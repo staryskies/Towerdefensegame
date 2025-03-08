@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tower Defense Game</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Login/Sign-In Screen -->
+  <div id="auth-screen">
+    <div id="auth-form">
+      <h2>Welcome to Tower Defense!</h2>
+      <div id="login-form">
+        <h3>Login</h3>
+        <input type="text" id="login-username" placeholder="Username">
+        <input type="password" id="login-password" placeholder="Password">
+        <button id="login-button">Login</button>
+        <p>Don't have an account? <a href="#" id="show-signup">Sign Up</a></p>
+      </div>
+      <div id="signup-form" style="display: none;">
+        <h3>Sign Up</h3>
+        <input type="text" id="signup-username" placeholder="Username">
+        <input type="password" id="signup-password" placeholder="Password">
+        <button id="signup-button">Sign Up</button>
+        <p>Already have an account? <a href="#" id="show-login">Login</a></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Menu -->
+  <div id="main-menu" style="display: none;">
+    <h1>Tower Defense Game</h1>
+    <button id="start-game" disabled>Start Game</button> <!-- Disabled by default -->
+    <div id="map-selector">
+      <h2>Select a Map</h2>
+      <button data-map="map1">Map 1</button>
+      <button data-map="map2">Map 2</button>
+      <button data-map="map3">Map 3</button>
+    </div>
+    <button id="logout-button">Logout</button>
+  </div>
+
+  <!-- Game Canvas and Other Elements -->
+  <canvas id="gameCanvas" style="display: none;"></canvas>
+  <div id="sidebar" style="display: none;"></div>
+  <div id="stats-panel" style="display: none;"></div>
+  <div id="tower-info-panel" style="display: none;"></div>
+  <div id="notification-box"></div>
+  <div id="end-screen" style="display: none;">
+    <h2 id="end-message"></h2>
+    <button id="restart-button">Restart</button>
+  </div>
+
+  <script>
+    // Login/Sign-In Screen Elements
+    const authScreen = document.getElementById("auth-screen");
+    const loginForm = document.getElementById("login-form");
+    const signupForm = document.getElementById("signup-form");
+    const loginButton = document.getElementById("login-button");
+    const signupButton = document.getElementById("signup-button");
+    const showSignup = document.getElementById("show-signup");
+    const showLogin = document.getElementById("show-login");
+
+    // Main Menu Elements
+    const mainMenu = document.getElementById("main-menu");
+    const startGameButton = document.getElementById("start-game");
+    const mapButtons = document.querySelectorAll("#map-selector button");
+    const logoutButton = document.getElementById("logout-button");
+
+    // Show the sign-up form
+    showSignup.addEventListener("click", (e) => {
+      e.preventDefault();
+      loginForm.style.display = "none";
+      signupForm.style.display = "block";
+    });
+
+    // Show the login form
+    showLogin.addEventListener("click", (e) => {
+      e.preventDefault();
+      signupForm.style.display = "none";
+      loginForm.style.display = "block";
+    });
+
+    // Handle login
+    loginButton.addEventListener("click", async () => {
+      const username = document.getElementById("login-username").value;
+      const password = document.getElementById("login-password").value;
+
+      try {
+        const response = await fetch("/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ username, password }),
+        });
+        const data = await response.json();
+
+        if (response.ok) {
+          localStorage.setItem("token", data.token); // Store the token
+          showMainMenu();
+        } else {
+          alert("Invalid username or password!");
+        }
+      } catch (err) {
+        console.error("Error logging in:", err);
+        alert("Error logging in. Please try again.");
+      }
+    });
+
+    // Handle sign-up
+    signupButton.addEventListener("click", async () => {
+      const username = document.getElementById("signup-username").value;
+      const password = document.getElementById("signup-password").value;
+
+      try {
+        const response = await fetch("/signup", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ username, password }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          localStorage.setItem("token", data.token); // Store the token
+          showMainMenu();
+        } else {
+          alert("Username already exists!");
+        }
+      } catch (err) {
+        console.error("Error signing up:", err);
+        alert("Error signing up. Please try again.");
+      }
+    });
+
+    // Show the main menu
+    function showMainMenu() {
+      authScreen.style.display = "none";
+      mainMenu.style.display = "flex";
+    }
+
+    // Handle logout
+    logoutButton.addEventListener("click", () => {
+      localStorage.removeItem("token"); // Clear the token
+      mainMenu.style.display = "none";
+      authScreen.style.display = "flex";
+    });
+
+    // Enable "Start Game" button when a map is selected
+    mapButtons.forEach(button => {
+      button.addEventListener("click", () => {
+        // Remove active class from all buttons
+        mapButtons.forEach(btn => btn.classList.remove("active"));
+        // Add active class to the clicked button
+        button.classList.add("active");
+        // Enable the "Start Game" button
+        startGameButton.disabled = false;
+      });
+    });
+
+    // Start game when "Start Game" button is clicked
+    startGameButton.addEventListener("click", () => {
+      const selectedMap = document.querySelector("#map-selector button.active")?.dataset.map || "map1";
+      localStorage.setItem("selectedMap", selectedMap); // Store selected map
+      window.location.href = "game.html"; // Redirect to game page
+    });
+  </script>
+</body>
+</html>
