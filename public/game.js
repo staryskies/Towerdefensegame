@@ -1,5 +1,6 @@
-// Import Tower and Projectile from tower.js
+// Import Tower, Projectile, and towerStats
 import { Tower, Projectile } from './tower.js';
+import { towerStats } from './stats.js';
 
 // Canvas Setup
 const canvas = document.getElementById("gameCanvas");
@@ -34,16 +35,6 @@ let gameState = {
   gameSpeed: 1,
   selectedTower: null,
   isSpawning: false,
-};
-
-// Tower Stats (used by Tower class)
-const towerStats = {
-  basic: { cost: 50, damage: 20, range: 100, cooldown: 60, color: "gray", ability: "None", unlocked: true },
-  sniper: { cost: 100, damage: 50, range: 200, cooldown: 120, color: "blue", ability: "High Damage", unlocked: false },
-  splash: { cost: 150, damage: 10, range: 80, cooldown: 30, color: "orange", ability: "Area Damage", unlocked: false },
-  slow: { cost: 75, damage: 5, range: 120, cooldown: 90, color: "cyan", ability: "Slows Enemies", unlocked: false },
-  rapid: { cost: 125, damage: 15, range: 90, cooldown: 12, color: "purple", ability: "Rapid Fire", unlocked: false },
-  bomb: { cost: 200, damage: 40, range: 150, cooldown: 90, color: "brown", ability: "Explosive Damage", unlocked: false },
 };
 
 // Load Unlocked Towers
@@ -149,10 +140,8 @@ function gameLoop() {
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Update scaling on resize
   updateScaledPathAndSpawnPoint();
 
-  // Draw Path
   ctx.beginPath();
   ctx.moveTo(scaledPath[0].x, scaledPath[0].y);
   for (let point of scaledPath) ctx.lineTo(point.x, point.y);
@@ -160,7 +149,6 @@ function gameLoop() {
   ctx.lineWidth = 5;
   ctx.stroke();
 
-  // Update and Draw Game Objects
   if (!gameState.isPaused) {
     gameState.enemies.forEach(enemy => enemy.update(gameState));
     gameState.towers.forEach(tower => tower.update(gameState));
@@ -179,7 +167,6 @@ function gameLoop() {
     gameState.wave++;
   }
 
-  // Update Stats
   document.getElementById("score").textContent = `Score: ${gameState.score}`;
   document.getElementById("money").textContent = `Money: $${gameState.money}`;
   document.getElementById("health").textContent = `Health: ${gameState.playerHealth}`;
@@ -258,7 +245,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (gameState.money >= cost) {
         gameState.selectedTowerType = type;
         option.classList.add("selected");
-        console.log(`Selected tower type: ${type}`); // Debug log
+        console.log(`Selected tower type: ${type}`);
       } else {
         showNotification("Not enough money!");
       }
@@ -277,7 +264,7 @@ document.addEventListener("DOMContentLoaded", () => {
       window.location.href = "index.html";
     }
   });
-  gameLoop(); // Start the game loop
+  gameLoop();
 });
 
 // Tower Placement and Selection
@@ -305,7 +292,7 @@ function drawTowerFootprint() {
 }
 
 function canPlaceTower(x, y) {
-  const minDistance = 40; // Minimum distance between towers in original coordinates
+  const minDistance = 40;
   for (let tower of gameState.towers) {
     const dx = x - tower.x;
     const dy = y - tower.y;
@@ -315,15 +302,14 @@ function canPlaceTower(x, y) {
       return false;
     }
   }
-  // Add path collision check here if needed in the future
   return true;
 }
 
 canvas.addEventListener("click", e => {
   const rect = canvas.getBoundingClientRect();
-  const x = (e.clientX - rect.left) / scaleX; // Convert to original coordinates
-  const y = (e.clientY - rect.top) / scaleY;  // Convert to original coordinates
-  console.log(`Clicked at (${x}, ${y}), selectedTowerType: ${gameState.selectedTowerType}`); // Debug log
+  const x = (e.clientX - rect.left) / scaleX;
+  const y = (e.clientY - rect.top) / scaleY;
+  console.log(`Clicked at (${x}, ${y}), selectedTowerType: ${gameState.selectedTowerType}`);
 
   if (gameState.selectedTowerType) {
     const cost = towerStats[gameState.selectedTowerType].cost;

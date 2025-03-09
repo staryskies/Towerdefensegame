@@ -5,221 +5,41 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tower Defense Game - Menu</title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #1e2a44, #2c3e50);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      color: #fff;
-    }
-    #auth-screen, #main-menu {
-      background: rgba(255, 255, 255, 0.95);
-      border-radius: 15px;
-      padding: 30px;
-      width: 100%;
-      max-width: 450px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-      backdrop-filter: blur(5px);
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    #signup-form {
-      display: none;
-    }
-    h1 {
-      font-size: 2.5em;
-      color: #2c3e50;
-      margin-bottom: 20px;
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-    h2 {
-      font-size: 1.8em;
-      color: #34495e;
-      margin-bottom: 20px;
-    }
-    input, button {
-      width: 100%;
-      padding: 12px;
-      margin: 10px 0;
-      border-radius: 8px;
-      font-size: 1em;
-      transition: all 0.3s ease;
-    }
-    input {
-      border: 2px solid #ddd;
-      background: #f9f9f9;
-      color: #333;
-    }
-    input:focus {
-      border-color: #3498db;
-      outline: none;
-      box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
-    }
-    button {
-      background: #3498db;
-      color: white;
-      border: none;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    button:hover:not(:disabled) {
-      background: #2980b9;
-      transform: translateY(-2px);
-      box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
-    }
-    button:disabled {
-      background: #bdc3c7;
-      cursor: not-allowed;
-      transform: none;
-      box-shadow: none;
-    }
-    a {
-      color: #3498db;
-      text-decoration: none;
-      font-weight: 500;
-    }
-    a:hover {
-      color: #2980b9;
-      text-decoration: underline;
-    }
-    p {
-      color: #7f8c8d;
-      text-align: center;
-      margin: 10px 0;
-    }
-    #map-selector {
-      display: flex;
-      flex-wrap: nowrap;
-      overflow-x: auto;
-      gap: 10px;
-      margin: 20px 0;
-      padding-bottom: 10px;
-      scrollbar-width: thin;
-      scrollbar-color: #3498db #ecf0f1;
-    }
-    #map-selector::-webkit-scrollbar {
-      height: 8px;
-    }
-    #map-selector::-webkit-scrollbar-track {
-      background: #ecf0f1;
-      border-radius: 4px;
-    }
-    #map-selector::-webkit-scrollbar-thumb {
-      background: #3498db;
-      border-radius: 4px;
-    }
-    .map-option {
-      min-width: 120px;
-      padding: 12px;
-      background: #ecf0f1;
-      color: #2c3e50;
-      border-radius: 8px;
-      margin-bottom: 0;
-      transition: all 0.3s ease;
-      white-space: nowrap;
-    }
-    .map-option:hover {
-      background: #3498db;
-      color: #fff;
-      transform: translateY(-2px);
-      box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
-    }
-    .map-option.selected {
-      background: #3498db;
-      color: #fff;
-    }
-    .map-option .difficulty {
-      font-size: 0.9em;
-      color: #7f8c8d;
-    }
-    #tower-shop {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(255, 255, 255, 0.98);
-      padding: 25px;
-      border-radius: 15px;
-      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
-      z-index: 1000;
-      width: 90%;
-      max-width: 400px;
-      max-height: 80vh;
-      overflow-y: auto;
-      display: none;
-    }
-    .shop-item {
-      background: #f5f6fa;
-      border-radius: 10px;
-      padding: 15px;
-      margin: 10px 0;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-      color: #2c3e50;
-    }
-    .shop-item h4 {
-      font-size: 1.2em;
-      margin-bottom: 5px;
-    }
-    .shop-item p {
-      color: #7f8c8d;
-      text-align: left;
-      margin: 5px 0;
-    }
-    #notification-box {
-      position: fixed;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(44, 62, 80, 0.9);
-      color: #ecf0f1;
-      padding: 10px 20px;
-      border-radius: 8px;
-      z-index: 2000;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-      font-weight: 500;
-    }
-    #notification-box.show {
-      opacity: 1;
-    }
-    body.shop-open {
-      overflow: hidden;
-    }
-    #main-menu {
-      position: relative;
-      z-index: 10;
-    }
-    .button-container {
-      display: flex;
-      justify-content: space-between;
-      width: 100%;
-      margin-top: 20px;
-    }
-    .button-container button {
-      width: 48%;
-      background: #3498db;
-      color: white;
-      border: none;
-      cursor: pointer;
-      font-weight: bold;
-      padding: 12px;
-      border-radius: 8px;
-      transition: all 0.3s ease;
-    }
-    .button-container button:hover {
-      background: #2980b9;
-      transform: translateY(-2px);
-      box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
-    }
+    /* Your existing styles remain unchanged */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #1e2a44, #2c3e50); display: flex; justify-content: center; align-items: center; min-height: 100vh; color: #fff; }
+    #auth-screen, #main-menu { background: rgba(255, 255, 255, 0.95); border-radius: 15px; padding: 30px; width: 100%; max-width: 450px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); backdrop-filter: blur(5px); text-align: center; display: flex; flex-direction: column; align-items: center; }
+    #signup-form { display: none; }
+    h1 { font-size: 2.5em; color: #2c3e50; margin-bottom: 20px; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
+    h2 { font-size: 1.8em; color: #34495e; margin-bottom: 20px; }
+    input, button { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; font-size: 1em; transition: all 0.3s ease; }
+    input { border: 2px solid #ddd; background: #f9f9f9; color: #333; }
+    input:focus { border-color: #3498db; outline: none; box-shadow: 0 0 5px rgba(52, 152, 219, 0.5); }
+    button { background: #3498db; color: white; border: none; cursor: pointer; font-weight: bold; }
+    button:hover:not(:disabled) { background: #2980b9; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4); }
+    button:disabled { background: #bdc3c7; cursor: not-allowed; transform: none; box-shadow: none; }
+    a { color: #3498db; text-decoration: none; font-weight: 500; }
+    a:hover { color: #2980b9; text-decoration: underline; }
+    p { color: #7f8c8d; text-align: center; margin: 10px 0; }
+    #map-selector { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 10px; margin: 20px 0; padding-bottom: 10px; scrollbar-width: thin; scrollbar-color: #3498db #ecf0f1; }
+    #map-selector::-webkit-scrollbar { height: 8px; }
+    #map-selector::-webkit-scrollbar-track { background: #ecf0f1; border-radius: 4px; }
+    #map-selector::-webkit-scrollbar-thumb { background: #3498db; border-radius: 4px; }
+    .map-option { min-width: 120px; padding: 12px; background: #ecf0f1; color: #2c3e50; border-radius: 8px; margin-bottom: 0; transition: all 0.3s ease; white-space: nowrap; }
+    .map-option:hover { background: #3498db; color: #fff; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4); }
+    .map-option.selected { background: #3498db; color: #fff; }
+    .map-option .difficulty { font-size: 0.9em; color: #7f8c8d; }
+    #tower-shop { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255, 255, 255, 0.98); padding: 25px; border-radius: 15px; box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3); z-index: 1000; width: 90%; max-width: 400px; max-height: 80vh; overflow-y: auto; display: none; }
+    .shop-item { background: #f5f6fa; border-radius: 10px; padding: 15px; margin: 10px 0; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); color: #2c3e50; }
+    .shop-item h4 { font-size: 1.2em; margin-bottom: 5px; }
+    .shop-item p { color: #7f8c8d; text-align: left; margin: 5px 0; }
+    #notification-box { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(44, 62, 80, 0.9); color: #ecf0f1; padding: 10px 20px; border-radius: 8px; z-index: 2000; opacity: 0; transition: opacity 0.3s ease; font-weight: 500; }
+    #notification-box.show { opacity: 1; }
+    body.shop-open { overflow: hidden; }
+    #main-menu { position: relative; z-index: 10; }
+    .button-container { display: flex; justify-content: space-between; width: 100%; margin-top: 20px; }
+    .button-container button { width: 48%; background: #3498db; color: white; border: none; cursor: pointer; font-weight: bold; padding: 12px; border-radius: 8px; transition: all 0.3s ease; }
+    .button-container button:hover { background: #2980b9; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4); }
   </style>
 </head>
 <body>
@@ -244,33 +64,15 @@
     <h1>Tower Defense</h1>
     <button id="start-game" disabled>Start Game</button>
     <div id="map-selector">
-      <div class="map-option" data-map="map1" data-difficulty="easy">
-        Beginner Path<br><span class="difficulty">Easy</span>
-      </div>
-      <div class="map-option" data-map="map2" data-difficulty="medium">
-        Zigzag Path<br><span class="difficulty">Medium</span>
-      </div>
-      <div class="map-option" data-map="map3" data-difficulty="hard">
-        Snake Path<br><span class="difficulty">Hard</span>
-      </div>
-      <div class="map-option" data-map="map4" data-difficulty="easy">
-        Forest Trail<br><span class="difficulty">Easy</span>
-      </div>
-      <div class="map-option" data-map="map5" data-difficulty="medium">
-        Mountain Pass<br><span class="difficulty">Medium</span>
-      </div>
-      <div class="map-option" data-map="map6" data-difficulty="hard">
-        Desert Maze<br><span class="difficulty">Hard</span>
-      </div>
-      <div class="map-option" data-map="map7" data-difficulty="easy">
-        River Bend<br><span class="difficulty">Easy</span>
-      </div>
-      <div class="map-option" data-map="map8" data-difficulty="medium">
-        Canyon Run<br><span class="difficulty">Medium</span>
-      </div>
-      <div class="map-option" data-map="map9" data-difficulty="hard">
-        Arctic Path<br><span class="difficulty">Hard</span>
-      </div>
+      <div class="map-option" data-map="map1" data-difficulty="easy">Beginner Path<br><span class="difficulty">Easy</span></div>
+      <div class="map-option" data-map="map2" data-difficulty="medium">Zigzag Path<br><span class="difficulty">Medium</span></div>
+      <div class="map-option" data-map="map3" data-difficulty="hard">Snake Path<br><span class="difficulty">Hard</span></div>
+      <div class="map-option" data-map="map4" data-difficulty="easy">Forest Trail<br><span class="difficulty">Easy</span></div>
+      <div class="map-option" data-map="map5" data-difficulty="medium">Mountain Pass<br><span class="difficulty">Medium</span></div>
+      <div class="map-option" data-map="map6" data-difficulty="hard">Desert Maze<br><span class="difficulty">Hard</span></div>
+      <div class="map-option" data-map="map7" data-difficulty="easy">River Bend<br><span class="difficulty">Easy</span></div>
+      <div class="map-option" data-map="map8" data-difficulty="medium">Canyon Run<br><span class="difficulty">Medium</span></div>
+      <div class="map-option" data-map="map9" data-difficulty="hard">Arctic Path<br><span class="difficulty">Hard</span></div>
     </div>
     <div class="button-container">
       <button id="open-tower-shop">Tower Shop</button>
@@ -286,21 +88,8 @@
 
   <div id="notification-box"></div>
 
-  <script>
-    const towerStats = {
-      basic: { unlockCost: 0, unlocked: true, damage: 20, range: 100, ability: "None" },
-      sniper: { unlockCost: 500, unlocked: false, damage: 50, range: 200, ability: "High Damage" },
-      splash: { unlockCost: 750, unlocked: false, damage: 10, range: 80, ability: "Area Damage" },
-      slow: { unlockCost: 600, unlocked: false, damage: 5, range: 120, ability: "Slows Enemies" },
-      rapid: { unlockCost: 800, unlocked: false, damage: 15, range: 90, ability: "Rapid Fire" },
-      bomb: { unlockCost: 1000, unlocked: false, damage: 40, range: 150, ability: "Explosive Damage" },
-      laser: { unlockCost: 1200, unlocked: false, damage: 30, range: 180, ability: "Piercing Shots" },
-      freeze: { unlockCost: 900, unlocked: false, damage: 10, range: 140, ability: "Freeze Enemies" },
-      poison: { unlockCost: 1100, unlocked: false, damage: 15, range: 110, ability: "Poison Over Time" },
-      flame: { unlockCost: 1300, unlocked: false, damage: 25, range: 90, ability: "Burn Damage" },
-      shield: { unlockCost: 1500, unlocked: false, damage: 20, range: 150, ability: "Protect Allies" },
-      missile: { unlockCost: 1800, unlocked: false, damage: 60, range: 200, ability: "Guided Missile" }
-    };
+  <script type="module">
+    import { towerStats } from './stats.js';
 
     let globalMoney = parseInt(localStorage.getItem("globalMoney") || "0");
     const authScreen = document.getElementById("auth-screen");
@@ -322,6 +111,21 @@
       map9: { name: "Arctic Path", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 500, y: 400 }, { x: 800, y: 100 }, { x: 1000, y: 400 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 130, difficulty: "hard", restrictedAreas: [{ x: 300, y: 200, width: 200, height: 200 }, { x: 600, y: 200, width: 200, height: 200 }, { x: 900, y: 200, width: 200, height: 200 }] },
     };
 
+    const shopTowerStats = {
+      basic: { unlockCost: 0, unlocked: true, damage: 20, range: 100, ability: "None" },
+      sniper: { unlockCost: 500, unlocked: false, damage: 50, range: 200, ability: "High Damage" },
+      splash: { unlockCost: 750, unlocked: false, damage: 10, range: 80, ability: "Area Damage" },
+      slow: { unlockCost: 600, unlocked: false, damage: 5, range: 120, ability: "Slows Enemies" },
+      rapid: { unlockCost: 800, unlocked: false, damage: 15, range: 90, ability: "Rapid Fire" },
+      bomb: { unlockCost: 1000, unlocked: false, damage: 40, range: 150, ability: "Explosive Damage" },
+      laser: { unlockCost: 1200, unlocked: false, damage: 30, range: 180, ability: "Piercing Shots" },
+      freeze: { unlockCost: 900, unlocked: false, damage: 10, range: 140, ability: "Freeze Enemies" },
+      poison: { unlockCost: 1100, unlocked: false, damage: 15, range: 110, ability: "Poison Over Time" },
+      flame: { unlockCost: 1300, unlocked: false, damage: 25, range: 90, ability: "Burn Damage" },
+      shield: { unlockCost: 1500, unlocked: false, damage: 20, range: 150, ability: "Protect Allies" },
+      missile: { unlockCost: 1800, unlocked: false, damage: 60, range: 200, ability: "Guided Missile" }
+    };
+
     function showNotification(message, duration = 3000) {
       const box = document.getElementById("notification-box");
       box.textContent = message;
@@ -332,15 +136,17 @@
     function loadUnlockedTowers() {
       const unlocked = JSON.parse(localStorage.getItem("unlockedTowers") || "[]");
       towerStats.basic.unlocked = true;
+      shopTowerStats.basic.unlocked = true;
       unlocked.forEach(type => {
         if (towerStats[type]) towerStats[type].unlocked = true;
+        if (shopTowerStats[type]) shopTowerStats[type].unlocked = true;
       });
     }
 
     function initShop() {
       shopItems.innerHTML = "";
       document.getElementById("global-money").textContent = globalMoney;
-      for (const [type, stats] of Object.entries(towerStats)) {
+      for (const [type, stats] of Object.entries(shopTowerStats)) {
         if (type === "basic") continue;
         const item = document.createElement("div");
         item.className = "shop-item";
@@ -430,9 +236,10 @@
     shopItems.addEventListener("click", e => {
       if (e.target.classList.contains("unlock-btn") && !e.target.disabled) {
         const type = e.target.getAttribute("data-type");
-        const cost = towerStats[type].unlockCost;
+        const cost = shopTowerStats[type].unlockCost;
         if (globalMoney >= cost) {
           globalMoney -= cost;
+          shopTowerStats[type].unlocked = true;
           towerStats[type].unlocked = true;
           const unlocked = JSON.parse(localStorage.getItem("unlockedTowers") || "[]");
           unlocked.push(type);

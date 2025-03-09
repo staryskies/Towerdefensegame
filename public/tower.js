@@ -1,3 +1,6 @@
+import { towerStats } from './stats.js';
+
+
 // Projectile Class
 class Projectile {
   constructor(x, y, target, damage, color = "yellow") {
