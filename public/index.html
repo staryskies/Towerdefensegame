@@ -61,6 +61,7 @@
 
   <div id="main-menu" style="display: none;">
     <h1>Tower Defense</h1>
+    <p>Money: $<span id="user-money">0</span></p>
     <button id="start-game" disabled>Start Game</button>
     <div id="map-selector">
       <div class="map-option" data-map="map1" data-difficulty="easy">Beginner Path<br><span class="difficulty">Easy</span></div>
@@ -79,7 +80,7 @@
     </div>
     <div id="tower-shop">
       <h3>Tower Shop</h3>
-      <p>Global Money: $<span id="global-money">0</span></p>
+      <p>Money: $<span id="global-money">0</span></p>
       <div id="shop-items"></div>
       <button id="close-shop">Close</button>
     </div>
@@ -90,7 +91,9 @@
   <script type="module">
     import { towerStats } from './stats.js';
 
-    let globalMoney = parseInt(localStorage.getItem("globalMoney") || "0");
+    const BASE_URL = 'http://localhost:3000'; // Replace with your deployed URL in production
+    let globalMoney = 0;
+
     const authScreen = document.getElementById("auth-screen");
     const mainMenu = document.getElementById("main-menu");
     const loginForm = document.getElementById("login-form");
@@ -117,21 +120,34 @@
       setTimeout(() => box.classList.remove("show"), duration);
     }
 
-    function loadUnlockedTowers() {
-      const unlocked = JSON.parse(localStorage.getItem("unlockedTowers") || "[]");
-      towerStats.basic.unlocked = true; // Ensure basic is always unlocked
-      unlocked.forEach(type => {
-        if (towerStats[type]) {
-          towerStats[type].unlocked = true;
+    async function loadUnlockedTowers() {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      try {
+        const response = await fetch(`${BASE_URL}/towers`, {
+          headers: { "Authorization": token }
+        });
+        const data = await response.json();
+        if (response.ok) {
+          towerStats.basic.unlocked = true;
+          data.towers.forEach(type => {
+            if (towerStats[type]) towerStats[type].unlocked = true;
+          });
+        } else {
+          throw new Error(data.message);
         }
-      });
+      } catch (err) {
+        console.error("Error loading towers:", err);
+        showNotification("Error loading towers.");
+      }
     }
 
     function initShop() {
       shopItems.innerHTML = "";
       document.getElementById("global-money").textContent = globalMoney;
       for (const [type, stats] of Object.entries(towerStats)) {
-        if (type === "basic") continue; // Skip basic tower in shop
+        if (type === "basic") continue;
         const item = document.createElement("div");
         item.className = "shop-item";
         item.innerHTML = `
@@ -147,6 +163,28 @@
       }
     }
 
+    async function fetchUserData() {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      try {
+        const response = await fetch(`${BASE_URL}/user`, {
+          headers: { "Authorization": token }
+        });
+        const data = await response.json();
+        if (response.ok) {
+          globalMoney = data.money;
+          document.getElementById("user-money").textContent = globalMoney;
+          document.getElementById("global-money").textContent = globalMoney;
+        } else {
+          throw new Error(data.message);
+        }
+      } catch (err) {
+        console.error("Error fetching user data:", err);
+        showNotification("Error fetching user data.");
+      }
+    }
+
     document.getElementById("show-signup").addEventListener("click", () => {
       loginForm.style.display = "none";
       signupForm.style.display = "block";
@@ -157,25 +195,59 @@
       loginForm.style.display = "block";
     });
 
-    document.getElementById("login-button").addEventListener("click", () => {
+    document.getElementById("login-button").addEventListener("click", async () => {
       const username = document.getElementById("login-username").value;
       const password = document.getElementById("login-password").value;
-      if (username && password) {
-        localStorage.setItem("token", "demo-token");
-        showMainMenu();
-      } else {
+      if (!username || !password) {
         showNotification("Please enter username and password");
+        return;
+      }
+
+      try {
+        const response = await fetch(`${BASE_URL}/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await response.json();
+        if (response.ok) {
+          localStorage.setItem("token", data.token);
+          globalMoney = data.money;
+          showMainMenu();
+        } else {
+          showNotification(data.message);
+        }
+      } catch (err) {
+        console.error("Login error:", err);
+        showNotification("Error logging in.");
       }
     });
 
-    document.getElementById("signup-button").addEventListener("click", () => {
+    document.getElementById("signup-button").addEventListener("click", async () => {
       const username = document.getElementById("signup-username").value;
       const password = document.getElementById("signup-password").value;
-      if (username && password) {
-        localStorage.setItem("token", "demo-token");
-        showMainMenu();
-      } else {
+      if (!username || !password) {
         showNotification("Please enter username and password");
+        return;
+      }
+
+      try {
+        const response = await fetch(`${BASE_URL}/signup`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await response.json();
+        if (response.ok) {
+          localStorage.setItem("token", data.token);
+          globalMoney = data.money;
+          showMainMenu();
+        } else {
+          showNotification(data.message);
+        }
+      } catch (err) {
+        console.error("Signup error:", err);
+        showNotification("Error signing up.");
       }
     });
 
@@ -191,20 +263,15 @@
 
     document.getElementById("start-game").addEventListener("click", () => {
       if (!document.getElementById("start-game").disabled) {
-        window.location.href = "game.html";
+        window.location.href = "/game";
       }
     });
 
-    const openTowerShopButton = document.getElementById("open-tower-shop");
-    if (openTowerShopButton) {
-      openTowerShopButton.addEventListener("click", () => {
-        initShop();
-        shop.style.display = "block";
-        document.body.classList.add("shop-open");
-      });
-    } else {
-      console.error("Tower Shop button not found!");
-    }
+    document.getElementById("open-tower-shop").addEventListener("click", () => {
+      initShop();
+      shop.style.display = "block";
+      document.body.classList.add("shop-open");
+    });
 
     document.getElementById("close-shop").addEventListener("click", () => {
       shop.style.display = "none";
@@ -217,34 +284,48 @@
       authScreen.style.display = "flex";
     });
 
-    shopItems.addEventListener("click", e => {
+    shopItems.addEventListener("click", async e => {
       if (e.target.classList.contains("unlock-btn") && !e.target.disabled) {
         const type = e.target.getAttribute("data-type");
         const cost = towerStats[type].unlockCost;
-        if (globalMoney >= cost) {
-          globalMoney -= cost;
-          towerStats[type].unlocked = true;
-          const unlocked = JSON.parse(localStorage.getItem("unlockedTowers") || "[]");
-          if (!unlocked.includes(type)) {
-            unlocked.push(type);
-            localStorage.setItem("unlockedTowers", JSON.stringify(unlocked));
+        const token = localStorage.getItem("token");
+
+        try {
+          const response = await fetch(`${BASE_URL}/unlock-tower`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": token
+            },
+            body: JSON.stringify({ towerType: type, cost })
+          });
+          const data = await response.json();
+          if (response.ok) {
+            globalMoney -= cost;
+            towerStats[type].unlocked = true;
+            initShop();
+            document.getElementById("user-money").textContent = globalMoney;
+            showNotification(`${type.charAt(0).toUpperCase() + type.slice(1)} Tower unlocked!`);
+          } else {
+            showNotification(data.message);
           }
-          localStorage.setItem("globalMoney", globalMoney);
-          initShop();
-          showNotification(`${type.charAt(0).toUpperCase() + type.slice(1)} Tower unlocked!`);
-        } else {
-          showNotification("Not enough global money!");
+        } catch (err) {
+          console.error("Error unlocking tower:", err);
+          showNotification("Error unlocking tower.");
         }
       }
     });
 
-    function showMainMenu() {
+    async function showMainMenu() {
       authScreen.style.display = "none";
       mainMenu.style.display = "flex";
-      loadUnlockedTowers();
+      await loadUnlockedTowers();
+      await fetchUserData();
     }
 
-    if (localStorage.getItem("token")) showMainMenu();
+    if (localStorage.getItem("token")) {
+      showMainMenu();
+    }
   </script>
 </body>
 </html>

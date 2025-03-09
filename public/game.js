@@ -1,8 +1,8 @@
-// Import Tower, Projectile, and towerStats
 import { Tower, Projectile } from './tower.js';
 import { towerStats } from './stats.js';
 
-// Canvas Setup
+const BASE_URL = 'http://localhost:3000'; // Replace with your deployed URL (e.g., Render) in production
+
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 const originalWidth = 1200;
@@ -20,14 +20,13 @@ function resizeCanvas() {
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
 
-// Game State
 let gameState = {
   enemies: [],
   towers: [],
   projectiles: [],
   wave: 1,
   score: 0,
-  money: 200,
+  money: 200, // Initial money will be overridden by fetchUserMoney
   selectedTowerType: null,
   gameOver: false,
   playerHealth: 20,
@@ -37,24 +36,82 @@ let gameState = {
   isSpawning: false,
 };
 
-// Load Unlocked Towers
-function loadUnlockedTowers() {
-  const unlocked = JSON.parse(localStorage.getItem("unlockedTowers") || "[]");
-  towerStats.basic.unlocked = true;
-  unlocked.forEach(type => {
-    if (towerStats[type]) towerStats[type].unlocked = true;
-  });
+async function loadUnlockedTowers() {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    showNotification("Not authenticated. Please log in.");
+    window.location.href = "/";
+    return;
+  }
+
+  try {
+    const response = await fetch(`${BASE_URL}/towers`, {
+      headers: { "Authorization": token }
+    });
+    const data = await response.json();
+    if (response.ok) {
+      towerStats.basic.unlocked = true; // Basic tower is always unlocked
+      data.towers.forEach(type => {
+        if (towerStats[type]) towerStats[type].unlocked = true;
+      });
+    } else {
+      throw new Error(data.message);
+    }
+  } catch (err) {
+    console.error("Error loading towers:", err);
+    showNotification("Error loading towers.");
+  }
 }
 
-// Map Data
+async function fetchUserMoney() {
+  const token = localStorage.getItem("token");
+  if (!token) return;
+
+  try {
+    const response = await fetch(`${BASE_URL}/user`, {
+      headers: { "Authorization": token }
+    });
+    const data = await response.json();
+    if (response.ok) {
+      gameState.money = data.money;
+    } else {
+      throw new Error(data.message);
+    }
+  } catch (err) {
+    console.error("Error fetching money:", err);
+    showNotification("Error fetching money.");
+  }
+}
+
+async function updateUserMoney() {
+  const token = localStorage.getItem("token");
+  if (!token) return;
+
+  try {
+    const response = await fetch(`${BASE_URL}/update-money`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": token
+      },
+      body: JSON.stringify({ money: gameState.money })
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message);
+  } catch (err) {
+    console.error("Error updating money:", err);
+    showNotification("Error updating money.");
+  }
+}
+
 const maps = {
-  map1: { name: "Beginner Path", path: [{ x: 0, y: 300 }, { x: 300, y: 300 }, { x: 600, y: 100 }, { x: 1200, y: 100 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 50, difficulty: "easy" },
+  map1: { name: "Beginner Path", path: [{ x: 0, y: 300 }, { x: 100, y: 200 }, { x: 200, y: 400 }, { x: 300, y: 300 }, { x: 400, y: 100 }, { x: 500, y: 300 }, { x: 600, y: 200 }, { x: 700, y: 400 }, { x: 800, y: 300 }, { x: 900, y: 100 }, { x: 1000, y: 300 }, { x: 1100, y: 200 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 50, difficulty: "easy" },
   map2: { name: "Zigzag Path", path: [{ x: 0, y: 150 }, { x: 400, y: 150 }, { x: 400, y: 450 }, { x: 800, y: 450 }, { x: 1200, y: 150 }], spawnPoint: { x: 0, y: 150 }, moneyReward: 75, difficulty: "medium" },
   map3: { name: "Snake Path", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 400, y: 300 }, { x: 600, y: 100 }, { x: 800, y: 300 }, { x: 1000, y: 100 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 100, difficulty: "hard" },
-  map4: { name: "Forest Trail", path: [{ x: 0, y: 200 }, { x: 300, y: 400 }, { x: 600, y: 200 }, { x: 900, y: 400 }, { x: 1200, y: 200 }], spawnPoint: { x: 0, y: 200 }, moneyReward: 60, difficulty: "easy" },
+  map4: { name: "Forest Trail", path: [{ x: 0, y: 200 }, { x: 100, y: 400 }, { x: 200, y: 150 }, { x: 300, y: 350 }, { x: 400, y: 250 }, { x: 500, y: 400 }, { x: 600, y: 200 }, { x: 700, y: 350 }, { x: 800, y: 150 }, { x: 900, y: 300 }, { x: 1000, y: 400 }, { x: 1100, y: 250 }, { x: 1200, y: 200 }], spawnPoint: { x: 0, y: 200 }, moneyReward: 60, difficulty: "easy" },
   map5: { name: "Mountain Pass", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 400, y: 400 }, { x: 800, y: 100 }, { x: 1000, y: 400 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 80, difficulty: "medium" },
   map6: { name: "Desert Maze", path: [{ x: 0, y: 150 }, { x: 300, y: 300 }, { x: 500, y: 150 }, { x: 700, y: 300 }, { x: 900, y: 150 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 150 }, moneyReward: 120, difficulty: "hard" },
-  map7: { name: "River Bend", path: [{ x: 0, y: 250 }, { x: 400, y: 100 }, { x: 800, y: 400 }, { x: 1200, y: 250 }], spawnPoint: { x: 0, y: 250 }, moneyReward: 55, difficulty: "easy" },
+  map7: { name: "River Bend", path: [{ x: 0, y: 250 }, { x: 100, y: 100 }, { x: 200, y: 350 }, { x: 300, y: 150 }, { x: 400, y: 300 }, { x: 500, y: 200 }, { x: 600, y: 400 }, { x: 700, y: 250 }, { x: 800, y: 100 }, { x: 900, y: 350 }, { x: 1000, y: 200 }, { x: 1100, y: 300 }, { x: 1200, y: 250 }], spawnPoint: { x: 0, y: 250 }, moneyReward: 55, difficulty: "easy" },
   map8: { name: "Canyon Run", path: [{ x: 0, y: 200 }, { x: 300, y: 400 }, { x: 600, y: 200 }, { x: 900, y: 400 }, { x: 1200, y: 200 }], spawnPoint: { x: 0, y: 200 }, moneyReward: 85, difficulty: "medium" },
   map9: { name: "Arctic Path", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 500, y: 400 }, { x: 800, y: 100 }, { x: 1000, y: 400 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 130, difficulty: "hard" },
 };
@@ -71,7 +128,6 @@ function updateScaledPathAndSpawnPoint() {
 }
 updateScaledPathAndSpawnPoint();
 
-// Enemy Types
 const enemyTypes = {
   easy: [{ health: 100, speed: 1, radius: 10, color: "red" }],
   medium: [
@@ -84,7 +140,6 @@ const enemyTypes = {
   ],
 };
 
-// Enemy Class
 class Enemy {
   constructor(path, type, spawnPoint) {
     this.path = path;
@@ -134,7 +189,6 @@ class Enemy {
   }
 }
 
-// Game Loop
 function gameLoop() {
   if (gameState.gameOver) return;
 
@@ -151,7 +205,7 @@ function gameLoop() {
 
   if (!gameState.isPaused) {
     gameState.enemies.forEach(enemy => enemy.update(gameState));
-    gameState.towers.forEach(tower => tower.update(gameState, scaleX, scaleY)); // Pass scaleX and scaleY
+    gameState.towers.forEach(tower => tower.update(gameState, scaleX, scaleY));
     gameState.projectiles.forEach(projectile => projectile.update(gameState));
     gameState.projectiles = gameState.projectiles.filter(p => p.isActive);
   }
@@ -176,7 +230,6 @@ function gameLoop() {
   requestAnimationFrame(gameLoop);
 }
 
-// Spawn Wave
 function spawnWave() {
   gameState.isSpawning = true;
   let waveSize = gameState.wave * 5;
@@ -195,10 +248,8 @@ function spawnWave() {
   }
 
   gameState.money += moneyReward;
-  let globalMoney = parseInt(localStorage.getItem("globalMoney") || "0");
-  globalMoney += Math.floor(moneyReward / 2);
-  localStorage.setItem("globalMoney", globalMoney);
-  showNotification(`Wave ${gameState.wave} completed! +$${moneyReward} (Game), +$${Math.floor(moneyReward / 2)} (Global)`);
+  updateUserMoney();
+  showNotification(`Wave ${gameState.wave} completed! +$${moneyReward}`);
 
   for (let i = 0; i < waveSize; i++) {
     setTimeout(() => {
@@ -212,7 +263,6 @@ function spawnWave() {
   }
 }
 
-// Sidebar
 function initSidebar() {
   const sidebar = document.getElementById("sidebar");
   sidebar.innerHTML = "";
@@ -232,8 +282,15 @@ function initSidebar() {
   `;
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  loadUnlockedTowers();
+document.addEventListener("DOMContentLoaded", async () => {
+  if (!localStorage.getItem("token")) {
+    showNotification("Please log in to play.");
+    window.location.href = "/";
+    return;
+  }
+
+  await loadUnlockedTowers();
+  await fetchUserMoney();
   initSidebar();
   const sidebar = document.getElementById("sidebar");
   sidebar.addEventListener("click", e => {
@@ -261,13 +318,13 @@ document.addEventListener("DOMContentLoaded", () => {
       e.target.classList.toggle("active", gameState.gameSpeed === 2);
     }
     if (e.target.id === "home-button") {
-      window.location.href = "index.html";
+      updateUserMoney();
+      window.location.href = "/";
     }
   });
   gameLoop();
 });
 
-// Tower Placement and Selection
 let mouseX = 0, mouseY = 0;
 canvas.addEventListener("mousemove", e => {
   const rect = canvas.getBoundingClientRect();
@@ -317,6 +374,7 @@ canvas.addEventListener("click", e => {
       if (canPlaceTower(x, y)) {
         gameState.towers.push(new Tower(x, y, gameState.selectedTowerType));
         gameState.money -= cost;
+        updateUserMoney();
         gameState.selectedTowerType = null;
         document.querySelectorAll(".tower-option").forEach(o => o.classList.remove("selected"));
         showNotification(`Tower placed at (${Math.round(x)}, ${Math.round(y)})!`);
@@ -348,7 +406,6 @@ canvas.addEventListener("click", e => {
   }
 });
 
-// Tower Info Panel
 function showTowerInfoPanel(tower) {
   const panel = document.getElementById("tower-info-panel");
   panel.style.display = "block";
@@ -367,6 +424,7 @@ document.getElementById("upgrade-tower-button").addEventListener("click", () => 
     if (gameState.money >= cost) {
       gameState.money -= cost;
       gameState.selectedTower.upgrade();
+      updateUserMoney();
       showTowerInfoPanel(gameState.selectedTower);
       showNotification(`Tower upgraded to level ${gameState.selectedTower.level}!`);
     } else {
@@ -375,7 +433,6 @@ document.getElementById("upgrade-tower-button").addEventListener("click", () => 
   }
 });
 
-// Utilities
 function showNotification(message, duration = 3000) {
   const box = document.getElementById("notification-box");
   box.textContent = message;
@@ -386,15 +443,15 @@ function showNotification(message, duration = 3000) {
 function checkGameEnd() {
   if (gameState.playerHealth <= 0 && !gameState.gameOver) {
     gameState.gameOver = true;
-    const earnedGlobalMoney = Math.floor(gameState.score / 10);
-    let globalMoney = parseInt(localStorage.getItem("globalMoney") || "0");
-    globalMoney += earnedGlobalMoney;
-    localStorage.setItem("globalMoney", globalMoney);
+    const earnedMoney = Math.floor(gameState.score / 10);
+    gameState.money += earnedMoney;
+    updateUserMoney();
     document.getElementById("end-screen").style.display = "block";
-    document.getElementById("end-message").textContent = `Game Over! Wave: ${gameState.wave}, Score: ${gameState.score}. Earned $${earnedGlobalMoney} global money.`;
+    document.getElementById("end-message").textContent = `Game Over! Wave: ${gameState.wave}, Score: ${gameState.score}. Earned $${earnedMoney}.`;
   }
 }
 
 document.getElementById("restart-button").addEventListener("click", () => {
+  updateUserMoney();
   window.location.reload();
 });
