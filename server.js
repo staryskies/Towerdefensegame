@@ -2,17 +2,15 @@ const express = require("express");
 const { Client } = require("pg");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const cors = require("cors");
 const path = require("path");
 
 const app = express();
 
-// Middleware
-app.use(express.json());
-app.use(cors({ origin: "*" })); // Adjust origin for production (e.g., your frontend URL)
+app.use(express.json()); // No CORS needed for same-origin
+
 const client = new Client({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }, // Required for Render's PostgreSQL
+  ssl: { rejectUnauthorized: false },
 });
 
 client.connect()
@@ -52,7 +50,7 @@ function authenticateToken(req, res, next) {
   });
 }
 
-// API Routes (must come before static file serving)
+// API Routes (before static file serving)
 app.get("/user", authenticateToken, (req, res) => {
   client.query("SELECT money FROM users WHERE username = $1", [req.user.username])
     .then((result) => {
@@ -150,17 +148,26 @@ app.post("/unlock-tower", authenticateToken, (req, res) => {
         .then(() => {
           client.query("UPDATE users SET money = money - $1 WHERE username = $2", [cost, req.user.username])
             .then(() => res.json({ message: "Tower unlocked successfully." }))
-            .catch((err) => res.status(500).json({ message: "Error updating money." }));
+            .catch((err) => {
+              console.error("Error updating money:", err);
+              res.status(500).json({ message: "Error updating money." });
+            });
         })
-        .catch((err) => res.status(500).json({ message: "Error unlocking tower." }));
+        .catch((err) => {
+          console.error("Error unlocking tower:", err);
+          res.status(500).json({ message: "Error unlocking tower." });
+        });
     })
-    .catch((err) => res.status(500).json({ message: "Error checking money." }));
+    .catch((err) => {
+      console.error("Error checking money:", err);
+      res.status(500).json({ message: "Error checking money." });
+    });
 });
 
-// Static file serving (must come after API routes)
+// Static file serving (after API routes)
+app.use(express.static(path.join(__dirname, "public")));
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
 app.get("/game", (req, res) => res.sendFile(path.join(__dirname, "public", "game.html")));
-app.use(express.static(path.join(__dirname, "public")));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

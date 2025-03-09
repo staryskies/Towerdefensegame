@@ -1,7 +1,9 @@
 import { Tower, Projectile } from './tower.js';
 import { towerStats } from './stats.js';
 
-const BASE_URL = 'http://localhost:3000'; // Replace with your deployed URL (e.g., Render) in production
+console.log("game.js loaded and running"); // Debug: Confirm script starts
+
+const BASE_URL = ''; // Relative path for same-origin requests (works on https://towerdefensegame.onrender.com)
 
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
@@ -37,57 +39,76 @@ let gameState = {
 };
 
 async function loadUnlockedTowers() {
+  console.log("loadUnlockedTowers called"); // Debug: Function entry
   const token = localStorage.getItem("token");
   if (!token) {
+    console.log("No token found in localStorage"); // Debug: Token check
     showNotification("Not authenticated. Please log in.");
     window.location.href = "/";
     return;
   }
 
   try {
+    console.log("Fetching towers with token:", token); // Debug: Before fetch
     const response = await fetch(`${BASE_URL}/towers`, {
       headers: { "Authorization": token }
     });
+    console.log("Towers response status:", response.status); // Debug: Response status
+    console.log("Towers response text:", await response.text()); // Debug: Raw response
     const data = await response.json();
     if (response.ok) {
       towerStats.basic.unlocked = true; // Basic tower is always unlocked
       data.towers.forEach(type => {
         if (towerStats[type]) towerStats[type].unlocked = true;
       });
+      console.log("Unlocked towers:", data.towers); // Debug: Successful load
     } else {
       throw new Error(data.message);
     }
   } catch (err) {
-    console.error("Error loading towers:", err);
+    console.error("Error loading towers:", err); // Debug: Error catch
     showNotification("Error loading towers.");
   }
 }
 
 async function fetchUserMoney() {
+  console.log("fetchUserMoney called"); // Debug: Function entry
   const token = localStorage.getItem("token");
-  if (!token) return;
+  if (!token) {
+    console.log("No token found in localStorage"); // Debug: Token check
+    return;
+  }
 
   try {
+    console.log("Fetching user money with token:", token); // Debug: Before fetch
     const response = await fetch(`${BASE_URL}/user`, {
       headers: { "Authorization": token }
     });
+    console.log("User response status:", response.status); // Debug: Response status
+    console.log("User response text:", await response.text()); // Debug: Raw response
     const data = await response.json();
     if (response.ok) {
       gameState.money = data.money;
+      console.log("User money loaded:", gameState.money); // Debug: Successful load
     } else {
       throw new Error(data.message);
     }
   } catch (err) {
-    console.error("Error fetching money:", err);
+    console.error("Error fetching money:", err); // Debug: Error catch
     showNotification("Error fetching money.");
   }
 }
 
 async function updateUserMoney() {
+  console.log("updateUserMoney called"); // Debug: Function entry
   const token = localStorage.getItem("token");
-  if (!token) return;
+  if (!token) {
+    console.log("No token found in localStorage"); // Debug: Token check
+    return;
+  }
 
   try {
+    console.log("Updating money:", gameState.money, "with token:", token); // Debug: Before fetch
     const response = await fetch(`${BASE_URL}/update-money`, {
       method: "POST",
       headers: {
@@ -96,10 +117,13 @@ async function updateUserMoney() {
       },
       body: JSON.stringify({ money: gameState.money })
     });
+    console.log("Update money response status:", response.status); // Debug: Response status
     const data = await response.json();
+    console.log("Update money response data:", data); // Debug: Response data
     if (!response.ok) throw new Error(data.message);
+    console.log("Money updated successfully"); // Debug: Successful update
   } catch (err) {
-    console.error("Error updating money:", err);
+    console.error("Error updating money:", err); // Debug: Error catch
     showNotification("Error updating money.");
   }
 }
@@ -231,6 +255,7 @@ function gameLoop() {
 }
 
 function spawnWave() {
+  console.log("spawnWave called"); // Debug: Function entry
   gameState.isSpawning = true;
   let waveSize = gameState.wave * 5;
   let moneyReward = maps[selectedMap].moneyReward;
@@ -264,6 +289,7 @@ function spawnWave() {
 }
 
 function initSidebar() {
+  console.log("initSidebar called"); // Debug: Function entry
   const sidebar = document.getElementById("sidebar");
   sidebar.innerHTML = "";
   for (const [type, stats] of Object.entries(towerStats)) {
@@ -280,10 +306,13 @@ function initSidebar() {
     <div id="fast-forward-button">Fast Forward (1x)</div>
     <div id="home-button">Home</div>
   `;
+  console.log("Sidebar initialized"); // Debug: Sidebar setup complete
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
+  console.log("DOMContentLoaded event fired"); // Debug: Event start
   if (!localStorage.getItem("token")) {
+    console.log("No token found, redirecting to login"); // Debug: Token check
     showNotification("Please log in to play.");
     window.location.href = "/";
     return;
@@ -298,6 +327,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (option) {
       const type = option.getAttribute("data-type");
       const cost = parseInt(option.getAttribute("data-cost"));
+      console.log("Tower option clicked:", type, "Cost:", cost); // Debug: Tower selection
       document.querySelectorAll(".tower-option").forEach(o => o.classList.remove("selected"));
       if (gameState.money >= cost) {
         gameState.selectedTowerType = type;
@@ -308,16 +338,19 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
     if (e.target.id === "pause-button") {
+      console.log("Pause button clicked"); // Debug: Button click
       gameState.isPaused = !gameState.isPaused;
       e.target.textContent = gameState.isPaused ? "Resume" : "Pause";
       e.target.classList.toggle("active", gameState.isPaused);
     }
     if (e.target.id === "fast-forward-button") {
+      console.log("Fast forward button clicked"); // Debug: Button click
       gameState.gameSpeed = gameState.gameSpeed === 1 ? 2 : 1;
       e.target.textContent = `Fast Forward (${gameState.gameSpeed}x)`;
       e.target.classList.toggle("active", gameState.gameSpeed === 2);
     }
     if (e.target.id === "home-button") {
+      console.log("Home button clicked"); // Debug: Button click
       updateUserMoney();
       window.location.href = "/";
     }
@@ -366,7 +399,7 @@ canvas.addEventListener("click", e => {
   const rect = canvas.getBoundingClientRect();
   const x = (e.clientX - rect.left) / scaleX;
   const y = (e.clientY - rect.top) / scaleY;
-  console.log(`Clicked at (${x}, ${y}), selectedTowerType: ${gameState.selectedTowerType}`);
+  console.log(`Clicked at (${x}, ${y}), selectedTowerType: ${gameState.selectedTowerType}`); // Debug: Canvas click
 
   if (gameState.selectedTowerType) {
     const cost = towerStats[gameState.selectedTowerType].cost;
@@ -407,6 +440,7 @@ canvas.addEventListener("click", e => {
 });
 
 function showTowerInfoPanel(tower) {
+  console.log("showTowerInfoPanel called for tower:", tower.type); // Debug: Function entry
   const panel = document.getElementById("tower-info-panel");
   panel.style.display = "block";
   document.getElementById("tower-type").textContent = `Type: ${tower.type.charAt(0).toUpperCase() + tower.type.slice(1)}`;
@@ -419,6 +453,7 @@ function showTowerInfoPanel(tower) {
 }
 
 document.getElementById("upgrade-tower-button").addEventListener("click", () => {
+  console.log("Upgrade tower button clicked"); // Debug: Button click
   if (gameState.selectedTower) {
     const cost = 100 * gameState.selectedTower.level;
     if (gameState.money >= cost) {
@@ -434,6 +469,7 @@ document.getElementById("upgrade-tower-button").addEventListener("click", () => 
 });
 
 function showNotification(message, duration = 3000) {
+  console.log("Notification:", message); // Debug: Log notifications
   const box = document.getElementById("notification-box");
   box.textContent = message;
   box.classList.add("show");
@@ -442,6 +478,7 @@ function showNotification(message, duration = 3000) {
 
 function checkGameEnd() {
   if (gameState.playerHealth <= 0 && !gameState.gameOver) {
+    console.log("Game over detected"); // Debug: Game end
     gameState.gameOver = true;
     const earnedMoney = Math.floor(gameState.score / 10);
     gameState.money += earnedMoney;
@@ -452,6 +489,7 @@ function checkGameEnd() {
 }
 
 document.getElementById("restart-button").addEventListener("click", () => {
+  console.log("Restart button clicked"); // Debug: Button click
   updateUserMoney();
   window.location.reload();
 });
