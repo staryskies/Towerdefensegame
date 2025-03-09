@@ -19,12 +19,12 @@
       min-height: 100vh;
       color: #fff;
     }
-    #main-menu {
+    #auth-screen, #main-menu {
       background: rgba(255, 255, 255, 0.95);
       border-radius: 15px;
       padding: 30px;
       width: 100%;
-      max-width: 600px;
+      max-width: 450px;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
       backdrop-filter: blur(5px);
       text-align: center;
@@ -32,44 +32,69 @@
       flex-direction: column;
       align-items: center;
     }
+    #signup-form {
+      display: none;
+    }
     h1 {
       font-size: 2.5em;
       color: #2c3e50;
       margin-bottom: 20px;
       text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
-    button {
+    h2 {
+      font-size: 1.8em;
+      color: #34495e;
+      margin-bottom: 20px;
+    }
+    input, button {
       width: 100%;
       padding: 12px;
       margin: 10px 0;
       border-radius: 8px;
       font-size: 1em;
       transition: all 0.3s ease;
+    }
+    input {
+      border: 2px solid #ddd;
+      background: #f9f9f9;
+      color: #333;
+    }
+    input:focus {
+      border-color: #3498db;
+      outline: none;
+      box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
+    }
+    button {
+      background: #3498db;
+      color: white;
       border: none;
       cursor: pointer;
       font-weight: bold;
     }
-    #start-game {
+    button:hover:not(:disabled) {
+      background: #2980b9;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+    }
+    button:disabled {
       background: #bdc3c7;
-      color: #fff;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
     }
-    #start-game:enabled {
-      background: #3498db;
-      color: #fff;
+    a {
+      color: #3498db;
+      text-decoration: none;
+      font-weight: 500;
     }
-    #start-game:enabled:hover {
-      background: #2980b9;
-      transform: translateY(-2px);
-      box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+    a:hover {
+      color: #2980b9;
+      text-decoration: underline;
     }
-    #tower-shop, #logout-button {
-      background: #3498db;
-      color: #fff;
-    }
-    #tower-shop:hover, #logout-button:hover {
-      background: #2980b9;
-      transform: translateY(-2px);
-      box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+    p {
+      color: #7f8c8d;
+      text-align: center;
+      margin: 10px 0;
     }
     #map-selector {
       display: flex;
@@ -99,29 +124,6 @@
     .map-option .difficulty {
       font-size: 0.9em;
       color: #7f8c8d;
-    }
-    #tower-shop {
-      width: 45%;
-    }
-    #logout-button {
-      width: 45%;
-    }
-    #notification-box {
-      position: fixed;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(44, 62, 80, 0.9);
-      color: #ecf0f1;
-      padding: 10px 20px;
-      border-radius: 8px;
-      z-index: 2000;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-      font-weight: 500;
-    }
-    #notification-box.show {
-      opacity: 1;
     }
     #tower-shop {
       position: fixed;
@@ -156,10 +158,44 @@
       text-align: left;
       margin: 5px 0;
     }
+    #notification-box {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(44, 62, 80, 0.9);
+      color: #ecf0f1;
+      padding: 10px 20px;
+      border-radius: 8px;
+      z-index: 2000;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      font-weight: 500;
+    }
+    #notification-box.show {
+      opacity: 1;
+    }
   </style>
 </head>
 <body>
-  <div id="main-menu">
+  <div id="auth-screen">
+    <div id="login-form">
+      <h2>Login</h2>
+      <input type="text" id="login-username" placeholder="Username">
+      <input type="password" id="login-password" placeholder="Password">
+      <button id="login-button">Login</button>
+      <p>Don't have an account? <a id="show-signup">Sign Up</a></p>
+    </div>
+    <div id="signup-form">
+      <h2>Sign Up</h2>
+      <input type="text" id="signup-username" placeholder="Username">
+      <input type="password" id="signup-password" placeholder="Password">
+      <button id="signup-button">Sign Up</button>
+      <p>Have an account? <a id="show-login">Login</a></p>
+    </div>
+  </div>
+
+  <div id="main-menu" style="display: none;">
     <h1>Tower Defense</h1>
     <button id="start-game" disabled>Start Game</button>
     <div id="map-selector">
@@ -216,7 +252,10 @@
     };
 
     let globalMoney = parseInt(localStorage.getItem("globalMoney") || "0");
+    const authScreen = document.getElementById("auth-screen");
     const mainMenu = document.getElementById("main-menu");
+    const loginForm = document.getElementById("login-form");
+    const signupForm = document.getElementById("signup-form");
     const shop = document.getElementById("tower-shop");
     const shopItems = document.getElementById("shop-items");
 
@@ -268,6 +307,38 @@
       }
     }
 
+    document.getElementById("show-signup").addEventListener("click", () => {
+      loginForm.style.display = "none";
+      signupForm.style.display = "block";
+    });
+
+    document.getElementById("show-login").addEventListener("click", () => {
+      signupForm.style.display = "none";
+      loginForm.style.display = "block";
+    });
+
+    document.getElementById("login-button").addEventListener("click", () => {
+      const username = document.getElementById("login-username").value;
+      const password = document.getElementById("login-password").value;
+      if (username && password) {
+        localStorage.setItem("token", "demo-token");
+        showMainMenu();
+      } else {
+        showNotification("Please enter username and password");
+      }
+    });
+
+    document.getElementById("signup-button").addEventListener("click", () => {
+      const username = document.getElementById("signup-username").value;
+      const password = document.getElementById("signup-password").value;
+      if (username && password) {
+        localStorage.setItem("token", "demo-token");
+        showMainMenu();
+      } else {
+        showNotification("Please enter username and password");
+      }
+    });
+
     document.querySelectorAll(".map-option").forEach(button => {
       button.addEventListener("click", () => {
         localStorage.setItem("selectedMap", button.getAttribute("data-map"));
@@ -295,7 +366,8 @@
 
     document.getElementById("logout-button").addEventListener("click", () => {
       localStorage.removeItem("token");
-      window.location.reload();
+      mainMenu.style.display = "none";
+      authScreen.style.display = "flex";
     });
 
     shopItems.addEventListener("click", e => {
@@ -318,6 +390,7 @@
     });
 
     function showMainMenu() {
+      authScreen.style.display = "none";
       mainMenu.style.display = "flex";
       loadUnlockedTowers();
     }
