@@ -90,8 +90,9 @@
 
   <script type="module">
     import { towerStats } from './stats.js';
+    console.log("Script loaded and running"); // Debug: Confirm script starts
 
-    const BASE_URL = 'http://localhost:3000'; // Replace with your deployed URL in production
+    const BASE_URL = 'https://your-app.onrender.com'; // Replace with your Render URL
     let globalMoney = 0;
 
     const authScreen = document.getElementById("auth-screen");
@@ -114,6 +115,7 @@
     };
 
     function showNotification(message, duration = 3000) {
+      console.log("Notification:", message); // Debug: Log notifications
       const box = document.getElementById("notification-box");
       box.textContent = message;
       box.classList.add("show");
@@ -121,29 +123,37 @@
     }
 
     async function loadUnlockedTowers() {
+      console.log("loadUnlockedTowers called"); // Debug: Function entry
       const token = localStorage.getItem("token");
-      if (!token) return;
-
+      if (!token) {
+        console.log("No token found in localStorage"); // Debug: Token check
+        return;
+      }
       try {
+        console.log("Fetching towers with token:", token); // Debug: Before fetch
         const response = await fetch(`${BASE_URL}/towers`, {
           headers: { "Authorization": token }
         });
+        console.log("Towers response status:", response.status); // Debug: Response status
+        console.log("Towers response text:", await response.text()); // Debug: Raw response
         const data = await response.json();
         if (response.ok) {
           towerStats.basic.unlocked = true;
           data.towers.forEach(type => {
             if (towerStats[type]) towerStats[type].unlocked = true;
           });
+          console.log("Unlocked towers:", data.towers); // Debug: Successful load
         } else {
           throw new Error(data.message);
         }
       } catch (err) {
-        console.error("Error loading towers:", err);
+        console.error("Error loading towers:", err); // Debug: Error catch
         showNotification("Error loading towers.");
       }
     }
 
     function initShop() {
+      console.log("initShop called"); // Debug: Function entry
       shopItems.innerHTML = "";
       document.getElementById("global-money").textContent = globalMoney;
       for (const [type, stats] of Object.entries(towerStats)) {
@@ -161,41 +171,52 @@
         `;
         shopItems.appendChild(item);
       }
+      console.log("Shop initialized"); // Debug: Shop setup complete
     }
 
     async function fetchUserData() {
+      console.log("fetchUserData called"); // Debug: Function entry
       const token = localStorage.getItem("token");
-      if (!token) return;
-
+      if (!token) {
+        console.log("No token found in localStorage"); // Debug: Token check
+        return;
+      }
       try {
+        console.log("Fetching user data with token:", token); // Debug: Before fetch
         const response = await fetch(`${BASE_URL}/user`, {
           headers: { "Authorization": token }
         });
+        console.log("User response status:", response.status); // Debug: Response status
+        console.log("User response text:", await response.text()); // Debug: Raw response
         const data = await response.json();
         if (response.ok) {
           globalMoney = data.money;
           document.getElementById("user-money").textContent = globalMoney;
           document.getElementById("global-money").textContent = globalMoney;
+          console.log("User money loaded:", globalMoney); // Debug: Successful load
         } else {
           throw new Error(data.message);
         }
       } catch (err) {
-        console.error("Error fetching user data:", err);
+        console.error("Error fetching user data:", err); // Debug: Error catch
         showNotification("Error fetching user data.");
       }
     }
 
     document.getElementById("show-signup").addEventListener("click", () => {
+      console.log("Switching to signup form"); // Debug: UI switch
       loginForm.style.display = "none";
       signupForm.style.display = "block";
     });
 
     document.getElementById("show-login").addEventListener("click", () => {
+      console.log("Switching to login form"); // Debug: UI switch
       signupForm.style.display = "none";
       loginForm.style.display = "block";
     });
 
     document.getElementById("login-button").addEventListener("click", async () => {
+      console.log("Login button clicked"); // Debug: Button click
       const username = document.getElementById("login-username").value;
       const password = document.getElementById("login-password").value;
       if (!username || !password) {
@@ -204,12 +225,15 @@
       }
 
       try {
+        console.log("Attempting login for username:", username); // Debug: Before fetch
         const response = await fetch(`${BASE_URL}/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username, password })
         });
+        console.log("Login response status:", response.status); // Debug: Response status
         const data = await response.json();
+        console.log("Login response data:", data); // Debug: Response data
         if (response.ok) {
           localStorage.setItem("token", data.token);
           globalMoney = data.money;
@@ -218,12 +242,13 @@
           showNotification(data.message);
         }
       } catch (err) {
-        console.error("Login error:", err);
+        console.error("Login error:", err); // Debug: Error catch
         showNotification("Error logging in.");
       }
     });
 
     document.getElementById("signup-button").addEventListener("click", async () => {
+      console.log("Signup button clicked"); // Debug: Button click
       const username = document.getElementById("signup-username").value;
       const password = document.getElementById("signup-password").value;
       if (!username || !password) {
@@ -232,12 +257,15 @@
       }
 
       try {
+        console.log("Attempting signup for username:", username); // Debug: Before fetch
         const response = await fetch(`${BASE_URL}/signup`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username, password })
         });
+        console.log("Signup response status:", response.status); // Debug: Response status
         const data = await response.json();
+        console.log("Signup response data:", data); // Debug: Response data
         if (response.ok) {
           localStorage.setItem("token", data.token);
           globalMoney = data.money;
@@ -246,13 +274,14 @@
           showNotification(data.message);
         }
       } catch (err) {
-        console.error("Signup error:", err);
+        console.error("Signup error:", err); // Debug: Error catch
         showNotification("Error signing up.");
       }
     });
 
     document.querySelectorAll(".map-option").forEach(button => {
       button.addEventListener("click", () => {
+        console.log("Map selected:", button.getAttribute("data-map")); // Debug: Map selection
         localStorage.setItem("selectedMap", button.getAttribute("data-map"));
         localStorage.setItem("selectedDifficulty", button.getAttribute("data-difficulty"));
         document.getElementById("start-game").disabled = false;
@@ -262,23 +291,27 @@
     });
 
     document.getElementById("start-game").addEventListener("click", () => {
+      console.log("Start game clicked"); // Debug: Button click
       if (!document.getElementById("start-game").disabled) {
         window.location.href = "/game";
       }
     });
 
     document.getElementById("open-tower-shop").addEventListener("click", () => {
+      console.log("Opening tower shop"); // Debug: Button click
       initShop();
       shop.style.display = "block";
       document.body.classList.add("shop-open");
     });
 
     document.getElementById("close-shop").addEventListener("click", () => {
+      console.log("Closing tower shop"); // Debug: Button click
       shop.style.display = "none";
       document.body.classList.remove("shop-open");
     });
 
     document.getElementById("logout-button").addEventListener("click", () => {
+      console.log("Logout button clicked"); // Debug: Button click
       localStorage.removeItem("token");
       mainMenu.style.display = "none";
       authScreen.style.display = "flex";
@@ -289,8 +322,10 @@
         const type = e.target.getAttribute("data-type");
         const cost = towerStats[type].unlockCost;
         const token = localStorage.getItem("token");
+        console.log("Unlock tower clicked:", type, "Cost:", cost); // Debug: Button click
 
         try {
+          console.log("Attempting to unlock tower with token:", token); // Debug: Before fetch
           const response = await fetch(`${BASE_URL}/unlock-tower`, {
             method: "POST",
             headers: {
@@ -299,7 +334,9 @@
             },
             body: JSON.stringify({ towerType: type, cost })
           });
+          console.log("Unlock tower response status:", response.status); // Debug: Response status
           const data = await response.json();
+          console.log("Unlock tower response data:", data); // Debug: Response data
           if (response.ok) {
             globalMoney -= cost;
             towerStats[type].unlocked = true;
@@ -310,21 +347,26 @@
             showNotification(data.message);
           }
         } catch (err) {
-          console.error("Error unlocking tower:", err);
+          console.error("Error unlocking tower:", err); // Debug: Error catch
           showNotification("Error unlocking tower.");
         }
       }
     });
 
     async function showMainMenu() {
+      console.log("showMainMenu called"); // Debug: Function entry
       authScreen.style.display = "none";
       mainMenu.style.display = "flex";
       await loadUnlockedTowers();
       await fetchUserData();
+      console.log("Main menu displayed"); // Debug: Function exit
     }
 
     if (localStorage.getItem("token")) {
+      console.log("Token found, showing main menu"); // Debug: Initial check
       showMainMenu();
+    } else {
+      console.log("No token, showing auth screen"); // Debug: Initial check
     }
   </script>
 </body>
