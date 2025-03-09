@@ -9,13 +9,10 @@ const app = express();
 
 // Middleware
 app.use(express.json());
-app.use(cors()); // Update origin for production if frontend is hosted separately
-app.use(express.static(path.join(__dirname, "public")));
-
-// PostgreSQL client
+app.use(cors({ origin: "*" })); // Adjust origin for production (e.g., your frontend URL)
 const client = new Client({
-  connectionString: process.env.DATABASE_URL || "postgres://localhost:5432/tower_defense",
-  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }, // Required for Render's PostgreSQL
 });
 
 client.connect()
@@ -32,44 +29,62 @@ function initializeDatabase() {
       username TEXT UNIQUE NOT NULL,
       password TEXT NOT NULL,
       money INTEGER DEFAULT 200
-    )
+    );
+    CREATE TABLE IF NOT EXISTS user_towers (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      tower_type TEXT NOT NULL,
+      UNIQUE(user_id, tower_type)
+    );
   `)
-    .then(() => console.log("Users table ready"))
-    .catch((err) => console.error("Error creating users table:", err));
+    .then(() => console.log("Users and towers tables ready"))
+    .catch((err) => console.error("Error creating tables:", err));
 }
 
 function authenticateToken(req, res, next) {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.split(" ")[1] : authHeader;
+  const token = req.headers["authorization"];
   if (!token) return res.status(401).json({ message: "Access denied. No token provided." });
 
-  jwt.verify(token, process.env.JWT_SECRET || "secretKey", (err, user) => {
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
     if (err) return res.status(403).json({ message: "Invalid token." });
     req.user = user;
     next();
   });
 }
 
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+// API Routes (must come before static file serving)
+app.get("/user", authenticateToken, (req, res) => {
+  client.query("SELECT money FROM users WHERE username = $1", [req.user.username])
+    .then((result) => {
+      const user = result.rows[0];
+      if (!user) return res.status(404).json({ message: "User not found." });
+      res.json({ money: user.money });
+    })
+    .catch((err) => {
+      console.error("Error fetching user data:", err);
+      res.status(500).json({ message: "Error fetching user data." });
+    });
+});
+
+app.get("/towers", authenticateToken, (req, res) => {
+  client.query("SELECT tower_type FROM user_towers WHERE user_id = $1", [req.user.id])
+    .then((result) => res.json({ towers: result.rows.map(row => row.tower_type) }))
+    .catch((err) => {
+      console.error("Error fetching towers:", err);
+      res.status(500).json({ message: "Error fetching towers." });
+    });
 });
 
 app.post("/login", (req, res) => {
   const { username, password } = req.body;
-
   client.query("SELECT * FROM users WHERE username = $1", [username])
     .then((result) => {
       const user = result.rows[0];
-      if (!user) {
-        return res.status(400).json({ message: "User not found." });
-      }
+      if (!user) return res.status(400).json({ message: "User not found." });
 
-      bcrypt.compare(password, user.password, (err, validPassword) => {
-        if (err || !validPassword) {
-          return res.status(400).json({ message: "Invalid password." });
-        }
-
-        const token = jwt.sign({ username: user.username }, process.env.JWT_SECRET || "secretKey");
+      bcrypt.compare(password, user.password, (err, valid) => {
+        if (err || !valid) return res.status(400).json({ message: "Invalid password." });
+        const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET);
         res.json({ token, money: user.money });
       });
     })
@@ -81,27 +96,21 @@ app.post("/login", (req, res) => {
 
 app.post("/signup", (req, res) => {
   const { username, password } = req.body;
-
   client.query("SELECT * FROM users WHERE username = $1", [username])
     .then((result) => {
-      if (result.rows[0]) {
-        return res.status(400).json({ message: "Username already exists." });
-      }
+      if (result.rows[0]) return res.status(400).json({ message: "Username already exists." });
 
       bcrypt.hash(password, 10, (err, hashedPassword) => {
-        if (err) {
-          console.error("Error hashing password:", err);
-          return res.status(500).json({ message: "Error creating user." });
-        }
+        if (err) return res.status(500).json({ message: "Error hashing password." });
 
         client.query(
           "INSERT INTO users (username, password) VALUES ($1, $2) RETURNING *",
           [username, hashedPassword]
         )
           .then((result) => {
-            const newUser = result.rows[0];
-            const token = jwt.sign({ username }, process.env.JWT_SECRET || "secretKey");
-            res.status(201).json({ token, money: newUser.money });
+            const user = result.rows[0];
+            const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET);
+            res.status(201).json({ token, money: user.money });
           })
           .catch((err) => {
             console.error("Error creating user:", err);
@@ -111,53 +120,47 @@ app.post("/signup", (req, res) => {
     })
     .catch((err) => {
       console.error("Error during signup:", err);
-      res.status(500).json({ message: "Error creating user." });
-    });
-});
-
-app.get("/user", authenticateToken, (req, res) => {
-  const { username } = req.user;
-
-  client.query("SELECT * FROM users WHERE username = $1", [username])
-    .then((result) => {
-      const user = result.rows[0];
-      if (!user) {
-        return res.status(404).json({ message: "User not found." });
-      }
-      res.json({ money: user.money });
-    })
-    .catch((err) => {
-      console.error("Error fetching user data:", err);
-      res.status(500).json({ message: "Error fetching user data." });
+      res.status(500).json({ message: "Error checking username." });
     });
 });
 
 app.post("/update-money", authenticateToken, (req, res) => {
-  const { username } = req.user;
   const { money } = req.body;
+  if (typeof money !== "number" || money < 0) return res.status(400).json({ message: "Invalid money value." });
 
-  if (typeof money !== "number" || money < 0) {
-    return res.status(400).json({ message: "Invalid money value." });
-  }
-
-  client.query(
-    "UPDATE users SET money = $1 WHERE username = $2",
-    [money, username]
-  )
-    .then(() => {
-      res.json({ message: "Money updated successfully." });
-    })
+  client.query("UPDATE users SET money = $1 WHERE username = $2", [money, req.user.username])
+    .then(() => res.json({ message: "Money updated successfully." }))
     .catch((err) => {
       console.error("Error updating money:", err);
       res.status(500).json({ message: "Error updating money." });
     });
 });
 
-app.get("/game", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "game.html"));
+app.post("/unlock-tower", authenticateToken, (req, res) => {
+  const { towerType, cost } = req.body;
+  client.query("SELECT money FROM users WHERE username = $1", [req.user.username])
+    .then((result) => {
+      const user = result.rows[0];
+      if (user.money < cost) return res.status(400).json({ message: "Not enough money." });
+
+      client.query(
+        "INSERT INTO user_towers (user_id, tower_type) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+        [req.user.id, towerType]
+      )
+        .then(() => {
+          client.query("UPDATE users SET money = money - $1 WHERE username = $2", [cost, req.user.username])
+            .then(() => res.json({ message: "Tower unlocked successfully." }))
+            .catch((err) => res.status(500).json({ message: "Error updating money." }));
+        })
+        .catch((err) => res.status(500).json({ message: "Error unlocking tower." }));
+    })
+    .catch((err) => res.status(500).json({ message: "Error checking money." }));
 });
 
+// Static file serving (must come after API routes)
+app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
+app.get("/game", (req, res) => res.sendFile(path.join(__dirname, "public", "game.html")));
+app.use(express.static(path.join(__dirname, "public")));
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
