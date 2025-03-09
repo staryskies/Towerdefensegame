@@ -73,13 +73,12 @@ const selectedDifficulty = localStorage.getItem("selectedDifficulty") || "easy";
 const path = maps[selectedMap].path;
 const spawnPoint = maps[selectedMap].spawnPoint;
 
-const { scaledPath, scaledSpawnPoint } = getScaledPathAndSpawnPoint();
-
-function getScaledPathAndSpawnPoint() {
-  const scaledPath = path.map(point => ({ x: point.x * scaleX, y: point.y * scaleY }));
-  const scaledSpawnPoint = { x: spawnPoint.x * scaleX, y: spawnPoint.y * scaleY };
-  return { scaledPath, scaledSpawnPoint };
+let scaledPath, scaledSpawnPoint;
+function updateScaledPathAndSpawnPoint() {
+  scaledPath = path.map(point => ({ x: point.x * scaleX, y: point.y * scaleY }));
+  scaledSpawnPoint = { x: spawnPoint.x * scaleX, y: spawnPoint.y * scaleY };
 }
+updateScaledPathAndSpawnPoint();
 
 // Enemy Types
 const enemyTypes = {
@@ -149,6 +148,9 @@ function gameLoop() {
   if (gameState.gameOver) return;
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Update scaling on resize
+  updateScaledPathAndSpawnPoint();
 
   // Draw Path
   ctx.beginPath();
@@ -256,6 +258,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (gameState.money >= cost) {
         gameState.selectedTowerType = type;
         option.classList.add("selected");
+        console.log(`Selected tower type: ${type}`); // Debug log
       } else {
         showNotification("Not enough money!");
       }
@@ -302,20 +305,26 @@ function drawTowerFootprint() {
 }
 
 function canPlaceTower(x, y) {
-  const minDistance = 40;
+  const minDistance = 40; // Minimum distance between towers in original coordinates
   for (let tower of gameState.towers) {
     const dx = x - tower.x;
     const dy = y - tower.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
-    if (distance < minDistance) return false;
+    if (distance < minDistance) {
+      console.log(`Cannot place: too close to tower at (${tower.x}, ${tower.y})`);
+      return false;
+    }
   }
+  // Add path collision check here if needed in the future
   return true;
 }
 
 canvas.addEventListener("click", e => {
   const rect = canvas.getBoundingClientRect();
-  const x = (e.clientX - rect.left) / scaleX;
-  const y = (e.clientY - rect.top) / scaleY;
+  const x = (e.clientX - rect.left) / scaleX; // Convert to original coordinates
+  const y = (e.clientY - rect.top) / scaleY;  // Convert to original coordinates
+  console.log(`Clicked at (${x}, ${y}), selectedTowerType: ${gameState.selectedTowerType}`); // Debug log
+
   if (gameState.selectedTowerType) {
     const cost = towerStats[gameState.selectedTowerType].cost;
     if (gameState.money >= cost) {
@@ -324,7 +333,7 @@ canvas.addEventListener("click", e => {
         gameState.money -= cost;
         gameState.selectedTowerType = null;
         document.querySelectorAll(".tower-option").forEach(o => o.classList.remove("selected"));
-        showNotification(`Tower placed!`);
+        showNotification(`Tower placed at (${Math.round(x)}, ${Math.round(y)})!`);
       } else {
         showNotification("Cannot place tower here: too close to another tower!");
       }

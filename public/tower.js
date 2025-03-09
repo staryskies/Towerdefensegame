@@ -1,13 +1,13 @@
 // Projectile Class
 class Projectile {
   constructor(x, y, target, damage, color = "yellow") {
-    this.x = x;
-    this.y = y;
-    this.target = target;
-    this.damage = damage;
-    this.color = color;
-    this.speed = 5;
-    this.isActive = true;
+    this.x = x;           // Starting X coordinate (scaled)
+    this.y = y;           // Starting Y coordinate (scaled)
+    this.target = target; // Target enemy object
+    this.damage = damage; // Damage to deal on impact
+    this.color = color;   // Color from tower or default
+    this.speed = 5;       // Pixels per frame
+    this.isActive = true; // Active state for cleanup
   }
 
   update(gameState) {
@@ -123,5 +123,6 @@ class Tower {
   }
 }
 
-// Export Tower and Projectile classes
+// Note: towerStats is defined in game.js, so we assume it's globally available
+// If you want to make this more modular, you could export it from a separate file
 export { Tower, Projectile };
