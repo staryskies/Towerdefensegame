@@ -52,55 +52,21 @@ function loadUnlockedTowers() {
   });
 }
 
-// Map Data
+// Map Data with Difficulties
 const maps = {
-  map1: {
-    path: [
-      { x: 0, y: 300 },
-      { x: 300, y: 300 },
-      { x: 300, y: 100 },
-      { x: 600, y: 100 },
-      { x: 600, y: 400 },
-      { x: 900, y: 400 },
-      { x: 900, y: 300 },
-      { x: 1200, y: 300 },
-    ],
-    spawnPoint: { x: 0, y: 300 },
-    moneyReward: 50,
-  },
-  map2: {
-    path: [
-      { x: 0, y: 150 },
-      { x: 400, y: 150 },
-      { x: 400, y: 450 },
-      { x: 800, y: 450 },
-      { x: 800, y: 150 },
-      { x: 1200, y: 150 },
-    ],
-    spawnPoint: { x: 0, y: 150 },
-    moneyReward: 75,
-  },
-  map3: {
-    path: [
-      { x: 0, y: 300 },
-      { x: 200, y: 300 },
-      { x: 200, y: 100 },
-      { x: 400, y: 100 },
-      { x: 400, y: 300 },
-      { x: 600, y: 300 },
-      { x: 600, y: 100 },
-      { x: 800, y: 100 },
-      { x: 800, y: 300 },
-      { x: 1000, y: 300 },
-      { x: 1000, y: 100 },
-      { x: 1200, y: 100 },
-    ],
-    spawnPoint: { x: 0, y: 300 },
-    moneyReward: 100,
-  },
+  map1: { name: "Beginner Path", path: [{ x: 0, y: 300 }, { x: 300, y: 300 }, { x: 600, y: 100 }, { x: 1200, y: 100 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 50, difficulty: "easy" },
+  map2: { name: "Zigzag Path", path: [{ x: 0, y: 150 }, { x: 400, y: 150 }, { x: 400, y: 450 }, { x: 800, y: 450 }, { x: 1200, y: 150 }], spawnPoint: { x: 0, y: 150 }, moneyReward: 75, difficulty: "medium" },
+  map3: { name: "Snake Path", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 400, y: 300 }, { x: 600, y: 100 }, { x: 800, y: 300 }, { x: 1000, y: 100 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 100, difficulty: "hard" },
+  map4: { name: "Forest Trail", path: [{ x: 0, y: 200 }, { x: 300, y: 400 }, { x: 600, y: 200 }, { x: 900, y: 400 }, { x: 1200, y: 200 }], spawnPoint: { x: 0, y: 200 }, moneyReward: 60, difficulty: "easy" },
+  map5: { name: "Mountain Pass", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 400, y: 400 }, { x: 800, y: 100 }, { x: 1000, y: 400 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 80, difficulty: "medium" },
+  map6: { name: "Desert Maze", path: [{ x: 0, y: 150 }, { x: 300, y: 300 }, { x: 500, y: 150 }, { x: 700, y: 300 }, { x: 900, y: 150 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 150 }, moneyReward: 120, difficulty: "hard" },
+  map7: { name: "River Bend", path: [{ x: 0, y: 250 }, { x: 400, y: 100 }, { x: 800, y: 400 }, { x: 1200, y: 250 }], spawnPoint: { x: 0, y: 250 }, moneyReward: 55, difficulty: "easy" },
+  map8: { name: "Canyon Run", path: [{ x: 0, y: 200 }, { x: 300, y: 400 }, { x: 600, y: 200 }, { x: 900, y: 400 }, { x: 1200, y: 200 }], spawnPoint: { x: 0, y: 200 }, moneyReward: 85, difficulty: "medium" },
+  map9: { name: "Arctic Path", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 500, y: 400 }, { x: 800, y: 100 }, { x: 1000, y: 400 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 130, difficulty: "hard" },
 };
 
 const selectedMap = localStorage.getItem("selectedMap") || "map1";
+const selectedDifficulty = localStorage.getItem("selectedDifficulty") || "easy";
 const path = maps[selectedMap].path;
 const spawnPoint = maps[selectedMap].spawnPoint;
 
@@ -112,12 +78,20 @@ function getScaledPathAndSpawnPoint() {
   return { scaledPath, scaledSpawnPoint };
 }
 
-// Enemy Types
-const enemyTypes = [
-  { health: 100, speed: 1, radius: 10, color: "red" }, // Basic
-  { health: 200, speed: 0.8, radius: 15, color: "blue" }, // Tank
-  { health: 50, speed: 2, radius: 8, color: "green" }, // Fast
-];
+// Enemy Types (adjusted for difficulty)
+const enemyTypes = {
+  easy: [
+    { health: 100, speed: 1, radius: 10, color: "red" }, // Basic
+  ],
+  medium: [
+    { health: 150, speed: 1.2, radius: 12, color: "blue" }, // Tank
+    { health: 75, speed: 1.5, radius: 8, color: "green" }, // Fast
+  ],
+  hard: [
+    { health: 200, speed: 1.5, radius: 15, color: "purple" }, // Strong Tank
+    { health: 100, speed: 2, radius: 10, color: "yellow" }, // Very Fast
+  ],
+};
 
 // Enemy Class
 class Enemy {
@@ -161,7 +135,6 @@ class Enemy {
     ctx.arc(this.x, this.y, this.radius * Math.min(scaleX, scaleY), 0, 2 * Math.PI);
     ctx.fillStyle = this.color;
     ctx.fill();
-    // Health bar
     const barWidth = 20 * Math.min(scaleX, scaleY);
     ctx.fillStyle = "red";
     ctx.fillRect(this.x - barWidth / 2, this.y - 15 * Math.min(scaleX, scaleY), barWidth, 2);
@@ -314,11 +287,25 @@ function gameLoop() {
   requestAnimationFrame(gameLoop);
 }
 
-// Spawn Wave
+// Spawn Wave with Difficulty Adjustment
 function spawnWave() {
   gameState.isSpawning = true;
-  const waveSize = gameState.wave * 5;
-  const moneyReward = maps[selectedMap].moneyReward;
+  let waveSize = gameState.wave * 5;
+  let moneyReward = maps[selectedMap].moneyReward;
+  let healthMultiplier = 1;
+  let spawnInterval = 1000;
+
+  // Adjust based on difficulty
+  if (selectedDifficulty === "medium") {
+    healthMultiplier = 1.5;
+    waveSize *= 1.2;
+    spawnInterval = 800;
+  } else if (selectedDifficulty === "hard") {
+    healthMultiplier = 2;
+    waveSize *= 1.5;
+    spawnInterval = 600;
+  }
+
   gameState.money += moneyReward;
   let globalMoney = parseInt(localStorage.getItem("globalMoney") || "0");
   globalMoney += Math.floor(moneyReward / 2);
@@ -328,13 +315,12 @@ function spawnWave() {
   for (let i = 0; i < waveSize; i++) {
     setTimeout(() => {
       if (!gameState.isPaused && !gameState.gameOver) {
-        let type = gameState.wave <= 3 ? enemyTypes[0] :
-                   gameState.wave <= 6 ? (Math.random() < 0.5 ? enemyTypes[0] : enemyTypes[1]) :
-                   enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
+        let type = enemyTypes[selectedDifficulty][Math.floor(Math.random() * enemyTypes[selectedDifficulty].length)];
+        type = { ...type, health: type.health * healthMultiplier };
         gameState.enemies.push(new Enemy(scaledPath, type, scaledSpawnPoint));
         if (i === waveSize - 1) gameState.isSpawning = false;
       }
-    }, (i * 1000) / gameState.gameSpeed);
+    }, (i * spawnInterval) / gameState.gameSpeed);
   }
 }
 
@@ -416,7 +402,7 @@ function drawTowerFootprint() {
 }
 
 function canPlaceTower(x, y) {
-  const minDistance = 40; // Minimum distance between towers in original coordinates
+  const minDistance = 40;
   for (let tower of gameState.towers) {
     const dx = x - tower.x;
     const dy = y - tower.y;

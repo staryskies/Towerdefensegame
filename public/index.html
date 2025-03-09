@@ -19,94 +19,109 @@
       min-height: 100vh;
       color: #fff;
     }
-    #auth-screen, #main-menu {
+    #main-menu {
       background: rgba(255, 255, 255, 0.95);
       border-radius: 15px;
       padding: 30px;
       width: 100%;
-      max-width: 450px;
+      max-width: 600px;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
       backdrop-filter: blur(5px);
-    }
-    #signup-form {
-      display: none;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
     h1 {
       font-size: 2.5em;
       color: #2c3e50;
-      text-align: center;
       margin-bottom: 20px;
       text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
-    h2 {
-      font-size: 1.8em;
-      color: #34495e;
-      margin-bottom: 20px;
-      text-align: center;
-    }
-    h3 {
-      font-size: 1.4em;
-      color: #34495e;
-      margin: 15px 0;
-    }
-    input, button {
+    button {
       width: 100%;
       padding: 12px;
       margin: 10px 0;
       border-radius: 8px;
       font-size: 1em;
       transition: all 0.3s ease;
-    }
-    input {
-      border: 2px solid #ddd;
-      background: #f9f9f9;
-      color: #333;
-    }
-    input:focus {
-      border-color: #3498db;
-      outline: none;
-      box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
-    }
-    button {
-      background: #3498db;
-      color: white;
       border: none;
       cursor: pointer;
       font-weight: bold;
     }
-    button:hover:not(:disabled) {
+    #start-game {
+      background: #bdc3c7;
+      color: #fff;
+    }
+    #start-game:enabled {
+      background: #3498db;
+      color: #fff;
+    }
+    #start-game:enabled:hover {
       background: #2980b9;
       transform: translateY(-2px);
       box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
     }
-    button:disabled {
-      background: #bdc3c7;
-      cursor: not-allowed;
-      transform: none;
-      box-shadow: none;
+    #tower-shop, #logout-button {
+      background: #3498db;
+      color: #fff;
     }
-    a {
-      color: #3498db;
-      text-decoration: none;
-      font-weight: 500;
+    #tower-shop:hover, #logout-button:hover {
+      background: #2980b9;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
     }
-    a:hover {
-      color: #2980b9;
-      text-decoration: underline;
+    #map-selector {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      margin: 20px 0;
     }
-    p {
-      color: #7f8c8d;
-      text-align: center;
-      margin: 10px 0;
-    }
-    #map-selector button {
+    .map-option {
+      width: 30%;
+      padding: 12px;
       background: #ecf0f1;
       color: #2c3e50;
-      margin: 5px 0;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      transition: all 0.3s ease;
     }
-    #map-selector button:hover:not(:disabled) {
+    .map-option:hover {
       background: #3498db;
-      color: white;
+      color: #fff;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+    }
+    .map-option.selected {
+      background: #3498db;
+      color: #fff;
+    }
+    .map-option .difficulty {
+      font-size: 0.9em;
+      color: #7f8c8d;
+    }
+    #tower-shop {
+      width: 45%;
+    }
+    #logout-button {
+      width: 45%;
+    }
+    #notification-box {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(44, 62, 80, 0.9);
+      color: #ecf0f1;
+      padding: 10px 20px;
+      border-radius: 8px;
+      z-index: 2000;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      font-weight: 500;
+    }
+    #notification-box.show {
+      opacity: 1;
     }
     #tower-shop {
       position: fixed;
@@ -141,54 +156,45 @@
       text-align: left;
       margin: 5px 0;
     }
-    #notification-box {
-      position: fixed;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(44, 62, 80, 0.9);
-      color: white;
-      padding: 10px 20px;
-      border-radius: 8px;
-      z-index: 2000;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-      font-weight: 500;
-    }
-    #notification-box.show {
-      opacity: 1;
-    }
   </style>
 </head>
 <body>
-  <div id="auth-screen">
-    <div id="login-form">
-      <h2>Login</h2>
-      <input type="text" id="login-username" placeholder="Username">
-      <input type="password" id="login-password" placeholder="Password">
-      <button id="login-button">Login</button>
-      <p>Don't have an account? <a id="show-signup">Sign Up</a></p>
-    </div>
-    <div id="signup-form">
-      <h2>Sign Up</h2>
-      <input type="text" id="signup-username" placeholder="Username">
-      <input type="password" id="signup-password" placeholder="Password">
-      <button id="signup-button">Sign Up</button>
-      <p>Have an account? <a id="show-login">Login</a></p>
-    </div>
-  </div>
-
-  <div id="main-menu" style="display: none;">
+  <div id="main-menu">
     <h1>Tower Defense</h1>
     <button id="start-game" disabled>Start Game</button>
     <div id="map-selector">
-      <h3>Select Map</h3>
-      <button data-map="map1">Beginner Path</button>
-      <button data-map="map2">Zigzag Path</button>
-      <button data-map="map3">Snake Path</button>
+      <div class="map-option" data-map="map1" data-difficulty="easy">
+        Beginner Path<br><span class="difficulty">Easy</span>
+      </div>
+      <div class="map-option" data-map="map2" data-difficulty="medium">
+        Zigzag Path<br><span class="difficulty">Medium</span>
+      </div>
+      <div class="map-option" data-map="map3" data-difficulty="hard">
+        Snake Path<br><span class="difficulty">Hard</span>
+      </div>
+      <div class="map-option" data-map="map4" data-difficulty="easy">
+        Forest Trail<br><span class="difficulty">Easy</span>
+      </div>
+      <div class="map-option" data-map="map5" data-difficulty="medium">
+        Mountain Pass<br><span class="difficulty">Medium</span>
+      </div>
+      <div class="map-option" data-map="map6" data-difficulty="hard">
+        Desert Maze<br><span class="difficulty">Hard</span>
+      </div>
+      <div class="map-option" data-map="map7" data-difficulty="easy">
+        River Bend<br><span class="difficulty">Easy</span>
+      </div>
+      <div class="map-option" data-map="map8" data-difficulty="medium">
+        Canyon Run<br><span class="difficulty">Medium</span>
+      </div>
+      <div class="map-option" data-map="map9" data-difficulty="hard">
+        Arctic Path<br><span class="difficulty">Hard</span>
+      </div>
     </div>
-    <button id="open-shop">Tower Shop</button>
-    <button id="logout-button">Logout</button>
+    <div style="display: flex; justify-content: space-between; width: 100%;">
+      <button id="tower-shop">Tower Shop</button>
+      <button id="logout-button">Logout</button>
+    </div>
     <div id="tower-shop">
       <h3>Tower Shop</h3>
       <p>Global Money: $<span id="global-money">0</span></p>
@@ -210,12 +216,22 @@
     };
 
     let globalMoney = parseInt(localStorage.getItem("globalMoney") || "0");
-    const authScreen = document.getElementById("auth-screen");
     const mainMenu = document.getElementById("main-menu");
-    const loginForm = document.getElementById("login-form");
-    const signupForm = document.getElementById("signup-form");
     const shop = document.getElementById("tower-shop");
     const shopItems = document.getElementById("shop-items");
+
+    // Map Data with Difficulties
+    const maps = {
+      map1: { name: "Beginner Path", path: [{ x: 0, y: 300 }, { x: 300, y: 300 }, { x: 600, y: 100 }, { x: 1200, y: 100 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 50, difficulty: "easy" },
+      map2: { name: "Zigzag Path", path: [{ x: 0, y: 150 }, { x: 400, y: 150 }, { x: 400, y: 450 }, { x: 800, y: 450 }, { x: 1200, y: 150 }], spawnPoint: { x: 0, y: 150 }, moneyReward: 75, difficulty: "medium" },
+      map3: { name: "Snake Path", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 400, y: 300 }, { x: 600, y: 100 }, { x: 800, y: 300 }, { x: 1000, y: 100 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 100, difficulty: "hard" },
+      map4: { name: "Forest Trail", path: [{ x: 0, y: 200 }, { x: 300, y: 400 }, { x: 600, y: 200 }, { x: 900, y: 400 }, { x: 1200, y: 200 }], spawnPoint: { x: 0, y: 200 }, moneyReward: 60, difficulty: "easy" },
+      map5: { name: "Mountain Pass", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 400, y: 400 }, { x: 800, y: 100 }, { x: 1000, y: 400 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 80, difficulty: "medium" },
+      map6: { name: "Desert Maze", path: [{ x: 0, y: 150 }, { x: 300, y: 300 }, { x: 500, y: 150 }, { x: 700, y: 300 }, { x: 900, y: 150 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 150 }, moneyReward: 120, difficulty: "hard" },
+      map7: { name: "River Bend", path: [{ x: 0, y: 250 }, { x: 400, y: 100 }, { x: 800, y: 400 }, { x: 1200, y: 250 }], spawnPoint: { x: 0, y: 250 }, moneyReward: 55, difficulty: "easy" },
+      map8: { name: "Canyon Run", path: [{ x: 0, y: 200 }, { x: 300, y: 400 }, { x: 600, y: 200 }, { x: 900, y: 400 }, { x: 1200, y: 200 }], spawnPoint: { x: 0, y: 200 }, moneyReward: 85, difficulty: "medium" },
+      map9: { name: "Arctic Path", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 500, y: 400 }, { x: 800, y: 100 }, { x: 1000, y: 400 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 130, difficulty: "hard" },
+    };
 
     function showNotification(message, duration = 3000) {
       const box = document.getElementById("notification-box");
@@ -252,64 +268,34 @@
       }
     }
 
-    document.getElementById("show-signup").addEventListener("click", () => {
-      loginForm.style.display = "none";
-      signupForm.style.display = "block";
-    });
-
-    document.getElementById("show-login").addEventListener("click", () => {
-      signupForm.style.display = "none";
-      loginForm.style.display = "block";
-    });
-
-    document.getElementById("login-button").addEventListener("click", () => {
-      const username = document.getElementById("login-username").value;
-      const password = document.getElementById("login-password").value;
-      if (username && password) {
-        localStorage.setItem("token", "demo-token");
-        showMainMenu();
-      } else {
-        showNotification("Please enter username and password");
-      }
-    });
-
-    document.getElementById("signup-button").addEventListener("click", () => {
-      const username = document.getElementById("signup-username").value;
-      const password = document.getElementById("signup-password").value;
-      if (username && password) {
-        localStorage.setItem("token", "demo-token");
-        showMainMenu();
-      } else {
-        showNotification("Please enter username and password");
-      }
-    });
-
-    document.getElementById("logout-button").addEventListener("click", () => {
-      localStorage.removeItem("token");
-      mainMenu.style.display = "none";
-      authScreen.style.display = "flex";
-    });
-
-    document.querySelectorAll("#map-selector button").forEach(button => {
+    document.querySelectorAll(".map-option").forEach(button => {
       button.addEventListener("click", () => {
         localStorage.setItem("selectedMap", button.getAttribute("data-map"));
+        localStorage.setItem("selectedDifficulty", button.getAttribute("data-difficulty"));
         document.getElementById("start-game").disabled = false;
-        document.querySelectorAll("#map-selector button").forEach(btn => btn.style.backgroundColor = "");
-        button.style.backgroundColor = "#3498db";
+        document.querySelectorAll(".map-option").forEach(btn => btn.classList.remove("selected"));
+        button.classList.add("selected");
       });
     });
 
     document.getElementById("start-game").addEventListener("click", () => {
-      window.location.href = "game.html";
+      if (!document.getElementById("start-game").disabled) {
+        window.location.href = "game.html";
+      }
     });
 
-    document.getElementById("open-shop").addEventListener("click", () => {
+    document.getElementById("tower-shop").addEventListener("click", () => {
       initShop();
       shop.style.display = "block";
     });
 
     document.getElementById("close-shop").addEventListener("click", () => {
       shop.style.display = "none";
+    });
+
+    document.getElementById("logout-button").addEventListener("click", () => {
+      localStorage.removeItem("token");
+      window.location.reload();
     });
 
     shopItems.addEventListener("click", e => {
@@ -332,7 +318,6 @@
     });
 
     function showMainMenu() {
-      authScreen.style.display = "none";
       mainMenu.style.display = "flex";
       loadUnlockedTowers();
     }
