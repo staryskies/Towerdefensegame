@@ -1,3 +1,6 @@
+// Import Tower and Projectile from tower.js
+import { Tower, Projectile } from './tower.js';
+
 // Canvas Setup
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
@@ -33,7 +36,7 @@ let gameState = {
   isSpawning: false,
 };
 
-// Tower Stats
+// Tower Stats (used by Tower class)
 const towerStats = {
   basic: { cost: 50, damage: 20, range: 100, cooldown: 60, color: "gray", ability: "None", unlocked: true },
   sniper: { cost: 100, damage: 50, range: 200, cooldown: 120, color: "blue", ability: "High Damage", unlocked: false },
@@ -52,17 +55,11 @@ function loadUnlockedTowers() {
   });
 }
 
-// Map Data with Difficulties
+// Map Data
 const maps = {
   map1: { name: "Beginner Path", path: [{ x: 0, y: 300 }, { x: 300, y: 300 }, { x: 600, y: 100 }, { x: 1200, y: 100 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 50, difficulty: "easy" },
   map2: { name: "Zigzag Path", path: [{ x: 0, y: 150 }, { x: 400, y: 150 }, { x: 400, y: 450 }, { x: 800, y: 450 }, { x: 1200, y: 150 }], spawnPoint: { x: 0, y: 150 }, moneyReward: 75, difficulty: "medium" },
   map3: { name: "Snake Path", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 400, y: 300 }, { x: 600, y: 100 }, { x: 800, y: 300 }, { x: 1000, y: 100 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 100, difficulty: "hard" },
-  map4: { name: "Forest Trail", path: [{ x: 0, y: 200 }, { x: 300, y: 400 }, { x: 600, y: 200 }, { x: 900, y: 400 }, { x: 1200, y: 200 }], spawnPoint: { x: 0, y: 200 }, moneyReward: 60, difficulty: "easy" },
-  map5: { name: "Mountain Pass", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 400, y: 400 }, { x: 800, y: 100 }, { x: 1000, y: 400 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 80, difficulty: "medium" },
-  map6: { name: "Desert Maze", path: [{ x: 0, y: 150 }, { x: 300, y: 300 }, { x: 500, y: 150 }, { x: 700, y: 300 }, { x: 900, y: 150 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 150 }, moneyReward: 120, difficulty: "hard" },
-  map7: { name: "River Bend", path: [{ x: 0, y: 250 }, { x: 400, y: 100 }, { x: 800, y: 400 }, { x: 1200, y: 250 }], spawnPoint: { x: 0, y: 250 }, moneyReward: 55, difficulty: "easy" },
-  map8: { name: "Canyon Run", path: [{ x: 0, y: 200 }, { x: 300, y: 400 }, { x: 600, y: 200 }, { x: 900, y: 400 }, { x: 1200, y: 200 }], spawnPoint: { x: 0, y: 200 }, moneyReward: 85, difficulty: "medium" },
-  map9: { name: "Arctic Path", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 500, y: 400 }, { x: 800, y: 100 }, { x: 1000, y: 400 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 130, difficulty: "hard" },
 };
 
 const selectedMap = localStorage.getItem("selectedMap") || "map1";
@@ -78,18 +75,16 @@ function getScaledPathAndSpawnPoint() {
   return { scaledPath, scaledSpawnPoint };
 }
 
-// Enemy Types (adjusted for difficulty)
+// Enemy Types
 const enemyTypes = {
-  easy: [
-    { health: 100, speed: 1, radius: 10, color: "red" }, // Basic
-  ],
+  easy: [{ health: 100, speed: 1, radius: 10, color: "red" }],
   medium: [
-    { health: 150, speed: 1.2, radius: 12, color: "blue" }, // Tank
-    { health: 75, speed: 1.5, radius: 8, color: "green" }, // Fast
+    { health: 150, speed: 1.2, radius: 12, color: "blue" },
+    { health: 75, speed: 1.5, radius: 8, color: "green" },
   ],
   hard: [
-    { health: 200, speed: 1.5, radius: 15, color: "purple" }, // Strong Tank
-    { health: 100, speed: 2, radius: 10, color: "yellow" }, // Very Fast
+    { health: 200, speed: 1.5, radius: 15, color: "purple" },
+    { health: 100, speed: 2, radius: 10, color: "yellow" },
   ],
 };
 
@@ -143,109 +138,6 @@ class Enemy {
   }
 }
 
-// Tower Class
-class Tower {
-  constructor(x, y, type) {
-    this.x = x;
-    this.y = y;
-    this.type = type;
-    this.damage = towerStats[type].damage;
-    this.range = towerStats[type].range;
-    this.cooldown = towerStats[type].cooldown;
-    this.color = towerStats[type].color;
-    this.ability = towerStats[type].ability;
-    this.cooldownTimer = 0;
-    this.level = 1;
-    this.selected = false;
-  }
-
-  update(gameState) {
-    if (this.cooldownTimer > 0) this.cooldownTimer--;
-    if (this.cooldownTimer === 0) {
-      for (let enemy of gameState.enemies) {
-        const dx = enemy.x - this.x * scaleX;
-        const dy = enemy.y - this.y * scaleY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        if (distance <= this.range * Math.min(scaleX, scaleY)) {
-          if (this.ability === "Area Damage") {
-            gameState.enemies.forEach(e => {
-              const d = Math.sqrt((e.x - this.x * scaleX) ** 2 + (e.y - this.y * scaleY) ** 2);
-              if (d <= this.range * Math.min(scaleX, scaleY)) {
-                gameState.projectiles.push(new Projectile(this.x * scaleX, this.y * scaleY, e, this.damage, this.color));
-              }
-            });
-          } else if (this.ability === "Slows Enemies") {
-            enemy.slowed = true;
-            setTimeout(() => (enemy.slowed = false), 2000);
-            gameState.projectiles.push(new Projectile(this.x * scaleX, this.y * scaleY, enemy, this.damage, this.color));
-          } else {
-            gameState.projectiles.push(new Projectile(this.x * scaleX, this.y * scaleY, enemy, this.damage, this.color));
-          }
-          this.cooldownTimer = this.cooldown;
-          break;
-        }
-      }
-    }
-  }
-
-  draw(ctx, scaleX, scaleY) {
-    ctx.fillStyle = this.color;
-    const size = 40 * Math.min(scaleX, scaleY);
-    ctx.fillRect(this.x * scaleX - size / 2, this.y * scaleY - size / 2, size, size);
-    if (this.selected) {
-      ctx.beginPath();
-      ctx.arc(this.x * scaleX, this.y * scaleY, this.range * Math.min(scaleX, scaleY), 0, 2 * Math.PI);
-      ctx.strokeStyle = "yellow";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }
-  }
-
-  upgrade() {
-    this.level++;
-    this.damage += Math.floor(this.damage * 0.5);
-    this.range += 20;
-    this.cooldown = Math.max(this.cooldown - 10, 5);
-  }
-}
-
-// Projectile Class
-class Projectile {
-  constructor(x, y, target, damage, color) {
-    this.x = x;
-    this.y = y;
-    this.target = target;
-    this.damage = damage;
-    this.color = color;
-    this.speed = 5;
-  }
-
-  update(gameState) {
-    const dx = this.target.x - this.x;
-    const dy = this.target.y - this.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    if (distance < this.speed) {
-      this.target.health -= this.damage;
-      if (this.target.health <= 0) {
-        gameState.score += 10;
-        gameState.money += 5;
-        gameState.enemies = gameState.enemies.filter(e => e !== this.target);
-      }
-      gameState.projectiles = gameState.projectiles.filter(p => p !== this);
-    } else {
-      this.x += (dx / distance) * this.speed * gameState.gameSpeed;
-      this.y += (dy / distance) * this.speed * gameState.gameSpeed;
-    }
-  }
-
-  draw(ctx) {
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, 5, 0, 2 * Math.PI);
-    ctx.fillStyle = this.color;
-    ctx.fill();
-  }
-}
-
 // Game Loop
 function gameLoop() {
   if (gameState.gameOver) return;
@@ -265,10 +157,12 @@ function gameLoop() {
     gameState.enemies.forEach(enemy => enemy.update(gameState));
     gameState.towers.forEach(tower => tower.update(gameState));
     gameState.projectiles.forEach(projectile => projectile.update(gameState));
+    gameState.projectiles = gameState.projectiles.filter(p => p.isActive);
   }
+
   gameState.enemies.forEach(enemy => enemy.draw(ctx, scaleX, scaleY));
   gameState.towers.forEach(tower => tower.draw(ctx, scaleX, scaleY));
-  gameState.projectiles.forEach(projectile => projectile.draw(ctx));
+  gameState.projectiles.forEach(projectile => projectile.draw(ctx, scaleX, scaleY));
 
   if (gameState.selectedTowerType) drawTowerFootprint();
 
@@ -287,7 +181,7 @@ function gameLoop() {
   requestAnimationFrame(gameLoop);
 }
 
-// Spawn Wave with Difficulty Adjustment
+// Spawn Wave
 function spawnWave() {
   gameState.isSpawning = true;
   let waveSize = gameState.wave * 5;
@@ -295,7 +189,6 @@ function spawnWave() {
   let healthMultiplier = 1;
   let spawnInterval = 1000;
 
-  // Adjust based on difficulty
   if (selectedDifficulty === "medium") {
     healthMultiplier = 1.5;
     waveSize *= 1.2;
@@ -375,6 +268,7 @@ document.addEventListener("DOMContentLoaded", () => {
       window.location.href = "index.html";
     }
   });
+  gameLoop(); // Start the game loop
 });
 
 // Tower Placement and Selection
@@ -502,9 +396,4 @@ function checkGameEnd() {
 
 document.getElementById("restart-button").addEventListener("click", () => {
   window.location.reload();
-});
-
-// Start Game
-document.addEventListener("DOMContentLoaded", () => {
-  gameLoop();
 });
