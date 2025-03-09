@@ -368,3 +368,76 @@ body, html {
 #tower-shop-items::-webkit-scrollbar-thumb:hover {
   background: #555;
 }
+
+#map-selector {
+  background-color: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  margin: 20px 0;
+  width: 100%;
+  max-width: 500px;
+}
+
+#map-selector h2 {
+  margin-top: 0;
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+#map-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding-right: 5px;
+}
+
+#map-container button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 15px;
+  background-color: #f0f0f0;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+#map-container button:hover:not(.active) {
+  background-color: #e0e0e0;
+}
+
+#map-container button.active {
+  background-color: #2196F3;
+  color: white;
+  border-color: #2196F3;
+}
+
+/* Custom scrollbar styling for map container */
+#map-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+#map-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+#map-container::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+#map-container::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Add a map icon for better visuals (optional) */
+#map-container button::before {
+  content: "🗺️";
+  margin-right: 8px;
+}
+

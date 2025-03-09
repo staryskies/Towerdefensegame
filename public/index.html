@@ -4,461 +4,257 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tower Defense Game</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="style.css">
   <style>
-    /* Basic styling for auth and menu screens */
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      background-color: #f0f0f0;
-    }
-    
-    #auth-screen, #main-menu {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      text-align: center;
-    }
-    
-    #auth-form, #map-selector, #tower-shop {
-      background-color: white;
+    /* Add the CSS for the map selection menu and button */
+    #map-selection-menu {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.8);
       padding: 20px;
       border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      margin: 20px 0;
-      width: 100%;
-      max-width: 500px;
+      color: white;
+      text-align: center;
+      z-index: 1000;
+      max-height: 80vh;
+      overflow-y: auto;
+      width: 300px;
+      display: none; /* Hidden by default */
     }
-    
-    input {
-      display: block;
-      width: 100%;
+
+    #map-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .map-button {
+      background: #444;
+      color: white;
       padding: 10px;
-      margin: 10px 0;
-      border: 1px solid #ddd;
-      border-radius: 5px;
-    }
-    
-    button {
-      padding: 10px 20px;
-      margin: 10px 5px;
       border: none;
       border-radius: 5px;
-      background-color: #4CAF50;
-      color: white;
       cursor: pointer;
+      transition: background 0.3s;
     }
-    
-    button:disabled {
-      background-color: #cccccc;
-      cursor: not-allowed;
+
+    .map-button:hover {
+      background: #666;
     }
-    
-    button:hover:not(:disabled) {
-      background-color: #45a049;
-    }
-    
-    button.active {
-      background-color: #2196F3;
-    }
-    
-    #tower-shop {
-      display: none;
-    }
-    
-    .shop-item {
-      border: 1px solid #ddd;
-      padding: 10px;
-      margin: 10px 0;
-      border-radius: 5px;
-    }
-    
-    #notification-box {
+
+    #open-map-menu {
       position: fixed;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background-color: rgba(0, 0, 0, 0.7);
+      top: 10px;
+      left: 10px;
+      background: #444;
       color: white;
-      padding: 10px 20px;
+      padding: 10px;
+      border: none;
       border-radius: 5px;
-      z-index: 1000;
-      opacity: 0;
-      transition: opacity 0.3s;
+      cursor: pointer;
+      transition: background 0.3s;
     }
-    
-    #notification-box.show {
-      opacity: 1;
-    }
-    
-    /* Adding styles for map container */
-    #map-container {
-      max-height: 300px;
-      overflow-y: auto;
-      width: 100%;
-    }
-    
-    #map-container button {
-      display: block;
-      width: 100%;
-      margin: 10px 0;
+
+    #open-map-menu:hover {
+      background: #666;
     }
   </style>
 </head>
 <body>
-  <!-- Login/Sign-In Screen -->
-  <div id="auth-screen">
-    <div id="auth-form">
-      <h2>Welcome to Tower Defense!</h2>
-      <div id="login-form">
-        <h3>Login</h3>
-        <input type="text" id="login-username" placeholder="Username">
-        <input type="password" id="login-password" placeholder="Password">
-        <button id="login-button">Login</button>
-        <p>Don't have an account? <a href="#" id="show-signup">Sign Up</a></p>
-      </div>
-      <div id="signup-form" style="display: none;">
-        <h3>Sign Up</h3>
-        <input type="text" id="signup-username" placeholder="Username">
-        <input type="password" id="signup-password" placeholder="Password">
-        <button id="signup-button">Sign Up</button>
-        <p>Already have an account? <a href="#" id="show-login">Login</a></p>
-      </div>
+  <!-- Map Selection Menu -->
+  <div id="map-selection-menu">
+    <h2>Select a Map</h2>
+    <div id="map-list">
+      <!-- Map buttons will be dynamically added here -->
     </div>
   </div>
 
-  <!-- Main Menu -->
-  <div id="main-menu" style="display: none;">
-    <h1>Tower Defense Game</h1>
-    <button id="start-game" disabled>Start Game</button> <!-- Disabled by default -->
-    <div id="map-selector">
-      <h2>Select a Map</h2>
-      <!-- Map buttons will be created dynamically by JavaScript -->
-    </div>
-    <button id="open-shop-button">Tower Shop</button>
-    <button id="logout-button">Logout</button>
-    
-    <div id="tower-shop" style="display: none;">
-      <h2>Tower Shop</h2>
-      <p>Global Money: $<span id="shop-global-money">0</span></p>
-      <div id="tower-shop-items"></div>
-      <button id="close-shop-button">Close Shop</button>
-    </div>
-  </div>
+  <!-- Change Map Button -->
+  <button id="open-map-menu">Change Map</button>
 
-  <div id="notification-box"></div>
+  <!-- Game Canvas -->
+  <canvas id="gameCanvas"></canvas>
 
   <script>
-    // Tower Stats (moved here for shop functionality)
-    const towerStats = {
-      basic: {
-        cost: 50,
-        damage: 20,
-        range: 100,
-        cooldown: 60,
-        color: "gray",
-        ability: "None",
-        unlocked: true,
-        unlockCost: 0
+    // Add the JavaScript code for the map selection menu and button
+    const maps = {
+      map1: {
+        path: [
+          { x: 0, y: 300 },
+          { x: 300, y: 300 },
+          { x: 300, y: 100 },
+          { x: 600, y: 100 },
+          { x: 600, y: 400 },
+          { x: 900, y: 400 },
+          { x: 900, y: 300 },
+          { x: 1200, y: 300 },
+        ],
+        spawnPoint: { x: 0, y: 300 },
+        moneyReward: 50,
+        name: "Beginner Path"
       },
-      sniper: {
-        cost: 100,
-        damage: 50,
-        range: 200,
-        cooldown: 120,
-        color: "blue",
-        ability: "High Damage",
-        unlocked: false,
-        unlockCost: 500
+      map2: {
+        path: [
+          { x: 0, y: 150 },
+          { x: 400, y: 150 },
+          { x: 400, y: 450 },
+          { x: 800, y: 450 },
+          { x: 800, y: 150 },
+          { x: 1200, y: 150 },
+        ],
+        spawnPoint: { x: 0, y: 150 },
+        moneyReward: 75,
+        name: "Zigzag Path"
       },
-      splash: {
-        cost: 150,
-        damage: 10,
-        range: 80,
-        cooldown: 30,
-        color: "orange",
-        ability: "Area Damage",
-        unlocked: false,
-        unlockCost: 750
+      map3: {
+        path: [
+          { x: 0, y: 300 },
+          { x: 200, y: 300 },
+          { x: 200, y: 100 },
+          { x: 400, y: 100 },
+          { x: 400, y: 300 },
+          { x: 600, y: 300 },
+          { x: 600, y: 100 },
+          { x: 800, y: 100 },
+          { x: 800, y: 300 },
+          { x: 1000, y: 300 },
+          { x: 1000, y: 100 },
+          { x: 1200, y: 100 },
+        ],
+        spawnPoint: { x: 0, y: 300 },
+        moneyReward: 100,
+        name: "Snake Path"
       },
-      slow: {
-        cost: 75,
-        damage: 5,
-        range: 120,
-        cooldown: 90,
-        color: "cyan",
-        ability: "Slows Enemies",
-        unlocked: false,
-        unlockCost: 600
+      map4: {
+        path: [
+          { x: 0, y: 200 },
+          { x: 400, y: 200 },
+          { x: 400, y: 400 },
+          { x: 800, y: 400 },
+          { x: 800, y: 200 },
+          { x: 1200, y: 200 },
+        ],
+        spawnPoint: { x: 0, y: 200 },
+        moneyReward: 80,
+        name: "Double Zigzag"
       },
-      rapid: {
-        cost: 125,
-        damage: 15,
-        range: 90,
-        cooldown: 12,
-        color: "purple",
-        ability: "Rapid Fire",
-        unlocked: false,
-        unlockCost: 800
+      map5: {
+        path: [
+          { x: 0, y: 100 },
+          { x: 200, y: 100 },
+          { x: 200, y: 500 },
+          { x: 400, y: 500 },
+          { x: 400, y: 100 },
+          { x: 600, y: 100 },
+          { x: 600, y: 500 },
+          { x: 800, y: 500 },
+          { x: 800, y: 100 },
+          { x: 1000, y: 100 },
+          { x: 1000, y: 500 },
+          { x: 1200, y: 500 },
+        ],
+        spawnPoint: { x: 0, y: 100 },
+        moneyReward: 120,
+        name: "Extreme Snake"
       },
-      bomb: {
-        cost: 200,
-        damage: 40,
-        range: 150,
-        cooldown: 90,
-        color: "brown",
-        ability: "Explosive Damage",
-        unlocked: false,
-        unlockCost: 1000
+      map6: {
+        path: [
+          { x: 0, y: 300 },
+          { x: 600, y: 300 },
+          { x: 600, y: 100 },
+          { x: 1200, y: 100 },
+        ],
+        spawnPoint: { x: 0, y: 300 },
+        moneyReward: 60,
+        name: "Shortcut"
+      },
+      map7: {
+        path: [
+          { x: 0, y: 400 },
+          { x: 300, y: 400 },
+          { x: 300, y: 200 },
+          { x: 600, y: 200 },
+          { x: 600, y: 400 },
+          { x: 900, y: 400 },
+          { x: 900, y: 200 },
+          { x: 1200, y: 200 },
+        ],
+        spawnPoint: { x: 0, y: 400 },
+        moneyReward: 90,
+        name: "Alternate Path"
+      },
+      map8: {
+        path: [
+          { x: 0, y: 100 },
+          { x: 400, y: 100 },
+          { x: 400, y: 500 },
+          { x: 800, y: 500 },
+          { x: 800, y: 100 },
+          { x: 1200, y: 100 },
+        ],
+        spawnPoint: { x: 0, y: 100 },
+        moneyReward: 110,
+        name: "Long Zigzag"
+      },
+      map9: {
+        path: [
+          { x: 0, y: 300 },
+          { x: 200, y: 300 },
+          { x: 200, y: 100 },
+          { x: 400, y: 100 },
+          { x: 400, y: 500 },
+          { x: 600, y: 500 },
+          { x: 600, y: 100 },
+          { x: 800, y: 100 },
+          { x: 800, y: 500 },
+          { x: 1000, y: 500 },
+          { x: 1000, y: 100 },
+          { x: 1200, y: 100 },
+        ],
+        spawnPoint: { x: 0, y: 300 },
+        moneyReward: 130,
+        name: "Crazy Path"
       },
     };
 
-    // Available maps
-    const availableMaps = { 
-      map1: "Beginner Path", 
-      map2: "Zigzag Path", 
-      map3: "Snake Path" 
-      // Add more maps here as needed 
-    };
+    // Function to create the map selection menu
+    function createMapSelectionMenu() {
+      const mapList = document.getElementById("map-list");
 
-    // Load global money from localStorage or initialize it
-    let globalMoney = parseInt(localStorage.getItem("globalMoney") || "0");
+      // Clear existing buttons
+      mapList.innerHTML = "";
 
-    // Function to show a notification
-    function showNotification(message, duration = 3000) {
-      const notificationBox = document.getElementById("notification-box");
-      notificationBox.textContent = message;
-      notificationBox.classList.add("show");
-      setTimeout(() => {
-        notificationBox.classList.remove("show");
-      }, duration);
-    }
-
-    window.addEventListener("load", () => {
-      // Check if we're returning from the game and should show the menu
-      if (window.location.hash === "#menu" && localStorage.getItem("token")) {
-        showMainMenu();
-      }
-    });
-
-    // Login/Sign-In Screen Elements
-    const authScreen = document.getElementById("auth-screen");
-    const loginForm = document.getElementById("login-form");
-    const signupForm = document.getElementById("signup-form");
-    const loginButton = document.getElementById("login-button");
-    const signupButton = document.getElementById("signup-button");
-    const showSignup = document.getElementById("show-signup");
-    const showLogin = document.getElementById("show-login");
-
-    // Main Menu Elements
-    const mainMenu = document.getElementById("main-menu");
-    const startGameButton = document.getElementById("start-game");
-    const mapSelector = document.getElementById("map-selector");
-    const logoutButton = document.getElementById("logout-button");
-
-    // Show the sign-up form
-    showSignup.addEventListener("click", (e) => {
-      e.preventDefault();
-      loginForm.style.display = "none";
-      signupForm.style.display = "block";
-    });
-
-    // Show the login form
-    showLogin.addEventListener("click", (e) => {
-      e.preventDefault();
-      signupForm.style.display = "none";
-      loginForm.style.display = "block";
-    });
-
-    // Handle login
-    loginButton.addEventListener("click", () => {
-      const username = document.getElementById("login-username").value;
-      const password = document.getElementById("login-password").value;
-
-      // Mock login for demo
-      if (username && password) {
-        localStorage.setItem("token", "demo-token");
-        localStorage.setItem("username", username);
-        showMainMenu();
-      } else {
-        alert("Please enter username and password");
-      }
-    });
-
-    // Handle sign-up
-    signupButton.addEventListener("click", () => {
-      const username = document.getElementById("signup-username").value;
-      const password = document.getElementById("signup-password").value;
-
-      // Mock signup for demo
-      if (username && password) {
-        localStorage.setItem("token", "demo-token");
-        localStorage.setItem("username", username);
-        showMainMenu();
-      } else {
-        alert("Please enter username and password");
-      }
-    });
-
-    // Show the main menu
-    function showMainMenu() {
-      authScreen.style.display = "none";
-      mainMenu.style.display = "flex";
-      loadUnlockedTowers();
-      initMapSelector();
-      initShop();
-    }
-
-    // Initialize the map selector
-    function initMapSelector() {
-      // Create a container for the maps (scrollable)
-      const mapContainer = document.createElement("div");
-      mapContainer.id = "map-container";
-      mapSelector.appendChild(mapContainer);
-      
-      // Add map buttons to the container
-      for (const [mapId, mapName] of Object.entries(availableMaps)) {
-        const mapButton = document.createElement("button");
-        mapButton.setAttribute("data-map", mapId);
-        mapButton.textContent = mapName;
-        
-        // Check if this was the previously selected map
-        const savedMap = localStorage.getItem("selectedMap");
-        if (savedMap === mapId) {
-          mapButton.classList.add("active");
-          startGameButton.disabled = false;
-        }
-        
-        mapContainer.appendChild(mapButton);
-      }
-      
-      // Add click event listeners to map buttons
-      const mapButtons = document.querySelectorAll("#map-container button");
-      mapButtons.forEach(button => {
+      // Add a button for each map
+      for (const [key, map] of Object.entries(maps)) {
+        const button = document.createElement("button");
+        button.className = "map-button";
+        button.textContent = map.name;
         button.addEventListener("click", () => {
-          // Remove active class from all buttons
-          mapButtons.forEach(btn => btn.classList.remove("active"));
-          // Add active class to the clicked button
-          button.classList.add("active");
-          // Enable the "Start Game" button
-          startGameButton.disabled = false;
-          // Save selected map
-          localStorage.setItem("selectedMap", button.getAttribute("data-map"));
+          // Save the selected map to localStorage
+          localStorage.setItem("selectedMap", key);
+          // Reload the game with the selected map
+          window.location.reload();
         });
-      });
-    }
-
-    // Handle logout
-    logoutButton.addEventListener("click", () => {
-      localStorage.removeItem("token");
-      localStorage.removeItem("username");
-      mainMenu.style.display = "none";
-      authScreen.style.display = "flex";
-    });
-
-    // Start game when "Start Game" button is clicked
-    startGameButton.addEventListener("click", () => {
-      const selectedMap = document.querySelector("#map-container button.active")?.dataset.map || "map1";
-      localStorage.setItem("selectedMap", selectedMap); // Store selected map
-      window.location.href = "game.html"; // Redirect to game page
-    });
-
-    function initShop() {
-      const shopButton = document.getElementById("open-shop-button");
-      const shopPanel = document.getElementById("tower-shop");
-      const closeShopButton = document.getElementById("close-shop-button");
-      const shopItemsContainer = document.getElementById("tower-shop-items");
-      
-      // Update the global money display in the shop
-      document.getElementById("shop-global-money").textContent = globalMoney;
-      
-      // Clear previous shop items
-      shopItemsContainer.innerHTML = "";
-      
-      // Populate shop with available tower types
-      for (const [towerType, stats] of Object.entries(towerStats)) {
-        if (towerType === "basic") continue; // Skip basic tower as it's already unlocked
-        
-        const isUnlocked = stats.unlocked;
-        const item = document.createElement("div");
-        item.className = "shop-item";
-        
-        item.innerHTML = `
-          <h3>${capitalizeFirstLetter(towerType)} Tower</h3>
-          <p>Damage: ${stats.damage} | Range: ${stats.range}</p>
-          <p>Ability: ${stats.ability}</p>
-          <p>${isUnlocked ? "Unlocked" : `Cost: $${stats.unlockCost}`}</p>
-          <button class="unlock-button" data-tower="${towerType}" ${isUnlocked ? "disabled" : ""}>
-            ${isUnlocked ? "Unlocked" : "Unlock"}
-          </button>
-        `;
-        
-        shopItemsContainer.appendChild(item);
+        mapList.appendChild(button);
       }
-      
-      // Show the shop
-      shopButton.addEventListener("click", () => {
-        shopPanel.style.display = "block";
-        // Update global money display
-        document.getElementById("shop-global-money").textContent = globalMoney;
-      });
-      
-      // Close the shop
-      closeShopButton.addEventListener("click", () => {
-        shopPanel.style.display = "none";
-      });
-      
-      // Handle tower unlocking
-      shopItemsContainer.addEventListener("click", (e) => {
-        if (e.target.classList.contains("unlock-button") && !e.target.disabled) {
-          const towerType = e.target.getAttribute("data-tower");
-          const unlockCost = towerStats[towerType].unlockCost;
-          
-          if (globalMoney >= unlockCost) {
-            // Unlock the tower
-            globalMoney -= unlockCost;
-            towerStats[towerType].unlocked = true;
-            localStorage.setItem("globalMoney", globalMoney);
-            
-            // Update unlocked towers in localStorage
-            const unlockedTowers = JSON.parse(localStorage.getItem("unlockedTowers") || "[]");
-            unlockedTowers.push(towerType);
-            localStorage.setItem("unlockedTowers", JSON.stringify(unlockedTowers));
-            
-            // Update the shop display
-            document.getElementById("shop-global-money").textContent = globalMoney;
-            e.target.innerHTML = "Unlocked";
-            e.target.disabled = true;
-            
-            showNotification(`${capitalizeFirstLetter(towerType)} Tower unlocked!`);
-          } else {
-            showNotification("Not enough global money to unlock this tower!");
-          }
-        }
-      });
     }
 
-    // Helper function to capitalize first letter
-    function capitalizeFirstLetter(string) {
-      return string.charAt(0).toUpperCase() + string.slice(1);
-    }
+    // Show the map selection menu when the game starts
+    document.addEventListener("DOMContentLoaded", () => {
+      createMapSelectionMenu();
+      document.getElementById("map-selection-menu").style.display = "block";
+    });
 
-    // Load unlocked towers from localStorage
-    function loadUnlockedTowers() {
-      const unlockedTowers = JSON.parse(localStorage.getItem("unlockedTowers") || "[]");
-      
-      // Basic tower is always unlocked
-      towerStats.basic.unlocked = true;
-      
-      unlockedTowers.forEach(towerType => {
-        if (towerStats[towerType]) {
-          towerStats[towerType].unlocked = true;
-        }
-      });
-    }
+    // Add event listener for the "Change Map" button
+    document.getElementById("open-map-menu").addEventListener("click", () => {
+      createMapSelectionMenu();
+      document.getElementById("map-selection-menu").style.display = "block";
+    });
   </script>
+
+  <!-- Your Game Script -->
+  <script src="game.js"></script>
 </body>
 </html>

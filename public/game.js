@@ -162,10 +162,131 @@ const maps = {
     moneyReward: 100,
     name: "Snake Path"
   },
+  map4: {
+    path: [
+      { x: 0, y: 200 },
+      { x: 400, y: 200 },
+      { x: 400, y: 400 },
+      { x: 800, y: 400 },
+      { x: 800, y: 200 },
+      { x: 1200, y: 200 },
+    ],
+    spawnPoint: { x: 0, y: 200 },
+    moneyReward: 80,
+    name: "Double Zigzag"
+  },
+  map5: {
+    path: [
+      { x: 0, y: 100 },
+      { x: 200, y: 100 },
+      { x: 200, y: 500 },
+      { x: 400, y: 500 },
+      { x: 400, y: 100 },
+      { x: 600, y: 100 },
+      { x: 600, y: 500 },
+      { x: 800, y: 500 },
+      { x: 800, y: 100 },
+      { x: 1000, y: 100 },
+      { x: 1000, y: 500 },
+      { x: 1200, y: 500 },
+    ],
+    spawnPoint: { x: 0, y: 100 },
+    moneyReward: 120,
+    name: "Extreme Snake"
+  },
+  map6: {
+    path: [
+      { x: 0, y: 300 },
+      { x: 600, y: 300 },
+      { x: 600, y: 100 },
+      { x: 1200, y: 100 },
+    ],
+    spawnPoint: { x: 0, y: 300 },
+    moneyReward: 60,
+    name: "Shortcut"
+  },
+  map7: {
+    path: [
+      { x: 0, y: 400 },
+      { x: 300, y: 400 },
+      { x: 300, y: 200 },
+      { x: 600, y: 200 },
+      { x: 600, y: 400 },
+      { x: 900, y: 400 },
+      { x: 900, y: 200 },
+      { x: 1200, y: 200 },
+    ],
+    spawnPoint: { x: 0, y: 400 },
+    moneyReward: 90,
+    name: "Alternate Path"
+  },
+  map8: {
+    path: [
+      { x: 0, y: 100 },
+      { x: 400, y: 100 },
+      { x: 400, y: 500 },
+      { x: 800, y: 500 },
+      { x: 800, y: 100 },
+      { x: 1200, y: 100 },
+    ],
+    spawnPoint: { x: 0, y: 100 },
+    moneyReward: 110,
+    name: "Long Zigzag"
+  },
+  map9: {
+    path: [
+      { x: 0, y: 300 },
+      { x: 200, y: 300 },
+      { x: 200, y: 100 },
+      { x: 400, y: 100 },
+      { x: 400, y: 500 },
+      { x: 600, y: 500 },
+      { x: 600, y: 100 },
+      { x: 800, y: 100 },
+      { x: 800, y: 500 },
+      { x: 1000, y: 500 },
+      { x: 1000, y: 100 },
+      { x: 1200, y: 100 },
+    ],
+    spawnPoint: { x: 0, y: 300 },
+    moneyReward: 130,
+    name: "Crazy Path"
+  },
 };
+// Function to create the map selection menu
+function createMapSelectionMenu() {
+  const mapList = document.getElementById("map-list");
 
+  // Clear existing buttons
+  mapList.innerHTML = "";
+
+  // Add a button for each map
+  for (const [key, map] of Object.entries(maps)) {
+    const button = document.createElement("button");
+    button.className = "map-button";
+    button.textContent = map.name;
+    button.addEventListener("click", () => {
+      // Save the selected map to localStorage
+      localStorage.setItem("selectedMap", key);
+      // Reload the game with the selected map
+      window.location.reload();
+    });
+    mapList.appendChild(button);
+  }
+}
+
+// Show the map selection menu when the game starts
+document.addEventListener("DOMContentLoaded", () => {
+  createMapSelectionMenu();
+});
+
+// Add event listener for the "Change Map" button
+document.getElementById("open-map-menu").addEventListener("click", () => {
+  createMapSelectionMenu();
+  document.getElementById("map-selection-menu").style.display = "block";
+});
 // Load Selected Map
-const selectedMap = localStorage.getItem("selectedMap") || "map1";
+const selectedMap = localStorage.getItem("selectedMap") || "map1"; // Default to map1 if no map is selected
 const path = maps[selectedMap].path;
 const spawnPoint = maps[selectedMap].spawnPoint;
 
@@ -266,6 +387,11 @@ function gameLoop() {
   for (let projectile of gameState.projectiles) {
     if (!gameState.isPaused) projectile.update(gameState);
     projectile.draw(ctx, scaleX, scaleY);
+  }
+
+  // Draw the tower footprint if a tower is selected
+  if (gameState.selectedTowerType) {
+    drawTowerFootprint();
   }
 
   // Check if all enemies are defeated and no wave is currently spawning
@@ -442,6 +568,53 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   });
 });
+
+let mouseX = 0;
+let mouseY = 0;
+
+
+canvas.addEventListener("mousemove", (e) => {
+  const rect = canvas.getBoundingClientRect();
+  mouseX = e.clientX - rect.left; // Mouse X relative to canvas
+  mouseY = e.clientY - rect.top; // Mouse Y relative to canvas
+});
+
+function drawTowerFootprint() {
+  if (gameState.selectedTowerType) {
+    const towerType = gameState.selectedTowerType;
+    const stats = towerStats[towerType];
+
+    // Convert mouse coordinates to unscaled coordinates
+    const x = mouseX / scaleX;
+    const y = mouseY / scaleY;
+
+    // Draw the tower range (as a circle)
+    ctx.beginPath();
+    ctx.arc(x * scaleX, y * scaleY, stats.range * Math.min(scaleX, scaleY), 0, 2 * Math.PI);
+    ctx.strokeStyle = "rgba(0, 255, 0, 0.5)"; // Semi-transparent green
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Draw the tower footprint (as a square)
+    ctx.fillStyle = "rgba(0, 255, 0, 0.2)"; // Semi-transparent green
+    ctx.fillRect(
+      x * scaleX - 20 * Math.min(scaleX, scaleY), // Adjust for scaling
+      y * scaleY - 20 * Math.min(scaleX, scaleY), // Adjust for scaling
+      40 * Math.min(scaleX, scaleY), // Tower size
+      40 * Math.min(scaleX, scaleY) // Tower size
+    );
+
+    // Draw the tower type text
+    ctx.fillStyle = "black";
+    ctx.font = "12px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(
+      `${capitalizeFirstLetter(towerType)} Tower`,
+      x * scaleX,
+      y * scaleY + 30 * Math.min(scaleX, scaleY)
+    );
+  }
+}
 
 // Place Towers on Canvas Click
 canvas.addEventListener("click", (e) => {
