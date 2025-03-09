@@ -5,71 +5,155 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tower Defense Game - Menu</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
+    * {
       margin: 0;
       padding: 0;
-      background-color: #f0f0f0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1e2a44, #2c3e50);
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
+      min-height: 100vh;
+      color: #fff;
     }
     #auth-screen, #main-menu {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      background-color: white;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 15px;
+      padding: 30px;
       width: 100%;
-      max-width: 500px;
+      max-width: 450px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      backdrop-filter: blur(5px);
     }
-    #signup-form, #tower-shop {
+    #signup-form {
       display: none;
+    }
+    h1 {
+      font-size: 2.5em;
+      color: #2c3e50;
+      text-align: center;
+      margin-bottom: 20px;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    h2 {
+      font-size: 1.8em;
+      color: #34495e;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    h3 {
+      font-size: 1.4em;
+      color: #34495e;
+      margin: 15px 0;
     }
     input, button {
       width: 100%;
-      padding: 10px;
-      margin: 5px 0;
-      border-radius: 5px;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 8px;
+      font-size: 1em;
+      transition: all 0.3s ease;
+    }
+    input {
+      border: 2px solid #ddd;
+      background: #f9f9f9;
+      color: #333;
+    }
+    input:focus {
+      border-color: #3498db;
+      outline: none;
+      box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
     }
     button {
-      background-color: #4CAF50;
+      background: #3498db;
       color: white;
       border: none;
       cursor: pointer;
+      font-weight: bold;
     }
     button:hover:not(:disabled) {
-      background-color: #45a049;
+      background: #2980b9;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
     }
     button:disabled {
-      background-color: #cccccc;
+      background: #bdc3c7;
       cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
     }
     a {
-      color: #2196F3;
-      cursor: pointer;
+      color: #3498db;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    a:hover {
+      color: #2980b9;
+      text-decoration: underline;
+    }
+    p {
+      color: #7f8c8d;
+      text-align: center;
+      margin: 10px 0;
+    }
+    #map-selector button {
+      background: #ecf0f1;
+      color: #2c3e50;
+      margin: 5px 0;
+    }
+    #map-selector button:hover:not(:disabled) {
+      background: #3498db;
+      color: white;
+    }
+    #tower-shop {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(255, 255, 255, 0.98);
+      padding: 25px;
+      border-radius: 15px;
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+      z-index: 1000;
+      width: 100%;
+      max-width: 400px;
+      max-height: 80vh;
+      overflow-y: auto;
+      display: none;
     }
     .shop-item {
-      border: 1px solid #ddd;
-      padding: 10px;
+      background: #f5f6fa;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 10px 0;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      color: #2c3e50;
+    }
+    .shop-item h4 {
+      font-size: 1.2em;
+      margin-bottom: 5px;
+    }
+    .shop-item p {
+      color: #7f8c8d;
+      text-align: left;
       margin: 5px 0;
-      border-radius: 5px;
     }
     #notification-box {
       position: fixed;
       top: 20px;
       left: 50%;
       transform: translateX(-50%);
-      background-color: rgba(0, 0, 0, 0.7);
+      background: rgba(44, 62, 80, 0.9);
       color: white;
       padding: 10px 20px;
-      border-radius: 5px;
-      z-index: 1000;
+      border-radius: 8px;
+      z-index: 2000;
       opacity: 0;
-      transition: opacity 0.3s;
+      transition: opacity 0.3s ease;
+      font-weight: 500;
     }
     #notification-box.show {
       opacity: 1;
@@ -211,7 +295,7 @@
         localStorage.setItem("selectedMap", button.getAttribute("data-map"));
         document.getElementById("start-game").disabled = false;
         document.querySelectorAll("#map-selector button").forEach(btn => btn.style.backgroundColor = "");
-        button.style.backgroundColor = "#2196F3";
+        button.style.backgroundColor = "#3498db";
       });
     });
 

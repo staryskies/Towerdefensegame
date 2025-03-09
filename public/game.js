@@ -415,6 +415,17 @@ function drawTowerFootprint() {
   );
 }
 
+function canPlaceTower(x, y) {
+  const minDistance = 40; // Minimum distance between towers in original coordinates
+  for (let tower of gameState.towers) {
+    const dx = x - tower.x;
+    const dy = y - tower.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    if (distance < minDistance) return false;
+  }
+  return true;
+}
+
 canvas.addEventListener("click", e => {
   const rect = canvas.getBoundingClientRect();
   const x = (e.clientX - rect.left) / scaleX;
@@ -422,11 +433,15 @@ canvas.addEventListener("click", e => {
   if (gameState.selectedTowerType) {
     const cost = towerStats[gameState.selectedTowerType].cost;
     if (gameState.money >= cost) {
-      gameState.towers.push(new Tower(x, y, gameState.selectedTowerType));
-      gameState.money -= cost;
-      gameState.selectedTowerType = null;
-      document.querySelectorAll(".tower-option").forEach(o => o.classList.remove("selected"));
-      showNotification(`Tower placed!`);
+      if (canPlaceTower(x, y)) {
+        gameState.towers.push(new Tower(x, y, gameState.selectedTowerType));
+        gameState.money -= cost;
+        gameState.selectedTowerType = null;
+        document.querySelectorAll(".tower-option").forEach(o => o.classList.remove("selected"));
+        showNotification(`Tower placed!`);
+      } else {
+        showNotification("Cannot place tower here: too close to another tower!");
+      }
     } else {
       showNotification("Not enough money!");
     }
