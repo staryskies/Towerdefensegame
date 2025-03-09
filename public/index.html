@@ -3,79 +3,61 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tower Defense Game</title>
-  <link rel="stylesheet" href="styles.css">
+  <title>Tower Defense Game - Menu</title>
   <style>
-    /* Basic styling for auth and menu screens */
     body {
       font-family: Arial, sans-serif;
       margin: 0;
       padding: 0;
       background-color: #f0f0f0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
     }
-    
     #auth-screen, #main-menu {
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      text-align: center;
-    }
-    
-    #auth-form, #map-selector, #tower-shop {
       background-color: white;
       padding: 20px;
       border-radius: 10px;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      margin: 20px 0;
       width: 100%;
       max-width: 500px;
     }
-    
-    input {
-      display: block;
+    #signup-form, #tower-shop {
+      display: none;
+    }
+    input, button {
       width: 100%;
       padding: 10px;
-      margin: 10px 0;
-      border: 1px solid #ddd;
+      margin: 5px 0;
       border-radius: 5px;
     }
-    
     button {
-      padding: 10px 20px;
-      margin: 10px 5px;
-      border: none;
-      border-radius: 5px;
       background-color: #4CAF50;
       color: white;
+      border: none;
       cursor: pointer;
     }
-    
+    button:hover:not(:disabled) {
+      background-color: #45a049;
+    }
     button:disabled {
       background-color: #cccccc;
       cursor: not-allowed;
     }
-    
-    button:hover:not(:disabled) {
-      background-color: #45a049;
+    a {
+      color: #2196F3;
+      cursor: pointer;
     }
-    
-    button.active {
-      background-color: #2196F3;
-    }
-    
-    #tower-shop {
-      display: none;
-    }
-    
     .shop-item {
       border: 1px solid #ddd;
       padding: 10px;
-      margin: 10px 0;
+      margin: 5px 0;
       border-radius: 5px;
     }
-    
     #notification-box {
       position: fixed;
       top: 20px;
@@ -89,376 +71,189 @@
       opacity: 0;
       transition: opacity 0.3s;
     }
-    
     #notification-box.show {
       opacity: 1;
-    }
-    
-    /* Adding styles for map container */
-    #map-container {
-      max-height: 300px;
-      overflow-y: auto;
-      width: 100%;
-    }
-    
-    #map-container button {
-      display: block;
-      width: 100%;
-      margin: 10px 0;
     }
   </style>
 </head>
 <body>
-  <!-- Login/Sign-In Screen -->
   <div id="auth-screen">
-    <div id="auth-form">
-      <h2>Welcome to Tower Defense!</h2>
-      <div id="login-form">
-        <h3>Login</h3>
-        <input type="text" id="login-username" placeholder="Username">
-        <input type="password" id="login-password" placeholder="Password">
-        <button id="login-button">Login</button>
-        <p>Don't have an account? <a href="#" id="show-signup">Sign Up</a></p>
-      </div>
-      <div id="signup-form" style="display: none;">
-        <h3>Sign Up</h3>
-        <input type="text" id="signup-username" placeholder="Username">
-        <input type="password" id="signup-password" placeholder="Password">
-        <button id="signup-button">Sign Up</button>
-        <p>Already have an account? <a href="#" id="show-login">Login</a></p>
-      </div>
+    <div id="login-form">
+      <h2>Login</h2>
+      <input type="text" id="login-username" placeholder="Username">
+      <input type="password" id="login-password" placeholder="Password">
+      <button id="login-button">Login</button>
+      <p>Don't have an account? <a id="show-signup">Sign Up</a></p>
+    </div>
+    <div id="signup-form">
+      <h2>Sign Up</h2>
+      <input type="text" id="signup-username" placeholder="Username">
+      <input type="password" id="signup-password" placeholder="Password">
+      <button id="signup-button">Sign Up</button>
+      <p>Have an account? <a id="show-login">Login</a></p>
     </div>
   </div>
 
-  <!-- Main Menu -->
   <div id="main-menu" style="display: none;">
-    <h1>Tower Defense Game</h1>
-    <button id="start-game" disabled>Start Game</button> <!-- Disabled by default -->
+    <h1>Tower Defense</h1>
+    <button id="start-game" disabled>Start Game</button>
     <div id="map-selector">
-      <h2>Select a Map</h2>
-      <!-- Map buttons will be created dynamically by JavaScript -->
+      <h3>Select Map</h3>
+      <button data-map="map1">Beginner Path</button>
+      <button data-map="map2">Zigzag Path</button>
+      <button data-map="map3">Snake Path</button>
     </div>
-    <button id="open-shop-button">Tower Shop</button>
+    <button id="open-shop">Tower Shop</button>
     <button id="logout-button">Logout</button>
-    
-    <div id="tower-shop" style="display: none;">
-      <h2>Tower Shop</h2>
-      <p>Global Money: $<span id="shop-global-money">0</span></p>
-      <div id="tower-shop-items"></div>
-      <button id="close-shop-button">Close Shop</button>
+    <div id="tower-shop">
+      <h3>Tower Shop</h3>
+      <p>Global Money: $<span id="global-money">0</span></p>
+      <div id="shop-items"></div>
+      <button id="close-shop">Close</button>
     </div>
   </div>
 
   <div id="notification-box"></div>
 
   <script>
-    // Tower Stats (moved here for shop functionality)
     const towerStats = {
-      basic: {
-        cost: 50,
-        damage: 20,
-        range: 100,
-        cooldown: 60,
-        color: "gray",
-        ability: "None",
-        unlocked: true,
-        unlockCost: 0
-      },
-      sniper: {
-        cost: 100,
-        damage: 50,
-        range: 200,
-        cooldown: 120,
-        color: "blue",
-        ability: "High Damage",
-        unlocked: false,
-        unlockCost: 500
-      },
-      splash: {
-        cost: 150,
-        damage: 10,
-        range: 80,
-        cooldown: 30,
-        color: "orange",
-        ability: "Area Damage",
-        unlocked: false,
-        unlockCost: 750
-      },
-      slow: {
-        cost: 75,
-        damage: 5,
-        range: 120,
-        cooldown: 90,
-        color: "cyan",
-        ability: "Slows Enemies",
-        unlocked: false,
-        unlockCost: 600
-      },
-      rapid: {
-        cost: 125,
-        damage: 15,
-        range: 90,
-        cooldown: 12,
-        color: "purple",
-        ability: "Rapid Fire",
-        unlocked: false,
-        unlockCost: 800
-      },
-      bomb: {
-        cost: 200,
-        damage: 40,
-        range: 150,
-        cooldown: 90,
-        color: "brown",
-        ability: "Explosive Damage",
-        unlocked: false,
-        unlockCost: 1000
-      },
+      basic: { unlockCost: 0, unlocked: true, damage: 20, range: 100, ability: "None" },
+      sniper: { unlockCost: 500, unlocked: false, damage: 50, range: 200, ability: "High Damage" },
+      splash: { unlockCost: 750, unlocked: false, damage: 10, range: 80, ability: "Area Damage" },
+      slow: { unlockCost: 600, unlocked: false, damage: 5, range: 120, ability: "Slows Enemies" },
+      rapid: { unlockCost: 800, unlocked: false, damage: 15, range: 90, ability: "Rapid Fire" },
+      bomb: { unlockCost: 1000, unlocked: false, damage: 40, range: 150, ability: "Explosive Damage" },
     };
 
-    // Available maps
-    const availableMaps = { 
-      map1: "Beginner Path", 
-      map2: "Zigzag Path", 
-      map3: "Snake Path" 
-      // Add more maps here as needed 
-    };
-
-    // Load global money from localStorage or initialize it
     let globalMoney = parseInt(localStorage.getItem("globalMoney") || "0");
-
-    // Function to show a notification
-    function showNotification(message, duration = 3000) {
-      const notificationBox = document.getElementById("notification-box");
-      notificationBox.textContent = message;
-      notificationBox.classList.add("show");
-      setTimeout(() => {
-        notificationBox.classList.remove("show");
-      }, duration);
-    }
-
-    window.addEventListener("load", () => {
-      // Check if we're returning from the game and should show the menu
-      if (window.location.hash === "#menu" && localStorage.getItem("token")) {
-        showMainMenu();
-      }
-    });
-
-    // Login/Sign-In Screen Elements
     const authScreen = document.getElementById("auth-screen");
+    const mainMenu = document.getElementById("main-menu");
     const loginForm = document.getElementById("login-form");
     const signupForm = document.getElementById("signup-form");
-    const loginButton = document.getElementById("login-button");
-    const signupButton = document.getElementById("signup-button");
-    const showSignup = document.getElementById("show-signup");
-    const showLogin = document.getElementById("show-login");
+    const shop = document.getElementById("tower-shop");
+    const shopItems = document.getElementById("shop-items");
 
-    // Main Menu Elements
-    const mainMenu = document.getElementById("main-menu");
-    const startGameButton = document.getElementById("start-game");
-    const mapSelector = document.getElementById("map-selector");
-    const logoutButton = document.getElementById("logout-button");
+    function showNotification(message, duration = 3000) {
+      const box = document.getElementById("notification-box");
+      box.textContent = message;
+      box.classList.add("show");
+      setTimeout(() => box.classList.remove("show"), duration);
+    }
 
-    // Show the sign-up form
-    showSignup.addEventListener("click", (e) => {
-      e.preventDefault();
+    function loadUnlockedTowers() {
+      const unlocked = JSON.parse(localStorage.getItem("unlockedTowers") || "[]");
+      towerStats.basic.unlocked = true;
+      unlocked.forEach(type => {
+        if (towerStats[type]) towerStats[type].unlocked = true;
+      });
+    }
+
+    function initShop() {
+      shopItems.innerHTML = "";
+      document.getElementById("global-money").textContent = globalMoney;
+      for (const [type, stats] of Object.entries(towerStats)) {
+        if (type === "basic") continue;
+        const item = document.createElement("div");
+        item.className = "shop-item";
+        item.innerHTML = `
+          <h4>${type.charAt(0).toUpperCase() + type.slice(1)}</h4>
+          <p>Damage: ${stats.damage} | Range: ${stats.range}</p>
+          <p>Ability: ${stats.ability}</p>
+          <p>${stats.unlocked ? "Unlocked" : `Cost: $${stats.unlockCost}`}</p>
+          <button class="unlock-btn" data-type="${type}" ${stats.unlocked ? "disabled" : ""}>
+            ${stats.unlocked ? "Unlocked" : "Unlock"}
+          </button>
+        `;
+        shopItems.appendChild(item);
+      }
+    }
+
+    document.getElementById("show-signup").addEventListener("click", () => {
       loginForm.style.display = "none";
       signupForm.style.display = "block";
     });
 
-    // Show the login form
-    showLogin.addEventListener("click", (e) => {
-      e.preventDefault();
+    document.getElementById("show-login").addEventListener("click", () => {
       signupForm.style.display = "none";
       loginForm.style.display = "block";
     });
 
-    // Handle login
-    loginButton.addEventListener("click", () => {
+    document.getElementById("login-button").addEventListener("click", () => {
       const username = document.getElementById("login-username").value;
       const password = document.getElementById("login-password").value;
-
-      // Mock login for demo
       if (username && password) {
         localStorage.setItem("token", "demo-token");
-        localStorage.setItem("username", username);
         showMainMenu();
       } else {
-        alert("Please enter username and password");
+        showNotification("Please enter username and password");
       }
     });
 
-    // Handle sign-up
-    signupButton.addEventListener("click", () => {
+    document.getElementById("signup-button").addEventListener("click", () => {
       const username = document.getElementById("signup-username").value;
       const password = document.getElementById("signup-password").value;
-
-      // Mock signup for demo
       if (username && password) {
         localStorage.setItem("token", "demo-token");
-        localStorage.setItem("username", username);
         showMainMenu();
       } else {
-        alert("Please enter username and password");
+        showNotification("Please enter username and password");
       }
     });
 
-    // Show the main menu
-    function showMainMenu() {
-      authScreen.style.display = "none";
-      mainMenu.style.display = "flex";
-      loadUnlockedTowers();
-      initMapSelector();
-      initShop();
-    }
-
-    // Initialize the map selector
-    function initMapSelector() {
-      // Create a container for the maps (scrollable)
-      const mapContainer = document.createElement("div");
-      mapContainer.id = "map-container";
-      mapSelector.appendChild(mapContainer);
-      
-      // Add map buttons to the container
-      for (const [mapId, mapName] of Object.entries(availableMaps)) {
-        const mapButton = document.createElement("button");
-        mapButton.setAttribute("data-map", mapId);
-        mapButton.textContent = mapName;
-        
-        // Check if this was the previously selected map
-        const savedMap = localStorage.getItem("selectedMap");
-        if (savedMap === mapId) {
-          mapButton.classList.add("active");
-          startGameButton.disabled = false;
-        }
-        
-        mapContainer.appendChild(mapButton);
-      }
-      
-      // Add click event listeners to map buttons
-      const mapButtons = document.querySelectorAll("#map-container button");
-      mapButtons.forEach(button => {
-        button.addEventListener("click", () => {
-          // Remove active class from all buttons
-          mapButtons.forEach(btn => btn.classList.remove("active"));
-          // Add active class to the clicked button
-          button.classList.add("active");
-          // Enable the "Start Game" button
-          startGameButton.disabled = false;
-          // Save selected map
-          localStorage.setItem("selectedMap", button.getAttribute("data-map"));
-        });
-      });
-    }
-
-    // Handle logout
-    logoutButton.addEventListener("click", () => {
+    document.getElementById("logout-button").addEventListener("click", () => {
       localStorage.removeItem("token");
-      localStorage.removeItem("username");
       mainMenu.style.display = "none";
       authScreen.style.display = "flex";
     });
 
-    // Start game when "Start Game" button is clicked
-    startGameButton.addEventListener("click", () => {
-      const selectedMap = document.querySelector("#map-container button.active")?.dataset.map || "map1";
-      localStorage.setItem("selectedMap", selectedMap); // Store selected map
-      window.location.href = "game.html"; // Redirect to game page
+    document.querySelectorAll("#map-selector button").forEach(button => {
+      button.addEventListener("click", () => {
+        localStorage.setItem("selectedMap", button.getAttribute("data-map"));
+        document.getElementById("start-game").disabled = false;
+        document.querySelectorAll("#map-selector button").forEach(btn => btn.style.backgroundColor = "");
+        button.style.backgroundColor = "#2196F3";
+      });
     });
 
-    function initShop() {
-      const shopButton = document.getElementById("open-shop-button");
-      const shopPanel = document.getElementById("tower-shop");
-      const closeShopButton = document.getElementById("close-shop-button");
-      const shopItemsContainer = document.getElementById("tower-shop-items");
-      
-      // Update the global money display in the shop
-      document.getElementById("shop-global-money").textContent = globalMoney;
-      
-      // Clear previous shop items
-      shopItemsContainer.innerHTML = "";
-      
-      // Populate shop with available tower types
-      for (const [towerType, stats] of Object.entries(towerStats)) {
-        if (towerType === "basic") continue; // Skip basic tower as it's already unlocked
-        
-        const isUnlocked = stats.unlocked;
-        const item = document.createElement("div");
-        item.className = "shop-item";
-        
-        item.innerHTML = `
-          <h3>${capitalizeFirstLetter(towerType)} Tower</h3>
-          <p>Damage: ${stats.damage} | Range: ${stats.range}</p>
-          <p>Ability: ${stats.ability}</p>
-          <p>${isUnlocked ? "Unlocked" : `Cost: $${stats.unlockCost}`}</p>
-          <button class="unlock-button" data-tower="${towerType}" ${isUnlocked ? "disabled" : ""}>
-            ${isUnlocked ? "Unlocked" : "Unlock"}
-          </button>
-        `;
-        
-        shopItemsContainer.appendChild(item);
+    document.getElementById("start-game").addEventListener("click", () => {
+      window.location.href = "game.html";
+    });
+
+    document.getElementById("open-shop").addEventListener("click", () => {
+      initShop();
+      shop.style.display = "block";
+    });
+
+    document.getElementById("close-shop").addEventListener("click", () => {
+      shop.style.display = "none";
+    });
+
+    shopItems.addEventListener("click", e => {
+      if (e.target.classList.contains("unlock-btn") && !e.target.disabled) {
+        const type = e.target.getAttribute("data-type");
+        const cost = towerStats[type].unlockCost;
+        if (globalMoney >= cost) {
+          globalMoney -= cost;
+          towerStats[type].unlocked = true;
+          const unlocked = JSON.parse(localStorage.getItem("unlockedTowers") || "[]");
+          unlocked.push(type);
+          localStorage.setItem("unlockedTowers", JSON.stringify(unlocked));
+          localStorage.setItem("globalMoney", globalMoney);
+          initShop();
+          showNotification(`${type.charAt(0).toUpperCase() + type.slice(1)} Tower unlocked!`);
+        } else {
+          showNotification("Not enough global money!");
+        }
       }
-      
-      // Show the shop
-      shopButton.addEventListener("click", () => {
-        shopPanel.style.display = "block";
-        // Update global money display
-        document.getElementById("shop-global-money").textContent = globalMoney;
-      });
-      
-      // Close the shop
-      closeShopButton.addEventListener("click", () => {
-        shopPanel.style.display = "none";
-      });
-      
-      // Handle tower unlocking
-      shopItemsContainer.addEventListener("click", (e) => {
-        if (e.target.classList.contains("unlock-button") && !e.target.disabled) {
-          const towerType = e.target.getAttribute("data-tower");
-          const unlockCost = towerStats[towerType].unlockCost;
-          
-          if (globalMoney >= unlockCost) {
-            // Unlock the tower
-            globalMoney -= unlockCost;
-            towerStats[towerType].unlocked = true;
-            localStorage.setItem("globalMoney", globalMoney);
-            
-            // Update unlocked towers in localStorage
-            const unlockedTowers = JSON.parse(localStorage.getItem("unlockedTowers") || "[]");
-            unlockedTowers.push(towerType);
-            localStorage.setItem("unlockedTowers", JSON.stringify(unlockedTowers));
-            
-            // Update the shop display
-            document.getElementById("shop-global-money").textContent = globalMoney;
-            e.target.innerHTML = "Unlocked";
-            e.target.disabled = true;
-            
-            showNotification(`${capitalizeFirstLetter(towerType)} Tower unlocked!`);
-          } else {
-            showNotification("Not enough global money to unlock this tower!");
-          }
-        }
-      });
+    });
+
+    function showMainMenu() {
+      authScreen.style.display = "none";
+      mainMenu.style.display = "flex";
+      loadUnlockedTowers();
     }
 
-    // Helper function to capitalize first letter
-    function capitalizeFirstLetter(string) {
-      return string.charAt(0).toUpperCase() + string.slice(1);
-    }
-
-    // Load unlocked towers from localStorage
-    function loadUnlockedTowers() {
-      const unlockedTowers = JSON.parse(localStorage.getItem("unlockedTowers") || "[]");
-      
-      // Basic tower is always unlocked
-      towerStats.basic.unlocked = true;
-      
-      unlockedTowers.forEach(towerType => {
-        if (towerStats[towerType]) {
-          towerStats[towerType].unlocked = true;
-        }
-      });
-    }
+    if (localStorage.getItem("token")) showMainMenu();
   </script>
 </body>
 </html>
