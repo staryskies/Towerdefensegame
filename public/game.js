@@ -60,6 +60,12 @@ const maps = {
   map1: { name: "Beginner Path", path: [{ x: 0, y: 300 }, { x: 300, y: 300 }, { x: 600, y: 100 }, { x: 1200, y: 100 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 50, difficulty: "easy" },
   map2: { name: "Zigzag Path", path: [{ x: 0, y: 150 }, { x: 400, y: 150 }, { x: 400, y: 450 }, { x: 800, y: 450 }, { x: 1200, y: 150 }], spawnPoint: { x: 0, y: 150 }, moneyReward: 75, difficulty: "medium" },
   map3: { name: "Snake Path", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 400, y: 300 }, { x: 600, y: 100 }, { x: 800, y: 300 }, { x: 1000, y: 100 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 100, difficulty: "hard" },
+  map4: { name: "Forest Trail", path: [{ x: 0, y: 200 }, { x: 300, y: 400 }, { x: 600, y: 200 }, { x: 900, y: 400 }, { x: 1200, y: 200 }], spawnPoint: { x: 0, y: 200 }, moneyReward: 60, difficulty: "easy" },
+  map5: { name: "Mountain Pass", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 400, y: 400 }, { x: 800, y: 100 }, { x: 1000, y: 400 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 80, difficulty: "medium" },
+  map6: { name: "Desert Maze", path: [{ x: 0, y: 150 }, { x: 300, y: 300 }, { x: 500, y: 150 }, { x: 700, y: 300 }, { x: 900, y: 150 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 150 }, moneyReward: 120, difficulty: "hard" },
+  map7: { name: "River Bend", path: [{ x: 0, y: 250 }, { x: 400, y: 100 }, { x: 800, y: 400 }, { x: 1200, y: 250 }], spawnPoint: { x: 0, y: 250 }, moneyReward: 55, difficulty: "easy" },
+  map8: { name: "Canyon Run", path: [{ x: 0, y: 200 }, { x: 300, y: 400 }, { x: 600, y: 200 }, { x: 900, y: 400 }, { x: 1200, y: 200 }], spawnPoint: { x: 0, y: 200 }, moneyReward: 85, difficulty: "medium" },
+  map9: { name: "Arctic Path", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 500, y: 400 }, { x: 800, y: 100 }, { x: 1000, y: 400 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 130, difficulty: "hard" },
 };
 
 const selectedMap = localStorage.getItem("selectedMap") || "map1";

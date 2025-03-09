@@ -103,8 +103,8 @@
       gap: 10px;
       margin: 20px 0;
       padding-bottom: 10px;
-      scrollbar-width: thin; /* For Firefox */
-      scrollbar-color: #3498db #ecf0f1; /* For Firefox */
+      scrollbar-width: thin;
+      scrollbar-color: #3498db #ecf0f1;
     }
     #map-selector::-webkit-scrollbar {
       height: 8px;
@@ -118,14 +118,14 @@
       border-radius: 4px;
     }
     .map-option {
-      min-width: 120px; /* Fixed width for consistency */
+      min-width: 120px;
       padding: 12px;
       background: #ecf0f1;
       color: #2c3e50;
       border-radius: 8px;
       margin-bottom: 0;
       transition: all 0.3s ease;
-      white-space: nowrap; /* Prevent text wrapping */
+      white-space: nowrap;
     }
     .map-option:hover {
       background: #3498db;
@@ -294,7 +294,6 @@
       slow: { unlockCost: 600, unlocked: false, damage: 5, range: 120, ability: "Slows Enemies" },
       rapid: { unlockCost: 800, unlocked: false, damage: 15, range: 90, ability: "Rapid Fire" },
       bomb: { unlockCost: 1000, unlocked: false, damage: 40, range: 150, ability: "Explosive Damage" },
-      // New Towers
       laser: { unlockCost: 1200, unlocked: false, damage: 30, range: 180, ability: "Piercing Shots" },
       freeze: { unlockCost: 900, unlocked: false, damage: 10, range: 140, ability: "Freeze Enemies" },
       poison: { unlockCost: 1100, unlocked: false, damage: 15, range: 110, ability: "Poison Over Time" },
@@ -311,7 +310,6 @@
     const shop = document.getElementById("tower-shop");
     const shopItems = document.getElementById("shop-items");
 
-    // Map Data with Difficulties
     const maps = {
       map1: { name: "Beginner Path", path: [{ x: 0, y: 300 }, { x: 100, y: 200 }, { x: 200, y: 400 }, { x: 300, y: 300 }, { x: 400, y: 100 }, { x: 500, y: 300 }, { x: 600, y: 200 }, { x: 700, y: 400 }, { x: 800, y: 300 }, { x: 900, y: 100 }, { x: 1000, y: 300 }, { x: 1100, y: 200 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 50, difficulty: "easy", restrictedAreas: [] },
       map2: { name: "Zigzag Path", path: [{ x: 0, y: 150 }, { x: 400, y: 150 }, { x: 400, y: 450 }, { x: 800, y: 450 }, { x: 1200, y: 150 }], spawnPoint: { x: 0, y: 150 }, moneyReward: 75, difficulty: "medium", restrictedAreas: [] },
@@ -409,9 +407,7 @@
 
     const openTowerShopButton = document.getElementById("open-tower-shop");
     if (openTowerShopButton) {
-      console.log("Tower Shop button found!");
       openTowerShopButton.addEventListener("click", () => {
-        console.log("Tower Shop button clicked!");
         initShop();
         shop.style.display = "block";
         document.body.classList.add("shop-open");
@@ -421,7 +417,6 @@
     }
 
     document.getElementById("close-shop").addEventListener("click", () => {
-      console.log("Close Shop button clicked!");
       shop.style.display = "none";
       document.body.classList.remove("shop-open");
     });
