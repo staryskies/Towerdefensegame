@@ -1,16 +1,15 @@
 import { towerStats } from './stats.js';
 
-
 // Projectile Class
 class Projectile {
   constructor(x, y, target, damage, color = "yellow") {
-    this.x = x;           // Starting X coordinate (scaled)
-    this.y = y;           // Starting Y coordinate (scaled)
-    this.target = target; // Target enemy object
-    this.damage = damage; // Damage to deal on impact
-    this.color = color;   // Color from tower or default
-    this.speed = 5;       // Pixels per frame
-    this.isActive = true; // Active state for cleanup
+    this.x = x;
+    this.y = y;
+    this.target = target;
+    this.damage = damage;
+    this.color = color;
+    this.speed = 5;
+    this.isActive = true;
   }
 
   update(gameState) {
@@ -76,7 +75,7 @@ class Tower {
     this.selected = false;
   }
 
-  update(gameState) {
+  update(gameState, scaleX, scaleY) {
     if (this.cooldownTimer > 0) this.cooldownTimer--;
     if (this.cooldownTimer === 0) {
       for (let enemy of gameState.enemies) {
@@ -126,6 +125,4 @@ class Tower {
   }
 }
 
-// Note: towerStats is defined in game.js, so we assume it's globally available
-// If you want to make this more modular, you could export it from a separate file
 export { Tower, Projectile };

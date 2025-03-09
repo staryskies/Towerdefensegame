@@ -151,7 +151,7 @@ function gameLoop() {
 
   if (!gameState.isPaused) {
     gameState.enemies.forEach(enemy => enemy.update(gameState));
-    gameState.towers.forEach(tower => tower.update(gameState));
+    gameState.towers.forEach(tower => tower.update(gameState, scaleX, scaleY)); // Pass scaleX and scaleY
     gameState.projectiles.forEach(projectile => projectile.update(gameState));
     gameState.projectiles = gameState.projectiles.filter(p => p.isActive);
   }

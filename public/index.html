@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tower Defense Game - Menu</title>
   <style>
-    /* Your existing styles remain unchanged */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #1e2a44, #2c3e50); display: flex; justify-content: center; align-items: center; min-height: 100vh; color: #fff; }
     #auth-screen, #main-menu { background: rgba(255, 255, 255, 0.95); border-radius: 15px; padding: 30px; width: 100%; max-width: 450px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); backdrop-filter: blur(5px); text-align: center; display: flex; flex-direction: column; align-items: center; }
@@ -111,21 +110,6 @@
       map9: { name: "Arctic Path", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 500, y: 400 }, { x: 800, y: 100 }, { x: 1000, y: 400 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 130, difficulty: "hard", restrictedAreas: [{ x: 300, y: 200, width: 200, height: 200 }, { x: 600, y: 200, width: 200, height: 200 }, { x: 900, y: 200, width: 200, height: 200 }] },
     };
 
-    const shopTowerStats = {
-      basic: { unlockCost: 0, unlocked: true, damage: 20, range: 100, ability: "None" },
-      sniper: { unlockCost: 500, unlocked: false, damage: 50, range: 200, ability: "High Damage" },
-      splash: { unlockCost: 750, unlocked: false, damage: 10, range: 80, ability: "Area Damage" },
-      slow: { unlockCost: 600, unlocked: false, damage: 5, range: 120, ability: "Slows Enemies" },
-      rapid: { unlockCost: 800, unlocked: false, damage: 15, range: 90, ability: "Rapid Fire" },
-      bomb: { unlockCost: 1000, unlocked: false, damage: 40, range: 150, ability: "Explosive Damage" },
-      laser: { unlockCost: 1200, unlocked: false, damage: 30, range: 180, ability: "Piercing Shots" },
-      freeze: { unlockCost: 900, unlocked: false, damage: 10, range: 140, ability: "Freeze Enemies" },
-      poison: { unlockCost: 1100, unlocked: false, damage: 15, range: 110, ability: "Poison Over Time" },
-      flame: { unlockCost: 1300, unlocked: false, damage: 25, range: 90, ability: "Burn Damage" },
-      shield: { unlockCost: 1500, unlocked: false, damage: 20, range: 150, ability: "Protect Allies" },
-      missile: { unlockCost: 1800, unlocked: false, damage: 60, range: 200, ability: "Guided Missile" }
-    };
-
     function showNotification(message, duration = 3000) {
       const box = document.getElementById("notification-box");
       box.textContent = message;
@@ -135,19 +119,19 @@
 
     function loadUnlockedTowers() {
       const unlocked = JSON.parse(localStorage.getItem("unlockedTowers") || "[]");
-      towerStats.basic.unlocked = true;
-      shopTowerStats.basic.unlocked = true;
+      towerStats.basic.unlocked = true; // Ensure basic is always unlocked
       unlocked.forEach(type => {
-        if (towerStats[type]) towerStats[type].unlocked = true;
-        if (shopTowerStats[type]) shopTowerStats[type].unlocked = true;
+        if (towerStats[type]) {
+          towerStats[type].unlocked = true;
+        }
       });
     }
 
     function initShop() {
       shopItems.innerHTML = "";
       document.getElementById("global-money").textContent = globalMoney;
-      for (const [type, stats] of Object.entries(shopTowerStats)) {
-        if (type === "basic") continue;
+      for (const [type, stats] of Object.entries(towerStats)) {
+        if (type === "basic") continue; // Skip basic tower in shop
         const item = document.createElement("div");
         item.className = "shop-item";
         item.innerHTML = `
@@ -236,14 +220,15 @@
     shopItems.addEventListener("click", e => {
       if (e.target.classList.contains("unlock-btn") && !e.target.disabled) {
         const type = e.target.getAttribute("data-type");
-        const cost = shopTowerStats[type].unlockCost;
+        const cost = towerStats[type].unlockCost;
         if (globalMoney >= cost) {
           globalMoney -= cost;
-          shopTowerStats[type].unlocked = true;
           towerStats[type].unlocked = true;
           const unlocked = JSON.parse(localStorage.getItem("unlockedTowers") || "[]");
-          unlocked.push(type);
-          localStorage.setItem("unlockedTowers", JSON.stringify(unlocked));
+          if (!unlocked.includes(type)) {
+            unlocked.push(type);
+            localStorage.setItem("unlockedTowers", JSON.stringify(unlocked));
+          }
           localStorage.setItem("globalMoney", globalMoney);
           initShop();
           showNotification(`${type.charAt(0).toUpperCase() + type.slice(1)} Tower unlocked!`);
