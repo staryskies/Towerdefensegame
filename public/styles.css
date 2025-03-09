@@ -276,3 +276,95 @@ body, html {
 #restart-button:hover {
   background-color: #555;
 }
+
+/* Add these styles to the <style> section in your HTML or to your styles.css file */
+#tower-shop {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.3);
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh; /* Limit height to 80% of viewport height */
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+}
+
+#tower-shop h2 {
+  margin-top: 0;
+}
+
+#tower-shop-items {
+  overflow-y: auto; /* Make this container scrollable */
+  max-height: calc(80vh - 150px); /* Leave space for header and footer */
+  padding-right: 5px; /* Space for scrollbar */
+}
+
+.shop-item {
+  margin-bottom: 15px;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  background-color: #f9f9f9;
+}
+
+.shop-item h3 {
+  margin-top: 0;
+  color: #333;
+}
+
+.unlock-button {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.unlock-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.unlock-button:hover:not(:disabled) {
+  background-color: #45a049;
+}
+
+#close-shop-button {
+  display: block;
+  margin: 20px auto 0;
+  /* Ensure the close button stays at the bottom */
+  margin-top: auto;
+  padding: 10px 20px;
+}
+
+#shop-global-money {
+  font-weight: bold;
+  color: #2196F3;
+}
+
+/* Custom scrollbar styling */
+#tower-shop-items::-webkit-scrollbar {
+  width: 8px;
+}
+
+#tower-shop-items::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+#tower-shop-items::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+#tower-shop-items::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}

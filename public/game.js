@@ -1,7 +1,7 @@
 // Import classes
-import { Enemy } from "../enemy.js";
-import { Tower } from "../tower.js";
-import { Projectile } from "../projectile.js";
+import { Enemy } from "./enemy.js";
+import { Tower } from "./tower.js";
+import { Projectile } from "./projectile.js";
 
 // Responsive Canvas Setup
 const canvas = document.getElementById("gameCanvas");
@@ -46,6 +46,71 @@ let gameState = {
   isPaused: false,
   gameSpeed: 1,
   selectedTower: null,
+  isSpawning: false, // Track if a wave is currently spawning
+};
+
+// Tower Stats
+const towerStats = {
+  basic: {
+    cost: 50,
+    damage: 20,
+    range: 100,
+    cooldown: 60, // Cooldown in frames
+    color: "gray",
+    ability: "None",
+    unlocked: true, // Basic tower is unlocked by default
+    unlockCost: 0
+  },
+  sniper: {
+    cost: 100,
+    damage: 50,
+    range: 200,
+    cooldown: 120,
+    color: "blue",
+    ability: "High Damage",
+    unlocked: false,
+    unlockCost: 500
+  },
+  splash: {
+    cost: 150,
+    damage: 10,
+    range: 80,
+    cooldown: 30,
+    color: "orange",
+    ability: "Area Damage",
+    unlocked: false,
+    unlockCost: 750
+  },
+  slow: {
+    cost: 75,
+    damage: 5,
+    range: 120,
+    cooldown: 90,
+    color: "cyan",
+    ability: "Slows Enemies",
+    unlocked: false,
+    unlockCost: 600
+  },
+  rapid: {
+    cost: 125,
+    damage: 15,
+    range: 90,
+    cooldown: 12,
+    color: "purple",
+    ability: "Rapid Fire",
+    unlocked: false,
+    unlockCost: 800
+  },
+  bomb: {
+    cost: 200,
+    damage: 40,
+    range: 150,
+    cooldown: 90,
+    color: "brown",
+    ability: "Explosive Damage",
+    unlocked: false,
+    unlockCost: 1000
+  },
 };
 
 // Map Data
@@ -62,7 +127,8 @@ const maps = {
       { x: 1200, y: 300 },
     ],
     spawnPoint: { x: 0, y: 300 },
-    moneyReward: 50, // Money earned per wave for map1
+    moneyReward: 50,
+    name: "Beginner Path"
   },
   map2: {
     path: [
@@ -74,7 +140,8 @@ const maps = {
       { x: 1200, y: 150 },
     ],
     spawnPoint: { x: 0, y: 150 },
-    moneyReward: 75, // Money earned per wave for map2
+    moneyReward: 75,
+    name: "Zigzag Path"
   },
   map3: {
     path: [
@@ -92,7 +159,8 @@ const maps = {
       { x: 1200, y: 100 },
     ],
     spawnPoint: { x: 0, y: 300 },
-    moneyReward: 100, // Money earned per wave for map3
+    moneyReward: 100,
+    name: "Snake Path"
   },
 };
 
@@ -100,6 +168,9 @@ const maps = {
 const selectedMap = localStorage.getItem("selectedMap") || "map1";
 const path = maps[selectedMap].path;
 const spawnPoint = maps[selectedMap].spawnPoint;
+
+// Load global money from localStorage or initialize it
+let globalMoney = parseInt(localStorage.getItem("globalMoney") || "0");
 
 // Function to create a scaled copy of the path and spawn point
 function getScaledPathAndSpawnPoint() {
@@ -126,92 +197,23 @@ const enemyTypes = [
   { health: 50, speed: 2, radius: 8, color: "green" }, // Fast
 ];
 
-// Tower Stats
-const towerStats = {
-  basic: {
-    cost: 50,
-    damage: 20,
-    range: 100,
-    cooldown: 60, // Cooldown in frames
-    color: "gray",
-    ability: "None",
-  },
-  sniper: {
-    cost: 100,
-    damage: 50,
-    range: 200,
-    cooldown: 120,
-    color: "blue",
-    ability: "High Damage",
-  },
-  splash: {
-    cost: 150,
-    damage: 10,
-    range: 80,
-    cooldown: 30,
-    color: "orange",
-    ability: "Area Damage",
-  },
-  slow: {
-    cost: 75,
-    damage: 5,
-    range: 120,
-    cooldown: 90,
-    color: "cyan",
-    ability: "Slows Enemies",
-  },
-  rapid: {
-    cost: 125,
-    damage: 15,
-    range: 90,
-    cooldown: 12,
-    color: "purple",
-    ability: "Rapid Fire",
-  },
-  bomb: {
-    cost: 200,
-    damage: 40,
-    range: 150,
-    cooldown: 90,
-    color: "brown",
-    ability: "Explosive Damage",
-  },
-};
+// Function to show a notification
+function showNotification(message, duration = 3000) {
+  const notificationBox = document.getElementById("notification-box");
 
-// Function to fetch user data from the server
-async function fetchUserData() {
-  try {
-    const token = localStorage.getItem("token");
-    const response = await fetch("/user", {
-      headers: {
-        Authorization: token,
-      },
-    });
-    const data = await response.json();
-    gameState.money = data.money;
-  } catch (err) {
-    console.error("Error fetching user data:", err);
-  }
+  // Set the message
+  notificationBox.textContent = message;
+
+  // Show the notification
+  notificationBox.classList.add("show");
+
+  // Hide the notification after the specified duration
+  setTimeout(() => {
+    notificationBox.classList.remove("show");
+  }, duration);
 }
 
-// Function to update money on the server
-async function updateMoneyOnServer(money) {
-  try {
-    const token = localStorage.getItem("token");
-    await fetch("/update-money", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: token,
-      },
-      body: JSON.stringify({ money }),
-    });
-  } catch (err) {
-    console.error("Error updating money:", err);
-  }
-}
-
-// Function to show end screen
+// Function to show the end screen
 function showEndScreen(message) {
   const endScreen = document.getElementById("end-screen");
   const endMessage = document.getElementById("end-message");
@@ -251,23 +253,23 @@ function gameLoop() {
   // Update and Draw Enemies
   for (let enemy of gameState.enemies) {
     if (!gameState.isPaused) enemy.update(gameState);
-    enemy.draw(ctx, scaleX, scaleY); // Pass scaling factors
+    enemy.draw(ctx, scaleX, scaleY);
   }
 
   // Update and Draw Towers
   for (let tower of gameState.towers) {
     tower.update(gameState);
-    tower.draw(ctx, scaleX, scaleY); // Pass scaling factors
+    tower.draw(ctx, scaleX, scaleY);
   }
 
   // Update and Draw Projectiles
   for (let projectile of gameState.projectiles) {
     if (!gameState.isPaused) projectile.update(gameState);
-    projectile.draw(ctx, scaleX, scaleY); // Pass scaling factors
+    projectile.draw(ctx, scaleX, scaleY);
   }
 
-  // Check if all enemies are defeated
-  if (gameState.enemies.length === 0 && !gameState.isPaused && !gameState.gameOver) {
+  // Check if all enemies are defeated and no wave is currently spawning
+  if (gameState.enemies.length === 0 && !gameState.isSpawning && !gameState.isPaused && !gameState.gameOver) {
     spawnWave(); // Spawn the next wave
     gameState.wave++; // Increment wave counter
   }
@@ -284,13 +286,19 @@ function gameLoop() {
 
 // Spawn Enemies in Waves
 function spawnWave() {
-  const waveSize = gameState.wave * 5; // Increase wave size as the game progresses
+  gameState.isSpawning = true;
+
+  const waveSize = gameState.wave * 5;
 
   // Award money for completing the previous wave
   const moneyReward = maps[selectedMap].moneyReward;
   gameState.money += moneyReward;
-  updateMoneyOnServer(gameState.money); // Update money on the server
-  showNotification(`Wave ${gameState.wave} completed! +$${moneyReward}`);
+  
+  // Add to global money as well (for the shop)
+  globalMoney += Math.floor(moneyReward / 2);
+  localStorage.setItem("globalMoney", globalMoney);
+  
+  showNotification(`Wave ${gameState.wave} completed! +$${moneyReward} (Game), +$${Math.floor(moneyReward / 2)} (Global)`);
 
   for (let i = 0; i < waveSize; i++) {
     setTimeout(() => {
@@ -306,32 +314,133 @@ function spawnWave() {
         // Spawn enemy at the scaled spawn point
         gameState.enemies.push(new Enemy(scaledPath, type, scaledSpawnPoint));
       }
+
+      // Mark the end of spawning after the last enemy is spawned
+      if (i === waveSize - 1) {
+        gameState.isSpawning = false;
+      }
     }, (i * 1000) / gameState.gameSpeed); // Space out enemy spawns
   }
-  gameState.wave++; // Increment wave counter
+
   console.log(`Wave ${gameState.wave} started with ${waveSize} enemies.`);
 }
 
-// Sidebar Tower Selection
-const sidebar = document.getElementById("sidebar");
-const towerOptions = document.querySelectorAll(".tower-option");
-
-sidebar.addEventListener("click", (e) => {
-  if (e.target.classList.contains("tower-option")) {
-    const type = e.target.getAttribute("data-type");
-    const cost = parseInt(e.target.getAttribute("data-cost"));
-
-    // Deselect all towers
-    towerOptions.forEach((option) => option.classList.remove("selected"));
-
-    if (gameState.money >= cost) {
-      gameState.selectedTowerType = type;
-      e.target.classList.add("selected");
-    } else {
-      showNotification("Not enough money!");
-      gameState.selectedTowerType = null;
-    }
+// Initialize the sidebar with available towers
+function initSidebar() {
+  const sidebar = document.getElementById("sidebar");
+  
+  // Clear existing content
+  sidebar.innerHTML = "";
+  
+  // Add tower options
+  for (const [type, stats] of Object.entries(towerStats)) {
+    // Skip towers that aren't unlocked
+    if (!stats.unlocked) continue;
+    
+    const towerOption = document.createElement("div");
+    towerOption.className = "tower-option";
+    towerOption.setAttribute("data-type", type);
+    towerOption.setAttribute("data-cost", stats.cost);
+    
+    towerOption.innerHTML = `
+      ${capitalizeFirstLetter(type)} Tower ($${stats.cost})
+      <div class="tower-stats">
+        Damage: ${stats.damage}<br>
+        Range: ${stats.range}<br>
+        Ability: ${stats.ability}
+      </div>
+    `;
+    
+    sidebar.appendChild(towerOption);
   }
+  
+  // Add control buttons
+  const pauseButton = document.createElement("div");
+  pauseButton.id = "pause-button";
+  pauseButton.textContent = "Pause";
+  sidebar.appendChild(pauseButton);
+  
+  const fastForwardButton = document.createElement("div");
+  fastForwardButton.id = "fast-forward-button";
+  fastForwardButton.textContent = "Fast Forward (1x)";
+  sidebar.appendChild(fastForwardButton);
+  
+  const homeButton = document.createElement("div");
+  homeButton.id = "home-button";
+  homeButton.textContent = "Home";
+  sidebar.appendChild(homeButton);
+}
+
+// Load unlocked towers from localStorage
+function loadUnlockedTowers() {
+  const unlockedTowers = JSON.parse(localStorage.getItem("unlockedTowers") || "[]");
+  
+  // Basic tower is always unlocked
+  towerStats.basic.unlocked = true;
+  
+  unlockedTowers.forEach(towerType => {
+    if (towerStats[towerType]) {
+      towerStats[towerType].unlocked = true;
+    }
+  });
+}
+
+// Helper function to capitalize first letter
+function capitalizeFirstLetter(string) {
+  return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
+// Sidebar Tower Selection
+document.addEventListener("DOMContentLoaded", function() {
+  // Load unlocked towers first
+  loadUnlockedTowers();
+  
+  // Initialize sidebar with available towers
+  initSidebar();
+  
+  const sidebar = document.getElementById("sidebar");
+  
+  sidebar.addEventListener("click", (e) => {
+    // Handle tower option click
+    if (e.target.classList.contains("tower-option") || e.target.closest(".tower-option")) {
+      const towerOption = e.target.classList.contains("tower-option") ? 
+                        e.target : e.target.closest(".tower-option");
+      
+      const type = towerOption.getAttribute("data-type");
+      const cost = parseInt(towerOption.getAttribute("data-cost"));
+      
+      // Deselect all towers
+      document.querySelectorAll(".tower-option").forEach((option) => 
+        option.classList.remove("selected"));
+      
+      if (gameState.money >= cost) {
+        gameState.selectedTowerType = type;
+        towerOption.classList.add("selected");
+      } else {
+        showNotification("Not enough money!");
+        gameState.selectedTowerType = null;
+      }
+    }
+    
+    // Handle pause button click
+    if (e.target.id === "pause-button") {
+      gameState.isPaused = !gameState.isPaused;
+      e.target.classList.toggle("active", gameState.isPaused);
+      e.target.textContent = gameState.isPaused ? "Resume" : "Pause";
+    }
+    
+    // Handle fast-forward button click
+    if (e.target.id === "fast-forward-button") {
+      gameState.gameSpeed = gameState.gameSpeed === 1 ? 2 : 1;
+      e.target.classList.toggle("active", gameState.gameSpeed === 2);
+      e.target.textContent = `Fast Forward (${gameState.gameSpeed}x)`;
+    }
+    
+    // Handle home button click
+    if (e.target.id === "home-button") {
+      window.location.href = "index.html#menu"; // Redirect to main menu with hash
+    }
+  });
 });
 
 // Place Towers on Canvas Click
@@ -351,9 +460,8 @@ canvas.addEventListener("click", (e) => {
       // Place the tower at the unscaled coordinates
       gameState.towers.push(new Tower(x, y, gameState.selectedTowerType, scaleX, scaleY));
       gameState.money -= cost;
-      updateMoneyOnServer(gameState.money); // Update money on the server
       gameState.selectedTowerType = null;
-      towerOptions.forEach((option) => option.classList.remove("selected"));
+      document.querySelectorAll(".tower-option").forEach((option) => option.classList.remove("selected"));
       showNotification(`Tower placed at (${x.toFixed(1)}, ${y.toFixed(1)})`);
     } else {
       // Not enough money
@@ -390,37 +498,21 @@ canvas.addEventListener("click", (e) => {
   }
 });
 
-/**
- * Show a notification message.
- * @param {string} message - The message to display.
- * @param {number} duration - The duration (in milliseconds) to show the notification.
- */
-function showNotification(message, duration = 3000) {
-  const notificationBox = document.getElementById("notification-box");
-
-  // Set the message
-  notificationBox.textContent = message;
-
-  // Show the notification
-  notificationBox.classList.add("show");
-
-  // Hide the notification after the specified duration
-  setTimeout(() => {
-    notificationBox.classList.remove("show");
-  }, duration);
-}
-
 // Show Tower Info Panel
 function showTowerInfoPanel(tower) {
   const panel = document.getElementById("tower-info-panel");
   panel.style.display = "block";
 
   // Update tower info
-  document.getElementById("tower-type").textContent = `Type: ${tower.type}`;
+  document.getElementById("tower-type").textContent = `Type: ${capitalizeFirstLetter(tower.type)}`;
   document.getElementById("tower-damage").textContent = `Damage: ${tower.damage}`;
   document.getElementById("tower-range").textContent = `Range: ${tower.range}`;
   document.getElementById("tower-level").textContent = `Level: ${tower.level}`;
   document.getElementById("tower-ability").textContent = `Ability: ${towerStats[tower.type].ability}`;
+
+  // Update upgrade button cost (based on tower level)
+  const upgradeCost = 100 * tower.level;
+  document.getElementById("upgrade-tower-button").textContent = `Upgrade ($${upgradeCost})`;
 
   // Style the panel to make it smaller
   panel.style.width = "150px"; // Reduce width
@@ -431,35 +523,73 @@ function showTowerInfoPanel(tower) {
 // Upgrade Tower
 document.getElementById("upgrade-tower-button").addEventListener("click", () => {
   if (gameState.selectedTower) {
-    gameState.selectedTower.upgrade(gameState);
-    showTowerInfoPanel(gameState.selectedTower);
+    const upgradeCost = 100 * gameState.selectedTower.level;
+    
+    if (gameState.money >= upgradeCost) {
+      gameState.money -= upgradeCost;
+      gameState.selectedTower.upgrade();
+      showTowerInfoPanel(gameState.selectedTower);
+      showNotification(`Tower upgraded to level ${gameState.selectedTower.level}!`);
+    } else {
+      showNotification(`Not enough money! Need $${upgradeCost} to upgrade.`);
+    }
   }
 });
 
-// Pause/Resume Game
-const pauseButton = document.getElementById("pause-button");
-pauseButton.addEventListener("click", () => {
-  gameState.isPaused = !gameState.isPaused;
-  pauseButton.classList.toggle("active", gameState.isPaused);
-  pauseButton.textContent = gameState.isPaused ? "Resume" : "Pause";
-});
-
-// Fast-Forward Game
-const fastForwardButton = document.getElementById("fast-forward-button");
-fastForwardButton.addEventListener("click", () => {
-  gameState.gameSpeed = gameState.gameSpeed === 1 ? 2 : 1;
-  fastForwardButton.classList.toggle("active", gameState.gameSpeed === 2);
-  fastForwardButton.textContent = `Fast Forward (${gameState.gameSpeed}x)`;
-});
-
-// Home Button
-const homeButton = document.getElementById("home-button");
-homeButton.addEventListener("click", () => {
-  window.location.href = "index.html"; // Redirect to main menu
-});
-
-// Fetch user data when the game starts
-fetchUserData();
+// End game when player health reaches 0
+function checkGameEnd() {
+  if (gameState.playerHealth <= 0 && !gameState.gameOver) {
+    gameState.gameOver = true;
+    showEndScreen(`Game Over! You reached wave ${gameState.wave} with a score of ${gameState.score}.`);
+    
+    // Award global money based on score
+    const earnedGlobalMoney = Math.floor(gameState.score / 10);
+    globalMoney += earnedGlobalMoney;
+    localStorage.setItem("globalMoney", globalMoney);
+    
+    // Update the end message to include earned money
+    document.getElementById("end-message").textContent += ` Earned $${earnedGlobalMoney} global money.`;
+  }
+}
 
 // Start Game
-gameLoop();
+document.addEventListener("DOMContentLoaded", function() {
+  loadUnlockedTowers();
+  initSidebar();
+  gameLoop();
+});
+
+// Check game end condition in the Enemy class's reachEnd method
+// Enemy.prototype.reachEnd = function(gameState) {
+//   gameState.playerHealth -= 1;
+//   checkGameEnd();
+//   return true;
+// };
+
+// This function helps enable the event handlers when the DOM is fully loaded
+document.addEventListener("DOMContentLoaded", function() {
+  const pauseButton = document.getElementById("pause-button");
+  if (pauseButton) {
+    pauseButton.addEventListener("click", () => {
+      gameState.isPaused = !gameState.isPaused;
+      pauseButton.classList.toggle("active", gameState.isPaused);
+      pauseButton.textContent = gameState.isPaused ? "Resume" : "Pause";
+    });
+  }
+
+  const fastForwardButton = document.getElementById("fast-forward-button");
+  if (fastForwardButton) {
+    fastForwardButton.addEventListener("click", () => {
+      gameState.gameSpeed = gameState.gameSpeed === 1 ? 2 : 1;
+      fastForwardButton.classList.toggle("active", gameState.gameSpeed === 2);
+      fastForwardButton.textContent = `Fast Forward (${gameState.gameSpeed}x)`;
+    });
+  }
+
+  const homeButton = document.getElementById("home-button");
+  if (homeButton) {
+    homeButton.addEventListener("click", () => {
+      window.location.href = "index.html#menu";
+    });
+  }
+});

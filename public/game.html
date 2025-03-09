@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tower Defense Game</title>
-  <link rel="stylesheet" href="styles.css">
   <style>
     /* Ensure the body and html take up the full screen */
     html, body {
@@ -13,6 +12,7 @@
       overflow: hidden;
       width: 100%;
       height: 100%;
+      font-family: Arial, sans-serif;
     }
 
     /* Make the canvas responsive */
@@ -35,6 +35,7 @@
       padding: 10px;
       box-sizing: border-box;
       overflow-y: auto;
+      z-index: 10;
     }
 
     .tower-option {
@@ -42,15 +43,38 @@
       padding: 10px;
       background-color: #444;
       cursor: pointer;
+      border-radius: 5px;
     }
 
     .tower-option:hover {
       background-color: #555;
     }
 
+    .tower-option.selected {
+      background-color: #2196F3;
+    }
+
     .tower-stats {
       font-size: 12px;
       color: #ccc;
+      margin-top: 5px;
+    }
+
+    #pause-button, #fast-forward-button, #home-button {
+      margin-top: 15px;
+      padding: 10px;
+      background-color: #444;
+      cursor: pointer;
+      text-align: center;
+      border-radius: 5px;
+    }
+
+    #pause-button:hover, #fast-forward-button:hover, #home-button:hover {
+      background-color: #555;
+    }
+
+    #pause-button.active, #fast-forward-button.active {
+      background-color: #2196F3;
     }
 
     /* Stats panel styling */
@@ -63,32 +87,57 @@
       color: white;
       padding: 10px;
       box-sizing: border-box;
+      border-radius: 0 0 0 5px;
+      z-index: 10;
     }
 
     /* Tower info panel styling */
     #tower-info-panel {
       position: fixed;
-      bottom: 0;
-      left: 200px;
+      bottom: 20px;
+      left: 220px;
       width: 200px;
       background-color: #333;
       color: white;
       padding: 10px;
       box-sizing: border-box;
+      border-radius: 5px;
       display: none; /* Hidden by default */
+      z-index: 10;
     }
 
-    /* Game over screen styling */
-    #game-over {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background-color: rgba(0, 0, 0, 0.8);
+    #upgrade-tower-button {
+      width: 100%;
+      padding: 8px;
+      margin-top: 10px;
+      background-color: #4CAF50;
       color: white;
-      padding: 20px;
-      text-align: center;
-      display: none; /* Hidden by default */
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #upgrade-tower-button:hover {
+      background-color: #45a049;
+    }
+
+    /* Notification box styling */
+    #notification-box {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 5px;
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    #notification-box.show {
+      opacity: 1;
     }
 
     /* End screen styling */
@@ -107,13 +156,13 @@
     }
 
     #end-screen h2 {
-      margin: 0 0 10px 0;
+      margin: 0 0 20px 0;
       font-size: 24px;
     }
 
     #restart-button {
       padding: 10px 20px;
-      background-color: #444;
+      background-color: #4CAF50;
       color: white;
       border: none;
       border-radius: 5px;
@@ -122,41 +171,13 @@
     }
 
     #restart-button:hover {
-      background-color: #555;
+      background-color: #45a049;
     }
   </style>
 </head>
 <body>
   <!-- Sidebar for Tower Selection and Controls -->
-  <div id="sidebar">
-    <div class="tower-option" data-type="basic" data-cost="50">
-      Basic Tower ($50)
-      <div class="tower-stats">Damage: 20<br>Reload: 1s</div>
-    </div>
-    <div class="tower-option" data-type="sniper" data-cost="100">
-      Sniper Tower ($100)
-      <div class="tower-stats">Damage: 50<br>Reload: 2s</div>
-    </div>
-    <div class="tower-option" data-type="splash" data-cost="150">
-      Splash Tower ($150)
-      <div class="tower-stats">Damage: 10<br>Reload: 0.5s</div>
-    </div>
-    <div class="tower-option" data-type="slow" data-cost="75">
-      Slow Tower ($75)
-      <div class="tower-stats">Damage: 5<br>Reload: 1.5s</div>
-    </div>
-    <div class="tower-option" data-type="rapid" data-cost="125">
-      Rapid Tower ($125)
-      <div class="tower-stats">Damage: 15<br>Reload: 0.2s</div>
-    </div>
-    <div class="tower-option" data-type="bomb" data-cost="200">
-      Bomb Tower ($200)
-      <div class="tower-stats">Damage: 40<br>Reload: 1.5s</div>
-    </div>
-    <div id="pause-button">Pause</div>
-    <div id="fast-forward-button">Fast Forward (1x)</div>
-    <div id="home-button">Home</div> <!-- Added Home Button -->
-  </div>
+  <div id="sidebar"></div>
 
   <!-- Game Canvas -->
   <canvas id="gameCanvas"></canvas>
@@ -182,13 +203,8 @@
     <button id="upgrade-tower-button">Upgrade ($100)</button>
   </div>
 
+  <!-- Notification Box -->
   <div id="notification-box"></div>
-
-  <!-- Game Over Screen -->
-  <div id="game-over">
-    Game Over!<br>
-    <button onclick="restartGame()">Restart</button>
-  </div>
 
   <!-- End Screen -->
   <div id="end-screen">
