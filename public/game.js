@@ -17,6 +17,7 @@ function resizeCanvas() {
   canvas.height = window.innerHeight;
   scaleX = canvas.width / originalWidth;
   scaleY = canvas.height / originalHeight;
+  console.log(`Canvas resized: width=${canvas.width}, height=${canvas.height}, scaleX=${scaleX}, scaleY=${scaleY}`);
 }
 
 resizeCanvas();
@@ -151,6 +152,7 @@ let scaledPath, scaledSpawnPoint;
 function updateScaledPathAndSpawnPoint() {
   scaledPath = path.map(point => ({ x: point.x * scaleX, y: point.y * scaleY }));
   scaledSpawnPoint = { x: spawnPoint.x * scaleX, y: spawnPoint.y * scaleY };
+  console.log("Updated scaled path:", scaledPath, "scaled spawn point:", scaledSpawnPoint);
 }
 updateScaledPathAndSpawnPoint();
 
@@ -374,7 +376,7 @@ function gameLoop() {
   }
 
   gameState.enemies.forEach(enemy => enemy.draw(ctx, scaleX, scaleY));
-  gameState.towers.forEach(tower => tower.draw(ctx, scaleY, scaleY));
+  gameState.towers.forEach(tower => tower.draw(ctx, scaleX, scaleY)); // Fixed typo: scaleY, scaleY -> scaleX, scaleY
   gameState.projectiles.forEach(projectile => projectile.draw(ctx, scaleX, scaleY));
 
   if (gameState.selectedTowerType) drawTowerFootprint();
@@ -550,15 +552,19 @@ canvas.addEventListener("mousemove", e => {
   const rect = canvas.getBoundingClientRect();
   mouseX = e.clientX - rect.left;
   mouseY = e.clientY - rect.top;
+  console.log(`Mouse moved: canvasX=${mouseX}, canvasY=${mouseY}, gameX=${mouseX / scaleX}, gameY=${mouseY / scaleY}`);
 });
 
 function drawTowerFootprint() {
+  if (!gameState.selectedTowerType) return;
   const stats = towerStats[gameState.selectedTowerType];
+  // Draw the tower's range preview in canvas coordinates
   ctx.beginPath();
   ctx.arc(mouseX, mouseY, stats.range * Math.min(scaleX, scaleY), 0, 2 * Math.PI);
   ctx.strokeStyle = "rgba(0, 255, 0, 0.5)";
   ctx.lineWidth = 2;
   ctx.stroke();
+  // Draw the tower footprint in canvas coordinates
   ctx.fillStyle = "rgba(0, 255, 0, 0.2)";
   ctx.fillRect(
     mouseX - 20 * Math.min(scaleX, scaleY),
@@ -569,13 +575,13 @@ function drawTowerFootprint() {
 }
 
 function canPlaceTower(x, y) {
-  const minDistance = 40;
+  const minDistance = 40; // Minimum distance in game coordinates
   for (let tower of gameState.towers) {
     const dx = x - tower.x;
     const dy = y - tower.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
     if (distance < minDistance) {
-      console.log(`Cannot place: too close to tower at (${tower.x}, ${tower.y})`);
+      console.log(`Cannot place: too close to tower at (${tower.x}, ${tower.y}), distance=${distance}`);
       return false;
     }
   }
@@ -584,9 +590,11 @@ function canPlaceTower(x, y) {
 
 canvas.addEventListener("click", e => {
   const rect = canvas.getBoundingClientRect();
-  const x = (e.clientX - rect.left) / scaleX;
-  const y = (e.clientY - rect.top) / scaleY;
-  console.log(`Clicked at (${x}, ${y}), selectedTowerType: ${gameState.selectedTowerType}`);
+  const canvasX = e.clientX - rect.left;
+  const canvasY = e.clientY - rect.top;
+  const x = canvasX / scaleX; // Convert to game coordinates
+  const y = canvasY / scaleY;
+  console.log(`Clicked at: canvasX=${canvasX}, canvasY=${canvasY}, gameX=${x}, gameY=${y}, selectedTowerType=${gameState.selectedTowerType}`);
 
   if (gameState.selectedTowerType) {
     const cost = towerStats[gameState.selectedTowerType].cost || 50;
@@ -597,7 +605,7 @@ canvas.addEventListener("click", e => {
         updateUserMoney();
         gameState.selectedTowerType = null;
         document.querySelectorAll(".tower-option").forEach(o => o.classList.remove("selected"));
-        showNotification(`Tower placed at (${Math.round(x)}, ${Math.round(y)})!`);
+        showNotification(`Tower placed at (gameX=${Math.round(x)}, gameY=${Math.round(y)})!`);
       } else {
         showNotification("Cannot place tower here: too close to another tower!");
       }
@@ -607,8 +615,8 @@ canvas.addEventListener("click", e => {
   } else {
     let towerClicked = false;
     for (let tower of gameState.towers) {
-      const dx = (e.clientX - rect.left) - tower.x * scaleX;
-      const dy = (e.clientY - rect.top) - tower.y * scaleY;
+      const dx = canvasX - tower.x * scaleX; // Compare in canvas coordinates
+      const dy = canvasY - tower.y * scaleY;
       if (Math.sqrt(dx * dx + dy * dy) <= 20 * Math.min(scaleX, scaleY)) {
         if (gameState.selectedTower) gameState.selectedTower.selected = false;
         gameState.selectedTower = tower;
