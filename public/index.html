@@ -482,6 +482,7 @@
       console.log("Start game clicked"); // Debug: Button click
       if (!document.getElementById("start-game").disabled) {
         console.log("Showing map menu"); // Debug: Confirming display
+        initMapMenu(); // Call initMapMenu to populate the map list
         mapMenu.style.display = "block";
         document.body.classList.add("shop-open"); // Reuse overlay for map menu
       } else {
