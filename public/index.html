@@ -250,9 +250,9 @@
   <div class="container" id="main-menu">
     <h1>Tower Defense</h1>
     <div id="user-money">Money: $0</div>
+    <button id="select-map">Select Map</button>
     <button id="start-game" disabled>Start Game</button>
     <div id="map-menu">
-      123
       <h2>Select Map <button class="close-btn" id="close-map-menu">X</button></h2>
       <div id="map-list">
         <!-- Maps will be populated here -->
@@ -479,16 +479,22 @@
       }
     });
 
+    document.getElementById("select-map").addEventListener("click", () => {
+      console.log("Select map clicked"); // Debug: Button click
+      initMapMenu(); // Call initMapMenu to populate the map list
+      mapMenu.style.display = "block";
+      document.body.classList.add("shop-open"); // Reuse overlay for map menu
+      console.log("mapList children:", mapList.children.length); // Debug: Check if map list is populated
+    });
+
     document.getElementById("start-game").addEventListener("click", () => {
       console.log("Start game clicked"); // Debug: Button click
       if (!document.getElementById("start-game").disabled) {
-        console.log("Showing map menu"); // Debug: Confirming display
-        initMapMenu(); // Call initMapMenu to populate the map list
-        mapMenu.style.display = "block";
-        document.body.classList.add("shop-open"); // Reuse overlay for map menu
-        console.log("mapList children:", mapList.children.length); // Debug: Check if map list is populated
+        console.log("Proceeding to game page"); // Debug: Confirming navigation
+        window.location.href = "/game";
       } else {
         console.log("Start game button is disabled"); // Debug: Check if disabled
+        showNotification("Please select a map first.");
       }
     });
 
@@ -509,7 +515,6 @@
         option.classList.add("selected");
         mapMenu.style.display = "none";
         document.body.classList.remove("shop-open");
-        window.location.href = "/game";
       }
     });
 
