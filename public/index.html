@@ -105,7 +105,7 @@
       max-height: 400px;
       overflow-y: auto;
       color: #333;
-      z-index: 1000; /* Ensure it appears above other content */
+      z-index: 1000;
     }
 
     #map-menu h2, #tower-shop h2 {
@@ -120,21 +120,44 @@
       top: 10px;
       right: 10px;
       background: #ff4d4d;
-      color: #fff;
+      color: transparent;
       border: none;
       border-radius: 50%;
-      width: 25px;
-      height: 25px;
+      width: 30px;
+      height: 30px;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      font-size: 16px;
-      line-height: 1;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+      transition: transform 0.1s ease, background 0.3s ease;
+    }
+
+    .close-btn::before,
+    .close-btn::after {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 2px;
+      background: #fff;
+      border-radius: 2px;
+    }
+
+    .close-btn::before {
+      transform: rotate(45deg);
+    }
+
+    .close-btn::after {
+      transform: rotate(-45deg);
     }
 
     .close-btn:hover {
       background: #e60000;
+      transform: scale(1.1);
+    }
+
+    .close-btn:active {
+      transform: scale(0.95);
     }
 
     #map-list, #shop-items {
@@ -250,20 +273,20 @@
   <div class="container" id="main-menu">
     <h1>Tower Defense</h1>
     <div id="user-money">Money: $0</div>
-    <button id="select-map">Select Map</button>
     <button id="start-game" disabled>Start Game</button>
+    <button id="select-map">Select Map</button>
+    <button id="open-tower-shop">Tower Shop</button>
+    <button id="logout-button">Logout</button>
     <div id="map-menu">
-      <h2>Select Map <button class="close-btn" id="close-map-menu">X</button></h2>
+      <h2>Select Map <button class="close-btn" id="close-map-menu"></button></h2>
       <div id="map-list">
         <!-- Maps will be populated here -->
       </div>
     </div>
-    <button id="open-tower-shop">Tower Shop</button>
-    <button id="logout-button">Logout</button>
   </div>
 
   <div id="tower-shop">
-    <h2>Tower Shop <button class="close-btn" id="close-shop">X</button></h2>
+    <h2>Tower Shop <button class="close-btn" id="close-shop"></button></h2>
     <div id="global-money">Money: $0</div>
     <div id="shop-items"></div>
   </div>
@@ -287,13 +310,13 @@
     const maps = {
       map1: { name: "Beginner Path", path: [{ x: 0, y: 300 }, { x: 100, y: 200 }, { x: 200, y: 400 }, { x: 300, y: 300 }, { x: 400, y: 100 }, { x: 500, y: 300 }, { x: 600, y: 200 }, { x: 700, y: 400 }, { x: 800, y: 300 }, { x: 900, y: 100 }, { x: 1000, y: 300 }, { x: 1100, y: 200 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 50, difficulty: "easy", restrictedAreas: [] },
       map2: { name: "Zigzag Path", path: [{ x: 0, y: 150 }, { x: 400, y: 150 }, { x: 400, y: 450 }, { x: 800, y: 450 }, { x: 1200, y: 150 }], spawnPoint: { x: 0, y: 150 }, moneyReward: 75, difficulty: "medium", restrictedAreas: [] },
-      map3: { name: "Snake Path", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 400, y: 300 }, { x: 600, y: 100 }, { x: 800, y: 300 }, { x: 1000, y: 100 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 100, difficulty: "hard", restrictedAreas: [{ x: 300, y: 200, width: 200, height: 200 }, { x: 700, y: 200, width: 200, height: 200 }] },
+      map3: { name: "Snake Path", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 400, y: 300 }, { x: 600, y: 100 }, { x: 800, y: 300 }, { x: 1000, y: 100 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 150, difficulty: "hard", restrictedAreas: [{ x: 300, y: 200, width: 200, height: 200 }, { x: 700, y: 200, width: 200, height: 200 }] },
       map4: { name: "Forest Trail", path: [{ x: 0, y: 200 }, { x: 100, y: 400 }, { x: 200, y: 150 }, { x: 300, y: 350 }, { x: 400, y: 250 }, { x: 500, y: 400 }, { x: 600, y: 200 }, { x: 700, y: 350 }, { x: 800, y: 150 }, { x: 900, y: 300 }, { x: 1000, y: 400 }, { x: 1100, y: 250 }, { x: 1200, y: 200 }], spawnPoint: { x: 0, y: 200 }, moneyReward: 60, difficulty: "easy", restrictedAreas: [] },
-      map5: { name: "Mountain Pass", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 400, y: 400 }, { x: 800, y: 100 }, { x: 1000, y: 400 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 80, difficulty: "medium", restrictedAreas: [] },
-      map6: { name: "Desert Maze", path: [{ x: 0, y: 150 }, { x: 300, y: 300 }, { x: 500, y: 150 }, { x: 700, y: 300 }, { x: 900, y: 150 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 150 }, moneyReward: 120, difficulty: "hard", restrictedAreas: [{ x: 400, y: 200, width: 200, height: 200 }, { x: 800, y: 200, width: 200, height: 200 }] },
-      map7: { name: "River Bend", path: [{ x: 0, y: 250 }, { x: 100, y: 100 }, { x: 200, y: 350 }, { x: 300, y: 150 }, { x: 400, y: 300 }, { x: 500, y: 200 }, { x: 600, y: 400 }, { x: 700, y: 250 }, { x: 800, y: 100 }, { x: 900, y: 350 }, { x: 1000, y: 200 }, { x: 1100, y: 300 }, { x: 1200, y: 250 }], spawnPoint: { x: 0, y: 250 }, moneyReward: 55, difficulty: "easy", restrictedAreas: [] },
-      map8: { name: "Canyon Run", path: [{ x: 0, y: 200 }, { x: 300, y: 400 }, { x: 600, y: 200 }, { x: 900, y: 400 }, { x: 1200, y: 200 }], spawnPoint: { x: 0, y: 200 }, moneyReward: 85, difficulty: "medium", restrictedAreas: [] },
-      map9: { name: "Arctic Path", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 500, y: 400 }, { x: 800, y: 100 }, { x: 1000, y: 400 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 130, difficulty: "hard", restrictedAreas: [{ x: 300, y: 200, width: 200, height: 200 }, { x: 600, y: 200, width: 200, height: 200 }, { x: 900, y: 200, width: 200, height: 200 }] },
+      map5: { name: "Mountain Pass", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 400, y: 400 }, { x: 800, y: 100 }, { x: 1000, y: 400 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 90, difficulty: "medium", restrictedAreas: [] },
+      map6: { name: "Desert Maze", path: [{ x: 0, y: 150 }, { x: 300, y: 300 }, { x: 500, y: 150 }, { x: 700, y: 300 }, { x: 900, y: 150 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 150 }, moneyReward: 180, difficulty: "hard", restrictedAreas: [{ x: 400, y: 200, width: 200, height: 200 }, { x: 800, y: 200, width: 200, height: 200 }] },
+      map7: { name: "River Bend", path: [{ x: 0, y: 250 }, { x: 100, y: 100 }, { x: 200, y: 350 }, { x: 300, y: 150 }, { x: 400, y: 300 }, { x: 500, y: 200 }, { x: 600, y: 400 }, { x: 700, y: 250 }, { x: 800, y: 100 }, { x: 900, y: 350 }, { x: 1000, y: 200 }, { x: 1100, y: 300 }, { x: 1200, y: 250 }], spawnPoint: { x: 0, y: 250 }, moneyReward: 65, difficulty: "easy", restrictedAreas: [] },
+      map8: { name: "Canyon Run", path: [{ x: 0, y: 200 }, { x: 300, y: 400 }, { x: 600, y: 200 }, { x: 900, y: 400 }, { x: 1200, y: 200 }], spawnPoint: { x: 0, y: 200 }, moneyReward: 100, difficulty: "medium", restrictedAreas: [] },
+      map9: { name: "Arctic Path", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 500, y: 400 }, { x: 800, y: 100 }, { x: 1000, y: 400 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 200, difficulty: "hard", restrictedAreas: [{ x: 300, y: 200, width: 200, height: 200 }, { x: 600, y: 200, width: 200, height: 200 }, { x: 900, y: 200, width: 200, height: 200 }] },
     };
 
     function showNotification(message, duration = 3000) {
@@ -337,7 +360,7 @@
     function initShop() {
       console.log("initShop called"); // Debug: Function entry
       shopItems.innerHTML = "";
-      document.getElementById("global-money").textContent = globalMoney;
+      document.getElementById("global-money").textContent = `Money: $${globalMoney}`;
       for (const [type, stats] of Object.entries(towerStats)) {
         if (type === "basic") continue;
         const item = document.createElement("div");
@@ -345,7 +368,7 @@
         item.innerHTML = `
           <h4>${type.charAt(0).toUpperCase() + type.slice(1)}</h4>
           <p>Damage: ${stats.damage} | Range: ${stats.range}</p>
-          <p>Ability: ${stats.ability}</p>
+          <p>Fire Rate: ${stats.fireRate / 1000}s | Ability: ${stats.ability}</p>
           <p>${stats.unlocked ? "Unlocked" : `Cost: $${stats.unlockCost}`}</p>
           <button class="unlock-btn" data-type="${type}" ${stats.unlocked ? "disabled" : ""}>
             ${stats.unlocked ? "Unlocked" : "Unlock"}
@@ -401,6 +424,16 @@
         console.error("Error fetching user data:", err); // Debug: Error catch
         showNotification("Error fetching user data.");
       }
+    }
+
+    // Hard mode damage multiplier for good towers (sniper, mortar, laser, missile, poison, vortex)
+    function applyHardModeDamage(towerType) {
+      const goodTowers = ["sniper", "mortar", "laser", "missile", "poison", "vortex"];
+      const difficulty = localStorage.getItem("selectedDifficulty");
+      if (difficulty === "hard" && goodTowers.includes(towerType)) {
+        return towerStats[towerType].damage * 1.5; // 50% damage boost on hard mode
+      }
+      return towerStats[towerType].damage;
     }
 
     document.getElementById("show-signup").addEventListener("click", () => {

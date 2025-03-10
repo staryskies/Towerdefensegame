@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tower Defense Game</title>
   <style>
-    /* Your existing styles remain unchanged */
+    /* Existing styles remain unchanged */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #2c3e50; }
     #gameCanvas { display: block; width: 100%; height: 100%; background: #ecf0f1; }
-    #sidebar { position: fixed; top: 0; left: 0; width: 220px; height: 100%; background: rgba(44, 62, 80, 0.95); color: #ecf0f1; padding: 20px; z-index: 10; box-shadow: 5px 0 15px rgba(0, 0, 0, 0.3); }
+    #sidebar { position: fixed; top: 0; left: 0; width: 220px; height: 100%; background: rgba(44, 62, 80, 0.95); color: #ecf0f1; padding: 20px; z-index: 10; box-shadow: 5px 0 15px rgba(0, 0, 0, 0.3); overflow-y: auto; }
     .tower-option { padding: 12px; background: #34495e; margin: 10px 0; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-weight: 500; }
     .tower-option:hover { background: #3e5c76; transform: translateX(5px); }
     .tower-option.selected { background: #3498db; transform: translateX(5px); }
@@ -26,11 +26,32 @@
     #notification-box.show { opacity: 1; }
     #end-screen { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(44, 62, 80, 0.95); color: #ecf0f1; padding: 30px; border-radius: 15px; text-align: center; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4); display: none; z-index: 1001; max-width: 400px; }
     #end-screen h2 { font-size: 2em; margin-bottom: 20px; }
-    #restart-button { padding: 12px 25px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.3s ease; }
-    #restart-button:hover { background: #2980b9; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4); }
+    #restart-button, #main-menu-button { padding: 12px 25px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.3s ease; margin: 10px; }
+    #restart-button:hover, #main-menu-button:hover { background: #2980b9; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4); }
+    #map-selection { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(44, 62, 80, 0.95); color: #ecf0f1; padding: 30px; border-radius: 15px; text-align: center; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4); z-index: 1002; display: block; }
+    .map-option { padding: 10px; background: #34495e; margin: 10px 0; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-weight: 500; }
+    .map-option:hover { background: #3e5c76; transform: translateX(5px); }
+    .map-option.selected { background: #3498db; transform: translateX(5px); }
+    #start-game-button { padding: 12px 25px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.3s ease; margin-top: 20px; }
+    #start-game-button:hover { background: #2980b9; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4); }
+    #boss-indicator { position: fixed; top: 70px; left: 50%; transform: translateX(-50%); background: rgba(255, 0, 0, 0.8); color: white; padding: 5px 15px; border-radius: 5px; z-index: 1000; opacity: 0; transition: opacity 0.3s ease; font-weight: 600; }
+    #boss-indicator.show { opacity: 1; }
   </style>
 </head>
 <body>
+  <div id="map-selection">
+    <h2>Select a Map</h2>
+    <div class="map-option" data-map="map1" data-difficulty="easy">Beginner Path (Easy)</div>
+    <div class="map-option" data-map="map2" data-difficulty="medium">Zigzag Path (Medium)</div>
+    <div class="map-option" data-map="map3" data-difficulty="hard">Snake Path (Hard)</div>
+    <div class="map-option" data-map="map4" data-difficulty="easy">Forest Trail (Easy)</div>
+    <div class="map-option" data-map="map5" data-difficulty="medium">Mountain Pass (Medium)</div>
+    <div class="map-option" data-map="map6" data-difficulty="hard">Desert Maze (Hard)</div>
+    <div class="map-option" data-map="map7" data-difficulty="easy">River Bend (Easy)</div>
+    <div class="map-option" data-map="map8" data-difficulty="medium">Canyon Run (Medium)</div>
+    <div class="map-option" data-map="map9" data-difficulty="hard">Arctic Path (Hard, 60 Waves)</div>
+    <button id="start-game-button">Start Game</button>
+  </div>
   <div id="sidebar"></div>
   <canvas id="gameCanvas"></canvas>
   <div id="stats-panel">
@@ -51,12 +72,55 @@
     <button id="upgrade-tower-button">Upgrade</button>
   </div>
   <div id="notification-box"></div>
+  <div id="boss-indicator"></div>
   <div id="end-screen">
     <h2 id="end-message"></h2>
     <button id="restart-button">Restart</button>
+    <button id="main-menu-button">Main Menu</button>
   </div>
   <script type="module" src="stats.js"></script>
   <script type="module" src="tower.js"></script>
   <script type="module" src="game.js"></script>
+  <script>
+    // JavaScript to handle map selection and game start
+    document.addEventListener("DOMContentLoaded", () => {
+      const mapOptions = document.querySelectorAll(".map-option");
+      let selectedMap = localStorage.getItem("selectedMap") || "map1";
+      let selectedDifficulty = localStorage.getItem("selectedDifficulty") || "easy";
+
+      mapOptions.forEach(option => {
+        option.addEventListener("click", () => {
+          mapOptions.forEach(o => o.classList.remove("selected"));
+          option.classList.add("selected");
+          selectedMap = option.getAttribute("data-map");
+          selectedDifficulty = option.getAttribute("data-difficulty");
+          localStorage.setItem("selectedMap", selectedMap);
+          localStorage.setItem("selectedDifficulty", selectedDifficulty);
+        });
+      });
+
+      document.getElementById("start-game-button").addEventListener("click", () => {
+        if (selectedMap && selectedDifficulty) {
+          document.getElementById("map-selection").style.display = "none";
+          // Game logic is handled in game.js, which will start after this
+        } else {
+          alert("Please select a map and difficulty!");
+        }
+      });
+
+      // Check if already in game (e.g., refresh)
+      if (localStorage.getItem("selectedMap") && localStorage.getItem("selectedDifficulty")) {
+        document.getElementById("map-selection").style.display = "none";
+      }
+    });
+
+    // Placeholder for boss indicator (to be updated in game.js)
+    window.addEventListener("bossActive", (e) => {
+      const bossIndicator = document.getElementById("boss-indicator");
+      bossIndicator.textContent = `Boss Active: Wave ${e.detail.wave}`;
+      bossIndicator.classList.add("show");
+      setTimeout(() => bossIndicator.classList.remove("show"), 5000);
+    });
+  </script>
 </body>
 </html>

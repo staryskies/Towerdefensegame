@@ -3,7 +3,7 @@ import { towerStats } from './stats.js';
 
 console.log("game.js loaded and running"); // Debug: Confirm script starts
 
-const BASE_URL = ''; // Relative path for same-origin requests (works on https://towerdefensegame.onrender.com)
+const BASE_URL = ''; // Relative path for same-origin requests
 
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
@@ -36,79 +36,80 @@ let gameState = {
   gameSpeed: 1,
   selectedTower: null,
   isSpawning: false,
+  gameWon: false, // New flag for winning the game
 };
 
 async function loadUnlockedTowers() {
-  console.log("loadUnlockedTowers called"); // Debug: Function entry
+  console.log("loadUnlockedTowers called");
   const token = localStorage.getItem("token");
   if (!token) {
-    console.log("No token found in localStorage"); // Debug: Token check
+    console.log("No token found in localStorage");
     showNotification("Not authenticated. Please log in.");
     window.location.href = "/";
     return;
   }
 
   try {
-    console.log("Fetching towers with token:", token); // Debug: Before fetch
+    console.log("Fetching towers with token:", token);
     const response = await fetch(`${BASE_URL}/towers`, {
       headers: { "Authorization": token }
     });
-    console.log("Towers response status:", response.status); // Debug: Response status
+    console.log("Towers response status:", response.status);
     const data = await response.json();
-    console.log("Towers response data:", data); // Debug: Parsed response
+    console.log("Towers response data:", data);
     if (response.ok) {
-      towerStats.basic.unlocked = true; // Basic tower is always unlocked
+      towerStats.basic.unlocked = true;
       data.towers.forEach(type => {
         if (towerStats[type]) towerStats[type].unlocked = true;
       });
-      console.log("Unlocked towers:", data.towers); // Debug: Successful load
+      console.log("Unlocked towers:", data.towers);
     } else {
       throw new Error(data.message);
     }
   } catch (err) {
-    console.error("Error loading towers:", err); // Debug: Error catch
+    console.error("Error loading towers:", err);
     showNotification("Error loading towers.");
   }
 }
 
 async function fetchUserMoney() {
-  console.log("fetchUserMoney called"); // Debug: Function entry
+  console.log("fetchUserMoney called");
   const token = localStorage.getItem("token");
   if (!token) {
-    console.log("No token found in localStorage"); // Debug: Token check
+    console.log("No token found in localStorage");
     return;
   }
 
   try {
-    console.log("Fetching user money with token:", token); // Debug: Before fetch
+    console.log("Fetching user money with token:", token);
     const response = await fetch(`${BASE_URL}/user`, {
       headers: { "Authorization": token }
     });
-    console.log("User response status:", response.status); // Debug: Response status
+    console.log("User response status:", response.status);
     const data = await response.json();
-    console.log("User response data:", data); // Debug: Parsed response
+    console.log("User response data:", data);
     if (response.ok) {
       gameState.money = data.money;
-      console.log("User money loaded:", gameState.money); // Debug: Successful load
+      console.log("User money loaded:", gameState.money);
     } else {
       throw new Error(data.message);
     }
   } catch (err) {
-    console.error("Error fetching money:", err); // Debug: Error catch
+    console.error("Error fetching money:", err);
     showNotification("Error fetching money.");
   }
 }
 
 async function updateUserMoney() {
-  console.log("updateUserMoney called"); // Debug: Function entry
+  console.log("updateUserMoney called");
   const token = localStorage.getItem("token");
   if (!token) {
-    console.log("No token found in localStorage"); // Debug: Token check
+    console.log("No token found in localStorage");
     return;
   }
 
   try {
-    console.log("Updating money:", gameState.money, "with token:", token); // Debug: Before fetch
+    console.log("Updating money:", gameState.money, "with token:", token);
     const response = await fetch(`${BASE_URL}/update-money`, {
       method: "POST",
       headers: {
@@ -117,33 +118,34 @@ async function updateUserMoney() {
       },
       body: JSON.stringify({ money: gameState.money })
     });
-    console.log("Update money response status:", response.status); // Debug: Response status
+    console.log("Update money response status:", response.status);
     const data = await response.json();
-    console.log("Update money response data:", data); // Debug: Response data
+    console.log("Update money response data:", data);
     if (!response.ok) throw new Error(data.message);
-    console.log("Money updated successfully"); // Debug: Successful update
+    console.log("Money updated successfully");
   } catch (err) {
-    console.error("Error updating money:", err); // Debug: Error catch
+    console.error("Error updating money:", err);
     showNotification("Error updating money.");
   }
 }
 
 const maps = {
-  map1: { name: "Beginner Path", path: [{ x: 0, y: 300 }, { x: 100, y: 200 }, { x: 200, y: 400 }, { x: 300, y: 300 }, { x: 400, y: 100 }, { x: 500, y: 300 }, { x: 600, y: 200 }, { x: 700, y: 400 }, { x: 800, y: 300 }, { x: 900, y: 100 }, { x: 1000, y: 300 }, { x: 1100, y: 200 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 50, difficulty: "easy" },
-  map2: { name: "Zigzag Path", path: [{ x: 0, y: 150 }, { x: 400, y: 150 }, { x: 400, y: 450 }, { x: 800, y: 450 }, { x: 1200, y: 150 }], spawnPoint: { x: 0, y: 150 }, moneyReward: 75, difficulty: "medium" },
-  map3: { name: "Snake Path", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 400, y: 300 }, { x: 600, y: 100 }, { x: 800, y: 300 }, { x: 1000, y: 100 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 100, difficulty: "hard" },
-  map4: { name: "Forest Trail", path: [{ x: 0, y: 200 }, { x: 100, y: 400 }, { x: 200, y: 150 }, { x: 300, y: 350 }, { x: 400, y: 250 }, { x: 500, y: 400 }, { x: 600, y: 200 }, { x: 700, y: 350 }, { x: 800, y: 150 }, { x: 900, y: 300 }, { x: 1000, y: 400 }, { x: 1100, y: 250 }, { x: 1200, y: 200 }], spawnPoint: { x: 0, y: 200 }, moneyReward: 60, difficulty: "easy" },
-  map5: { name: "Mountain Pass", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 400, y: 400 }, { x: 800, y: 100 }, { x: 1000, y: 400 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 80, difficulty: "medium" },
-  map6: { name: "Desert Maze", path: [{ x: 0, y: 150 }, { x: 300, y: 300 }, { x: 500, y: 150 }, { x: 700, y: 300 }, { x: 900, y: 150 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 150 }, moneyReward: 120, difficulty: "hard" },
-  map7: { name: "River Bend", path: [{ x: 0, y: 250 }, { x: 100, y: 100 }, { x: 200, y: 350 }, { x: 300, y: 150 }, { x: 400, y: 300 }, { x: 500, y: 200 }, { x: 600, y: 400 }, { x: 700, y: 250 }, { x: 800, y: 100 }, { x: 900, y: 350 }, { x: 1000, y: 200 }, { x: 1100, y: 300 }, { x: 1200, y: 250 }], spawnPoint: { x: 0, y: 250 }, moneyReward: 55, difficulty: "easy" },
-  map8: { name: "Canyon Run", path: [{ x: 0, y: 200 }, { x: 300, y: 400 }, { x: 600, y: 200 }, { x: 900, y: 400 }, { x: 1200, y: 200 }], spawnPoint: { x: 0, y: 200 }, moneyReward: 85, difficulty: "medium" },
-  map9: { name: "Arctic Path", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 500, y: 400 }, { x: 800, y: 100 }, { x: 1000, y: 400 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 130, difficulty: "hard" },
+  map1: { name: "Beginner Path", path: [{ x: 0, y: 300 }, { x: 100, y: 200 }, { x: 200, y: 400 }, { x: 300, y: 300 }, { x: 400, y: 100 }, { x: 500, y: 300 }, { x: 600, y: 200 }, { x: 700, y: 400 }, { x: 800, y: 300 }, { x: 900, y: 100 }, { x: 1000, y: 300 }, { x: 1100, y: 200 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 50, difficulty: "easy", theme: "grassland" },
+  map2: { name: "Zigzag Path", path: [{ x: 0, y: 150 }, { x: 400, y: 150 }, { x: 400, y: 450 }, { x: 800, y: 450 }, { x: 1200, y: 150 }], spawnPoint: { x: 0, y: 150 }, moneyReward: 75, difficulty: "medium", theme: "grassland" },
+  map3: { name: "Snake Path", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 400, y: 300 }, { x: 600, y: 100 }, { x: 800, y: 300 }, { x: 1000, y: 100 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 150, difficulty: "hard", theme: "grassland" },
+  map4: { name: "Forest Trail", path: [{ x: 0, y: 200 }, { x: 100, y: 400 }, { x: 200, y: 150 }, { x: 300, y: 350 }, { x: 400, y: 250 }, { x: 500, y: 400 }, { x: 600, y: 200 }, { x: 700, y: 350 }, { x: 800, y: 150 }, { x: 900, y: 300 }, { x: 1000, y: 400 }, { x: 1100, y: 250 }, { x: 1200, y: 200 }], spawnPoint: { x: 0, y: 200 }, moneyReward: 60, difficulty: "easy", theme: "forest" },
+  map5: { name: "Mountain Pass", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 400, y: 400 }, { x: 800, y: 100 }, { x: 1000, y: 400 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 90, difficulty: "medium", theme: "mountain" },
+  map6: { name: "Desert Maze", path: [{ x: 0, y: 150 }, { x: 300, y: 300 }, { x: 500, y: 150 }, { x: 700, y: 300 }, { x: 900, y: 150 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 150 }, moneyReward: 180, difficulty: "hard", theme: "desert" },
+  map7: { name: "River Bend", path: [{ x: 0, y: 250 }, { x: 100, y: 100 }, { x: 200, y: 350 }, { x: 300, y: 150 }, { x: 400, y: 300 }, { x: 500, y: 200 }, { x: 600, y: 400 }, { x: 700, y: 250 }, { x: 800, y: 100 }, { x: 900, y: 350 }, { x: 1000, y: 200 }, { x: 1100, y: 300 }, { x: 1200, y: 250 }], spawnPoint: { x: 0, y: 250 }, moneyReward: 65, difficulty: "easy", theme: "river" },
+  map8: { name: "Canyon Run", path: [{ x: 0, y: 200 }, { x: 300, y: 400 }, { x: 600, y: 200 }, { x: 900, y: 400 }, { x: 1200, y: 200 }], spawnPoint: { x: 0, y: 200 }, moneyReward: 100, difficulty: "medium", theme: "canyon" },
+  map9: { name: "Arctic Path", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 500, y: 400 }, { x: 800, y: 100 }, { x: 1000, y: 400 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 200, difficulty: "hard", theme: "arctic" },
 };
 
 const selectedMap = localStorage.getItem("selectedMap") || "map1";
 const selectedDifficulty = localStorage.getItem("selectedDifficulty") || "easy";
 const path = maps[selectedMap].path;
 const spawnPoint = maps[selectedMap].spawnPoint;
+const mapTheme = maps[selectedMap].theme;
 
 let scaledPath, scaledSpawnPoint;
 function updateScaledPathAndSpawnPoint() {
@@ -152,16 +154,120 @@ function updateScaledPathAndSpawnPoint() {
 }
 updateScaledPathAndSpawnPoint();
 
-const enemyTypes = {
-  easy: [{ health: 100, speed: 1, radius: 10, color: "red" }],
-  medium: [
-    { health: 150, speed: 1.2, radius: 12, color: "blue" },
-    { health: 75, speed: 1.5, radius: 8, color: "green" },
-  ],
-  hard: [
-    { health: 200, speed: 1.5, radius: 15, color: "purple" },
-    { health: 100, speed: 2, radius: 10, color: "yellow" },
-  ],
+// Define themed enemy types and bosses for each map
+const enemyThemes = {
+  grassland: {
+    easy: [{ health: 100, speed: 1, radius: 10, color: "red" }],
+    medium: [
+      { health: 150, speed: 1.2, radius: 12, color: "blue" },
+      { health: 75, speed: 1.5, radius: 8, color: "green" },
+    ],
+    hard: [
+      { health: 200, speed: 1.5, radius: 15, color: "purple" },
+      { health: 100, speed: 2, radius: 10, color: "yellow" },
+    ],
+    boss: {
+      easy: { health: 500, speed: 0.7, radius: 20, color: "darkred" },
+      medium: { health: 800, speed: 0.9, radius: 25, color: "darkblue" },
+      hard: { health: 1200, speed: 1.1, radius: 30, color: "darkviolet" },
+    },
+  },
+  forest: {
+    easy: [{ health: 110, speed: 0.9, radius: 10, color: "darkgreen" }],
+    medium: [
+      { health: 160, speed: 1.1, radius: 12, color: "brown" },
+      { health: 80, speed: 1.4, radius: 8, color: "olive" },
+    ],
+    hard: [
+      { health: 220, speed: 1.4, radius: 15, color: "forestgreen" },
+      { health: 110, speed: 1.9, radius: 10, color: "limegreen" },
+    ],
+    boss: {
+      easy: { health: 550, speed: 0.6, radius: 20, color: "darkgreen" },
+      medium: { health: 850, speed: 0.8, radius: 25, color: "saddlebrown" },
+      hard: { health: 1300, speed: 1.0, radius: 30, color: "darkolivegreen" },
+    },
+  },
+  mountain: {
+    easy: [{ health: 120, speed: 0.8, radius: 10, color: "gray" }],
+    medium: [
+      { health: 170, speed: 1.0, radius: 12, color: "slategray" },
+      { health: 85, speed: 1.3, radius: 8, color: "lightgray" },
+    ],
+    hard: [
+      { health: 230, speed: 1.3, radius: 15, color: "darkgray" },
+      { health: 115, speed: 1.8, radius: 10, color: "silver" },
+    ],
+    boss: {
+      easy: { health: 600, speed: 0.5, radius: 20, color: "dimgray" },
+      medium: { health: 900, speed: 0.7, radius: 25, color: "gray" },
+      hard: { health: 1400, speed: 0.9, radius: 30, color: "darkslategray" },
+    },
+  },
+  desert: {
+    easy: [{ health: 130, speed: 1.1, radius: 10, color: "sandybrown" }],
+    medium: [
+      { health: 180, speed: 1.3, radius: 12, color: "tan" },
+      { health: 90, speed: 1.6, radius: 8, color: "khaki" },
+    ],
+    hard: [
+      { health: 240, speed: 1.6, radius: 15, color: "darkorange" },
+      { health: 120, speed: 2.1, radius: 10, color: "gold" },
+    ],
+    boss: {
+      easy: { health: 650, speed: 0.8, radius: 20, color: "peru" },
+      medium: { health: 950, speed: 1.0, radius: 25, color: "sienna" },
+      hard: { health: 1500, speed: 1.2, radius: 30, color: "chocolate" },
+    },
+  },
+  river: {
+    easy: [{ health: 100, speed: 1.2, radius: 10, color: "aqua" }],
+    medium: [
+      { health: 150, speed: 1.4, radius: 12, color: "teal" },
+      { health: 75, speed: 1.7, radius: 8, color: "lightblue" },
+    ],
+    hard: [
+      { health: 200, speed: 1.7, radius: 15, color: "deepskyblue" },
+      { health: 100, speed: 2.2, radius: 10, color: "cyan" },
+    ],
+    boss: {
+      easy: { health: 500, speed: 0.9, radius: 20, color: "darkcyan" },
+      medium: { health: 800, speed: 1.1, radius: 25, color: "turquoise" },
+      hard: { health: 1200, speed: 1.3, radius: 30, color: "darkturquoise" },
+    },
+  },
+  canyon: {
+    easy: [{ health: 120, speed: 1.0, radius: 10, color: "sienna" }],
+    medium: [
+      { health: 170, speed: 1.2, radius: 12, color: "peru" },
+      { health: 85, speed: 1.5, radius: 8, color: "burlywood" },
+    ],
+    hard: [
+      { health: 230, speed: 1.5, radius: 15, color: "chocolate" },
+      { health: 115, speed: 2.0, radius: 10, color: "coral" },
+    ],
+    boss: {
+      easy: { health: 600, speed: 0.7, radius: 20, color: "saddlebrown" },
+      medium: { health: 900, speed: 0.9, radius: 25, color: "rosybrown" },
+      hard: { health: 1400, speed: 1.1, radius: 30, color: "brown" },
+    },
+  },
+  arctic: {
+    easy: [{ health: 140, speed: 0.9, radius: 10, color: "white" }],
+    medium: [
+      { health: 190, speed: 1.1, radius: 12, color: "aliceblue" },
+      { health: 95, speed: 1.4, radius: 8, color: "snow" },
+    ],
+    hard: [
+      { health: 250, speed: 1.4, radius: 15, color: "ghostwhite" },
+      { health: 125, speed: 1.9, radius: 10, color: "ivory" },
+    ],
+    boss: {
+      easy: { health: 700, speed: 0.6, radius: 20, color: "lightcyan" },
+      medium: { health: 1000, speed: 0.8, radius: 25, color: "azure" },
+      hard: { health: 1600, speed: 1.0, radius: 30, color: "lightblue" },
+    },
+  },
 };
 
 class Enemy {
@@ -176,15 +282,47 @@ class Enemy {
     this.color = type.color;
     this.pathIndex = 1;
     this.slowed = false;
+    this.burnTimer = 0;
+    this.burnDamage = 0;
+    this.poisonTimer = 0;
+    this.poisonDamage = 0;
+    this.isStrongest = false; // For missile targeting
   }
 
   update(gameState) {
     if (this.pathIndex >= this.path.length) {
-      gameState.playerHealth -= 1;
+      gameState.playerHealth -= this.radius / 10; // Larger enemies deal more damage
       gameState.enemies = gameState.enemies.filter(e => e !== this);
       checkGameEnd();
       return;
     }
+
+    // Apply burn damage (flamethrower ability)
+    if (this.burnTimer > 0) {
+      this.health -= this.burnDamage * gameState.gameSpeed / 60;
+      this.burnTimer -= 1000 / 60 * gameState.gameSpeed;
+      if (this.health <= 0) {
+        gameState.score += 10;
+        gameState.money += 5;
+        updateUserMoney();
+        gameState.enemies = gameState.enemies.filter(e => e !== this);
+        return;
+      }
+    }
+
+    // Apply poison damage (poison ability)
+    if (this.poisonTimer > 0) {
+      this.health -= this.poisonDamage * gameState.gameSpeed / 60;
+      this.poisonTimer -= 1000 / 60 * gameState.gameSpeed;
+      if (this.health <= 0) {
+        gameState.score += 10;
+        gameState.money += 5;
+        updateUserMoney();
+        gameState.enemies = gameState.enemies.filter(e => e !== this);
+        return;
+      }
+    }
+
     const target = this.path[this.pathIndex];
     const dx = target.x - this.x;
     const dy = target.y - this.y;
@@ -214,16 +352,17 @@ class Enemy {
 }
 
 function gameLoop() {
-  if (gameState.gameOver) return;
+  if (gameState.gameOver || gameState.gameWon) return;
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   updateScaledPathAndSpawnPoint();
 
+  // Draw the path with a themed color
   ctx.beginPath();
   ctx.moveTo(scaledPath[0].x, scaledPath[0].y);
   for (let point of scaledPath) ctx.lineTo(point.x, point.y);
-  ctx.strokeStyle = "black";
+  ctx.strokeStyle = mapTheme === "arctic" ? "lightblue" : mapTheme === "desert" ? "sandybrown" : mapTheme === "forest" ? "darkgreen" : mapTheme === "mountain" ? "gray" : mapTheme === "river" ? "aqua" : mapTheme === "canyon" ? "sienna" : "black";
   ctx.lineWidth = 5;
   ctx.stroke();
 
@@ -235,12 +374,23 @@ function gameLoop() {
   }
 
   gameState.enemies.forEach(enemy => enemy.draw(ctx, scaleX, scaleY));
-  gameState.towers.forEach(tower => tower.draw(ctx, scaleX, scaleY));
+  gameState.towers.forEach(tower => tower.draw(ctx, scaleY, scaleY));
   gameState.projectiles.forEach(projectile => projectile.draw(ctx, scaleX, scaleY));
 
   if (gameState.selectedTowerType) drawTowerFootprint();
 
-  if (gameState.enemies.length === 0 && !gameState.isSpawning && !gameState.isPaused && !gameState.gameOver) {
+  // Check for win condition on Arctic Path
+  if (selectedMap === "map9" && gameState.wave > 60 && gameState.enemies.length === 0 && !gameState.isSpawning) {
+    gameState.gameWon = true;
+    const earnedMoney = Math.floor(gameState.score / 5);
+    gameState.money += earnedMoney;
+    updateUserMoney();
+    document.getElementById("end-screen").style.display = "block";
+    document.getElementById("end-message").textContent = `Victory! You survived all 60 waves on Arctic Path! Score: ${gameState.score}. Earned $${earnedMoney}.`;
+    return;
+  }
+
+  if (gameState.enemies.length === 0 && !gameState.isSpawning && !gameState.isPaused && !gameState.gameOver && !gameState.gameWon) {
     spawnWave();
     gameState.wave++;
   }
@@ -255,32 +405,61 @@ function gameLoop() {
 }
 
 function spawnWave() {
-  console.log("spawnWave called"); // Debug: Function entry
+  console.log("spawnWave called");
   gameState.isSpawning = true;
-  let waveSize = gameState.wave * 5;
+  let baseWaveSize = selectedDifficulty === "easy" ? 5 : selectedDifficulty === "medium" ? 8 : 10;
+  baseWaveSize *= gameState.wave; // Scale with wave number
+  let waveSize = Math.round(baseWaveSize);
   let moneyReward = maps[selectedMap].moneyReward;
-  let healthMultiplier = 1;
-  let spawnInterval = 1000;
+  let healthMultiplier = selectedDifficulty === "easy" ? 1 : selectedDifficulty === "medium" ? 1.5 : 2;
+  let spawnInterval = selectedDifficulty === "easy" ? 1000 : selectedDifficulty === "medium" ? 800 : 600;
 
-  if (selectedDifficulty === "medium") {
-    healthMultiplier = 1.5;
-    waveSize *= 1.2;
-    spawnInterval = 800;
-  } else if (selectedDifficulty === "hard") {
-    healthMultiplier = 2;
-    waveSize *= 1.5;
-    spawnInterval = 600;
+  // Arctic Path specific logic
+  if (selectedMap === "map9") {
+    waveSize = Math.min(waveSize, 20); // Cap wave size for balance
+    if (gameState.wave % 10 === 0) {
+      const bossType = enemyThemes.arctic.boss.hard; // Hard mode boss for Arctic
+      gameState.enemies.push(new Enemy(scaledPath, { ...bossType, health: bossType.health * (1 + gameState.wave / 10) }, scaledSpawnPoint));
+      showNotification(`Boss Wave ${gameState.wave} on Arctic Path!`);
+      window.dispatchEvent(new CustomEvent("bossActive", { detail: { wave: gameState.wave } }));
+    }
+  } else {
+    // Boss spawning for other difficulties
+    const bossInterval = selectedDifficulty === "easy" ? 20 : selectedDifficulty === "medium" ? 10 : 5;
+    if (gameState.wave % bossInterval === 0 && gameState.wave > 1) {
+      const bossType = enemyThemes[mapTheme].boss[selectedDifficulty];
+      gameState.enemies.push(new Enemy(scaledPath, { ...bossType, health: bossType.health * (1 + gameState.wave / 10) }, scaledSpawnPoint));
+      showNotification(`Boss Wave ${gameState.wave} on ${maps[selectedMap].name}!`);
+      window.dispatchEvent(new CustomEvent("bossActive", { detail: { wave: gameState.wave } }));
+    }
   }
+
+  // Cap wave size for non-Arctic maps to prevent overwhelming
+  if (selectedMap !== "map9") waveSize = Math.min(waveSize, 15);
 
   gameState.money += moneyReward;
   updateUserMoney();
   showNotification(`Wave ${gameState.wave} completed! +$${moneyReward}`);
 
+  // Mark the strongest enemy for missile targeting
+  let strongestEnemy = null;
+  let maxHealth = 0;
+  gameState.enemies.forEach(enemy => {
+    if (enemy.health > maxHealth) {
+      maxHealth = enemy.health;
+      strongestEnemy = enemy;
+    }
+  });
+  if (strongestEnemy) {
+    gameState.enemies.forEach(enemy => enemy.isStrongest = false);
+    strongestEnemy.isStrongest = true;
+  }
+
   for (let i = 0; i < waveSize; i++) {
     setTimeout(() => {
-      if (!gameState.isPaused && !gameState.gameOver) {
-        let type = enemyTypes[selectedDifficulty][Math.floor(Math.random() * enemyTypes[selectedDifficulty].length)];
-        type = { ...type, health: type.health * healthMultiplier };
+      if (!gameState.isPaused && !gameState.gameOver && !gameState.gameWon) {
+        let type = enemyThemes[mapTheme][selectedDifficulty][Math.floor(Math.random() * enemyThemes[mapTheme][selectedDifficulty].length)];
+        type = { ...type, health: type.health * healthMultiplier * (1 + gameState.wave / 20) }; // Scale health with wave
         gameState.enemies.push(new Enemy(scaledPath, type, scaledSpawnPoint));
         if (i === waveSize - 1) gameState.isSpawning = false;
       }
@@ -289,7 +468,7 @@ function spawnWave() {
 }
 
 function initSidebar() {
-  console.log("initSidebar called"); // Debug: Function entry
+  console.log("initSidebar called");
   const sidebar = document.getElementById("sidebar");
   sidebar.innerHTML = "";
   for (const [type, stats] of Object.entries(towerStats)) {
@@ -297,8 +476,8 @@ function initSidebar() {
     const div = document.createElement("div");
     div.className = "tower-option";
     div.setAttribute("data-type", type);
-    div.setAttribute("data-cost", stats.cost);
-    div.textContent = `${type.charAt(0).toUpperCase() + type.slice(1)} Tower ($${stats.cost})`;
+    div.setAttribute("data-cost", stats.cost || 50); // Default cost if not specified
+    div.textContent = `${type.charAt(0).toUpperCase() + type.slice(1)} Tower ($${stats.cost || 50})`;
     sidebar.appendChild(div);
   }
   sidebar.innerHTML += `
@@ -306,13 +485,13 @@ function initSidebar() {
     <div id="fast-forward-button">Fast Forward (1x)</div>
     <div id="home-button">Home</div>
   `;
-  console.log("Sidebar initialized"); // Debug: Sidebar setup complete
+  console.log("Sidebar initialized");
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-  console.log("DOMContentLoaded event fired"); // Debug: Event start
+  console.log("DOMContentLoaded event fired");
   if (!localStorage.getItem("token")) {
-    console.log("No token found, redirecting to login"); // Debug: Token check
+    console.log("No token found, redirecting to login");
     showNotification("Please log in to play.");
     window.location.href = "/";
     return;
@@ -327,7 +506,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (option) {
       const type = option.getAttribute("data-type");
       const cost = parseInt(option.getAttribute("data-cost"));
-      console.log("Tower option clicked:", type, "Cost:", cost); // Debug: Tower selection
+      console.log("Tower option clicked:", type, "Cost:", cost);
       document.querySelectorAll(".tower-option").forEach(o => o.classList.remove("selected"));
       if (gameState.money >= cost) {
         gameState.selectedTowerType = type;
@@ -338,23 +517,31 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
     if (e.target.id === "pause-button") {
-      console.log("Pause button clicked"); // Debug: Button click
+      console.log("Pause button clicked");
       gameState.isPaused = !gameState.isPaused;
       e.target.textContent = gameState.isPaused ? "Resume" : "Pause";
       e.target.classList.toggle("active", gameState.isPaused);
     }
     if (e.target.id === "fast-forward-button") {
-      console.log("Fast forward button clicked"); // Debug: Button click
+      console.log("Fast forward button clicked");
       gameState.gameSpeed = gameState.gameSpeed === 1 ? 2 : 1;
       e.target.textContent = `Fast Forward (${gameState.gameSpeed}x)`;
       e.target.classList.toggle("active", gameState.gameSpeed === 2);
     }
     if (e.target.id === "home-button") {
-      console.log("Home button clicked"); // Debug: Button click
+      console.log("Home button clicked");
       updateUserMoney();
       window.location.href = "/";
     }
   });
+
+  // Add event listener for main menu button
+  document.getElementById("main-menu-button").addEventListener("click", () => {
+    console.log("Main menu button clicked");
+    updateUserMoney();
+    window.location.href = "/"; // Redirect to map selection
+  });
+
   gameLoop();
 });
 
@@ -399,10 +586,10 @@ canvas.addEventListener("click", e => {
   const rect = canvas.getBoundingClientRect();
   const x = (e.clientX - rect.left) / scaleX;
   const y = (e.clientY - rect.top) / scaleY;
-  console.log(`Clicked at (${x}, ${y}), selectedTowerType: ${gameState.selectedTowerType}`); // Debug: Canvas click
+  console.log(`Clicked at (${x}, ${y}), selectedTowerType: ${gameState.selectedTowerType}`);
 
   if (gameState.selectedTowerType) {
-    const cost = towerStats[gameState.selectedTowerType].cost;
+    const cost = towerStats[gameState.selectedTowerType].cost || 50;
     if (gameState.money >= cost) {
       if (canPlaceTower(x, y)) {
         gameState.towers.push(new Tower(x, y, gameState.selectedTowerType));
@@ -440,7 +627,7 @@ canvas.addEventListener("click", e => {
 });
 
 function showTowerInfoPanel(tower) {
-  console.log("showTowerInfoPanel called for tower:", tower.type); // Debug: Function entry
+  console.log("showTowerInfoPanel called for tower:", tower.type);
   const panel = document.getElementById("tower-info-panel");
   panel.style.display = "block";
   document.getElementById("tower-type").textContent = `Type: ${tower.type.charAt(0).toUpperCase() + tower.type.slice(1)}`;
@@ -453,7 +640,7 @@ function showTowerInfoPanel(tower) {
 }
 
 document.getElementById("upgrade-tower-button").addEventListener("click", () => {
-  console.log("Upgrade tower button clicked"); // Debug: Button click
+  console.log("Upgrade tower button clicked");
   if (gameState.selectedTower) {
     const cost = 100 * gameState.selectedTower.level;
     if (gameState.money >= cost) {
@@ -469,7 +656,7 @@ document.getElementById("upgrade-tower-button").addEventListener("click", () => 
 });
 
 function showNotification(message, duration = 3000) {
-  console.log("Notification:", message); // Debug: Log notifications
+  console.log("Notification:", message);
   const box = document.getElementById("notification-box");
   box.textContent = message;
   box.classList.add("show");
@@ -478,7 +665,7 @@ function showNotification(message, duration = 3000) {
 
 function checkGameEnd() {
   if (gameState.playerHealth <= 0 && !gameState.gameOver) {
-    console.log("Game over detected"); // Debug: Game end
+    console.log("Game over detected");
     gameState.gameOver = true;
     const earnedMoney = Math.floor(gameState.score / 10);
     gameState.money += earnedMoney;
@@ -489,7 +676,7 @@ function checkGameEnd() {
 }
 
 document.getElementById("restart-button").addEventListener("click", () => {
-  console.log("Restart button clicked"); // Debug: Button click
+  console.log("Restart button clicked");
   updateUserMoney();
-  window.location.reload();
+  window.location.href = "/"; // Return to map selection
 });

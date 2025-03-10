@@ -1,16 +1,98 @@
-const towerStats = {
-    basic: { cost: 50, damage: 20, range: 100, cooldown: 60, color: "gray", ability: "None", unlockCost: 0, unlocked: true },
-    sniper: { cost: 100, damage: 50, range: 200, cooldown: 120, color: "blue", ability: "High Damage", unlockCost: 500, unlocked: false },
-    splash: { cost: 150, damage: 10, range: 80, cooldown: 30, color: "orange", ability: "Area Damage", unlockCost: 750, unlocked: false },
-    slow: { cost: 75, damage: 5, range: 120, cooldown: 90, color: "cyan", ability: "Slows Enemies", unlockCost: 600, unlocked: false },
-    rapid: { cost: 125, damage: 15, range: 90, cooldown: 12, color: "purple", ability: "Rapid Fire", unlockCost: 800, unlocked: false },
-    bomb: { cost: 200, damage: 40, range: 150, cooldown: 90, color: "brown", ability: "Explosive Damage", unlockCost: 1000, unlocked: false },
-    laser: { cost: 250, damage: 30, range: 180, cooldown: 80, color: "red", ability: "Piercing Shots", unlockCost: 1200, unlocked: false },
-    freeze: { cost: 175, damage: 10, range: 140, cooldown: 100, color: "lightblue", ability: "Freeze Enemies", unlockCost: 900, unlocked: false },
-    poison: { cost: 225, damage: 15, range: 110, cooldown: 70, color: "green", ability: "Poison Over Time", unlockCost: 1100, unlocked: false },
-    flame: { cost: 275, damage: 25, range: 90, cooldown: 50, color: "yellow", ability: "Burn Damage", unlockCost: 1300, unlocked: false },
-    shield: { cost: 300, damage: 20, range: 150, cooldown: 120, color: "silver", ability: "Protect Allies", unlockCost: 1500, unlocked: false },
-    missile: { cost: 350, damage: 60, range: 200, cooldown: 150, color: "darkgray", ability: "Guided Missile", unlockCost: 1800, unlocked: false },
-  };
-  
-  export { towerStats };
+export const towerStats = {
+  basic: {
+    unlocked: true,
+    damage: 10,
+    range: 100,
+    fireRate: 1000, // milliseconds between shots
+    unlockCost: 0,
+    ability: "None"
+  },
+  archer: {
+    unlocked: false,
+    damage: 15,
+    range: 120,
+    fireRate: 800,
+    unlockCost: 50,
+    ability: "Multi-Shot: Fires 2 arrows every 2 seconds"
+  },
+  cannon: {
+    unlocked: false,
+    damage: 30,
+    range: 150,
+    fireRate: 2000,
+    unlockCost: 100,
+    ability: "Splash Damage: Deals 50% damage in a 50-unit radius"
+  },
+  sniper: {
+    unlocked: false,
+    damage: 50,
+    range: 250,
+    fireRate: 3000,
+    unlockCost: 200,
+    ability: "Critical Hit: 20% chance to deal double damage"
+  },
+  freeze: {
+    unlocked: false,
+    damage: 20,
+    range: 130,
+    fireRate: 1500,
+    unlockCost: 150,
+    ability: "Slow: Reduces enemy speed by 50% for 2 seconds"
+  },
+  mortar: {
+    unlocked: false,
+    damage: 40,
+    range: 200,
+    fireRate: 2500,
+    unlockCost: 250,
+    ability: "Area Blast: Deals 75% damage in a 75-unit radius every 3 seconds"
+  },
+  laser: {
+    unlocked: false,
+    damage: 60,
+    range: 180,
+    fireRate: 1000,
+    unlockCost: 300,
+    ability: "Beam: Continuously damages enemies in range for 5 seconds every 10 seconds"
+  },
+  tesla: {
+    unlocked: false,
+    damage: 25,
+    range: 140,
+    fireRate: 1200,
+    unlockCost: 180,
+    ability: "Chain Lightning: Jumps to 2 nearby enemies, dealing 50% damage"
+  },
+  flamethrower: {
+    unlocked: false,
+    damage: 35,
+    range: 110,
+    fireRate: 900,
+    unlockCost: 220,
+    ability: "Burn: Deals 10 damage per second for 3 seconds after hit"
+  },
+  missile: {
+    unlocked: false,
+    damage: 70,
+    range: 220,
+    fireRate: 4000,
+    unlockCost: 350,
+    ability: "Homing Missile: Tracks the strongest enemy, dealing 100% damage on hit"
+  },
+  poison: {
+    unlocked: false,
+    damage: 15,
+    range: 160,
+    fireRate: 1800,
+    unlockCost: 200,
+    ability: "Poison Cloud: Deals 5 damage per second to all enemies in range for 4 seconds"
+  },
+  vortex: {
+    unlocked: false,
+    damage: 45,
+    range: 190,
+    fireRate: 3000,
+    unlockCost: 280,
+    ability: "Pull: Pulls enemies 50 units toward the tower every 5 seconds"
+  }
+};
