@@ -252,6 +252,7 @@
     <div id="user-money">Money: $0</div>
     <button id="start-game" disabled>Start Game</button>
     <div id="map-menu">
+      123
       <h2>Select Map <button class="close-btn" id="close-map-menu">X</button></h2>
       <div id="map-list">
         <!-- Maps will be populated here -->
@@ -485,6 +486,7 @@
         initMapMenu(); // Call initMapMenu to populate the map list
         mapMenu.style.display = "block";
         document.body.classList.add("shop-open"); // Reuse overlay for map menu
+        console.log("mapList children:", mapList.children.length); // Debug: Check if map list is populated
       } else {
         console.log("Start game button is disabled"); // Debug: Check if disabled
       }
