@@ -38,6 +38,66 @@ let gameState = {
   isSpawning: false,
 };
 
+async function loadUnlockedTowers() {
+  console.log("loadUnlockedTowers called"); // Debug: Function entry
+  const token = localStorage.getItem("token");
+  if (!token) {
+    console.log("No token found in localStorage"); // Debug: Token check
+    showNotification("Not authenticated. Please log in.");
+    window.location.href = "/";
+    return;
+  }
+
+  try {
+    console.log("Fetching towers with token:", token); // Debug: Before fetch
+    const response = await fetch(`${BASE_URL}/towers`, {
+      headers: { "Authorization": token }
+    });
+    console.log("Towers response status:", response.status); // Debug: Response status
+    const data = await response.json();
+    console.log("Towers response data:", data); // Debug: Parsed response
+    if (response.ok) {
+      towerStats.basic.unlocked = true; // Basic tower is always unlocked
+      data.towers.forEach(type => {
+        if (towerStats[type]) towerStats[type].unlocked = true;
+      });
+      console.log("Unlocked towers:", data.towers); // Debug: Successful load
+    } else {
+      throw new Error(data.message);
+    }
+  } catch (err) {
+    console.error("Error loading towers:", err); // Debug: Error catch
+    showNotification("Error loading towers.");
+  }
+}
+
+async function fetchUserMoney() {
+  console.log("fetchUserMoney called"); // Debug: Function entry
+  const token = localStorage.getItem("token");
+  if (!token) {
+    console.log("No token found in localStorage"); // Debug: Token check
+    return;
+  }
+
+  try {
+    console.log("Fetching user money with token:", token); // Debug: Before fetch
+    const response = await fetch(`${BASE_URL}/user`, {
+      headers: { "Authorization": token }
+    });
+    console.log("User response status:", response.status); // Debug: Response status
+    const data = await response.json();
+    console.log("User response data:", data); // Debug: Parsed response
+    if (response.ok) {
+      gameState.money = data.money;
+      console.log("User money loaded:", gameState.money); // Debug: Successful load
+    } else {
+      throw new Error(data.message);
+    }
+  } catch (err) {
+    console.error("Error fetching money:", err); // Debug: Error catch
+    showNotification("Error fetching money.");
+  }
+}
 
 async function updateUserMoney() {
   console.log("updateUserMoney called"); // Debug: Function entry
@@ -150,39 +210,6 @@ class Enemy {
     ctx.fillRect(this.x - barWidth / 2, this.y - 15 * Math.min(scaleX, scaleY), barWidth, 2);
     ctx.fillStyle = "green";
     ctx.fillRect(this.x - barWidth / 2, this.y - 15 * Math.min(scaleX, scaleY), barWidth * (this.health / this.maxHealth), 2);
-  }
-}
-
-async function loadUnlockedTowers() {
-  console.log("loadUnlockedTowers called"); // Debug: Function entry
-  const token = localStorage.getItem("token");
-  if (!token) {
-    console.log("No token found in localStorage"); // Debug: Token check
-    showNotification("Not authenticated. Please log in.");
-    window.location.href = "/";
-    return;
-  }
-
-  try {
-    console.log("Fetching towers with token:", token); // Debug: Before fetch
-    const response = await fetch(`${BASE_URL}/towers`, {
-      headers: { "Authorization": token }
-    });
-    console.log("Towers response status:", response.status); // Debug: Response status
-    const data = await response.json();
-    console.log("Towers response data:", data); // Debug: Parsed response
-    if (response.ok) {
-      towerStats.basic.unlocked = true; // Basic tower is always unlocked
-      data.towers.forEach(type => {
-        if (towerStats[type]) towerStats[type].unlocked = true;
-      });
-      console.log("Unlocked towers:", data.towers); // Debug: Successful load
-    } else {
-      throw new Error(data.message);
-    }
-  } catch (err) {
-    console.error("Error loading towers:", err); // Debug: Error catch
-    showNotification("Error loading towers.");
   }
 }
 
