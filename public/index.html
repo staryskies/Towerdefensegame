@@ -105,7 +105,7 @@
       max-height: 400px;
       overflow-y: auto;
       color: #333;
-      z-index: 1000;
+      z-index: 1000; /* Ensure it appears above other content */
     }
 
     #map-menu h2, #tower-shop h2 {
@@ -390,8 +390,8 @@
         console.log("User response data:", data); // Debug: Parsed response
         if (response.ok) {
           globalMoney = data.money;
-          document.getElementById("user-money").textContent = globalMoney;
-          document.getElementById("global-money").textContent = globalMoney;
+          document.getElementById("user-money").textContent = `Money: $${globalMoney}`;
+          document.getElementById("global-money").textContent = `Money: $${globalMoney}`;
           console.log("User money loaded:", globalMoney); // Debug: Successful load
         } else {
           throw new Error(data.message);
@@ -481,8 +481,11 @@
     document.getElementById("start-game").addEventListener("click", () => {
       console.log("Start game clicked"); // Debug: Button click
       if (!document.getElementById("start-game").disabled) {
+        console.log("Showing map menu"); // Debug: Confirming display
         mapMenu.style.display = "block";
         document.body.classList.add("shop-open"); // Reuse overlay for map menu
+      } else {
+        console.log("Start game button is disabled"); // Debug: Check if disabled
       }
     });
 
@@ -551,7 +554,7 @@
             globalMoney -= cost;
             towerStats[type].unlocked = true;
             initShop();
-            document.getElementById("user-money").textContent = globalMoney;
+            document.getElementById("user-money").textContent = `Money: $${globalMoney}`;
             showNotification(`${type.charAt(0).toUpperCase() + type.slice(1)} Tower unlocked!`);
           } else {
             showNotification(data.message);
