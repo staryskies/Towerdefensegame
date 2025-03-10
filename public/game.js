@@ -71,38 +71,7 @@ async function loadUnlockedTowers() {
   }
 }
 
-async function loadUnlockedTowers() {
-  console.log("loadUnlockedTowers called"); // Debug: Function entry
-  const token = localStorage.getItem("token");
-  if (!token) {
-    console.log("No token found in localStorage"); // Debug: Token check
-    showNotification("Not authenticated. Please log in.");
-    window.location.href = "/";
-    return;
-  }
 
-  try {
-    console.log("Fetching towers with token:", token); // Debug: Before fetch
-    const response = await fetch(`${BASE_URL}/towers`, {
-      headers: { "Authorization": token }
-    });
-    console.log("Towers response status:", response.status); // Debug: Response status
-    const data = await response.json();
-    console.log("Towers response data:", data); // Debug: Parsed response
-    if (response.ok) {
-      towerStats.basic.unlocked = true; // Basic tower is always unlocked
-      data.towers.forEach(type => {
-        if (towerStats[type]) towerStats[type].unlocked = true;
-      });
-      console.log("Unlocked towers:", data.towers); // Debug: Successful load
-    } else {
-      throw new Error(data.message);
-    }
-  } catch (err) {
-    console.error("Error loading towers:", err); // Debug: Error catch
-    showNotification("Error loading towers.");
-  }
-}
 
 async function updateUserMoney() {
   console.log("updateUserMoney called"); // Debug: Function entry
