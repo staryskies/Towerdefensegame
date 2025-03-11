@@ -14,7 +14,7 @@ function resizeCanvas() {
   canvas.height = window.innerHeight;
   scaleX = Math.min(canvas.width / originalWidth, 2);
   scaleY = Math.min(canvas.height / originalHeight, 2);
-  textScale = Math.min(canvas.width / originalWidth, 1.5);
+  textScale = Math.min(canvas.height / originalHeight, 1.5); // Changed to scaleY
   updateScaledPathAndSpawnPoint();
 }
 
@@ -240,23 +240,18 @@ class Enemy {
   }
 
   draw(ctx) {
-    // Base enemy circle
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.radius * Math.min(scaleX, scaleY), 0, 2 * Math.PI);
     ctx.fillStyle = this.color;
     ctx.fill();
 
-    // Health bar
     const barWidth = 20 * Math.min(scaleX, scaleY);
     ctx.fillStyle = "red";
     ctx.fillRect(this.x - barWidth / 2, this.y - 15 * Math.min(scaleX, scaleY), barWidth, 2 * Math.min(scaleX, scaleY));
     ctx.fillStyle = "green";
     ctx.fillRect(this.x - barWidth / 2, this.y - 15 * Math.min(scaleX, scaleY), barWidth * (this.health / this.maxHealth), 2 * Math.min(scaleX, scaleY));
 
-    // Status effects
     const scaledRadius = this.radius * Math.min(scaleX, scaleY);
-
-    // Slow effect: Blue ring
     if (this.slowed && this.slowTimer > 0) {
       ctx.beginPath();
       ctx.arc(this.x, this.y, scaledRadius + 2, 0, 2 * Math.PI);
@@ -265,16 +260,14 @@ class Enemy {
       ctx.stroke();
     }
 
-    // Burn effect: Red flickering outline
     if (this.burnTimer > 0) {
       ctx.beginPath();
       ctx.arc(this.x, this.y, scaledRadius + 1, 0, 2 * Math.PI);
-      ctx.strokeStyle = `rgba(255, 0, 0, ${Math.sin(Date.now() * 0.01) * 0.5 + 0.5})`; // Flickering effect
+      ctx.strokeStyle = `rgba(255, 0, 0, ${Math.sin(Date.now() * 0.01) * 0.5 + 0.5})`;
       ctx.lineWidth = 2;
       ctx.stroke();
     }
 
-    // Poison effect: Green cloud-like particles
     if (this.poisonTimer > 0) {
       ctx.save();
       ctx.globalAlpha = 0.5;

@@ -2,16 +2,17 @@ import { towerStats } from './stats.js';
 
 class Projectile {
   constructor(x, y, target, damage, speed, scaleX, scaleY, ability = "none", abilityData = {}) {
-    this.x = x; // Already in scaled coordinates from Tower.update
+    this.x = x;
     this.y = y;
     this.target = target;
     this.damage = damage;
-    this.speed = speed * Math.min(scaleX, scaleY); // Scale speed
-    this.scaleX = scaleX; // Store for abilities and drawing
+    this.speed = speed * Math.min(scaleX, scaleY);
+    this.scaleX = scaleX;
     this.scaleY = scaleY;
     this.isActive = true;
     this.ability = ability;
     this.abilityData = abilityData;
+    this.trail = []; // For visual trail effect
   }
 
   update(gameState) {
@@ -34,6 +35,8 @@ class Projectile {
         gameState.enemies = gameState.enemies.filter(e => e !== this.target);
       }
     } else {
+      this.trail.push({ x: this.x, y: this.y }); // Add to trail
+      if (this.trail.length > 5) this.trail.shift(); // Limit trail length
       this.x += (dx / distance) * scaledSpeed;
       this.y += (dy / distance) * scaledSpeed;
     }
@@ -95,7 +98,6 @@ class Projectile {
         }
         break;
       case "Homing Missile":
-        // Homing logic handled in Tower.update; no additional action needed here
         break;
       case "Poison Cloud":
         if (!this.target.poisonTimer) {
@@ -144,10 +146,19 @@ class Projectile {
   }
 
   draw(ctx) {
-    const scaledSize = 5 * Math.min(this.scaleX, this.scaleY);
+    const scaledSize = 10 * Math.min(this.scaleX, this.scaleY); // Increased size for visibility
     ctx.save();
     ctx.translate(this.x, this.y);
-  
+
+    // Draw trail
+    this.trail.forEach((point, index) => {
+      ctx.beginPath();
+      ctx.arc(point.x - this.x, point.y - this.y, scaledSize * (1 - index * 0.2), 0, 2 * Math.PI);
+      ctx.fillStyle = `rgba(255, 255, 255, ${0.5 - index * 0.1})`;
+      ctx.fill();
+    });
+
+    // Draw projectile
     switch (this.ability) {
       case "none":
         ctx.beginPath();
@@ -226,19 +237,18 @@ class Projectile {
         ctx.fill();
         break;
     }
-  
     ctx.restore();
   }
 }
 
 class Tower {
   constructor(x, y, type) {
-    this.x = x; // Original coordinates
+    this.x = x;
     this.y = y;
     this.type = type;
     this.level = 1;
     this.stats = towerStats[type];
-    this.damage = this.stats.damage;
+    this.damage = this.stats.damage * (1 + this.stats.unlockCost / 100); // Boost damage based on cost
     this.range = this.stats.range;
     this.fireRate = this.stats.fireRate;
     this.ability = this.stats.ability;
@@ -480,7 +490,7 @@ class Tower {
 
   upgrade() {
     this.level++;
-    this.damage += 5;
+    this.damage += 10; // Increased upgrade damage
     this.range += 10;
     this.fireRate = Math.max(500, this.fireRate - 200);
   }
