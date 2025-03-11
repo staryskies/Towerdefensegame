@@ -36,24 +36,22 @@ async function loadUnlockedTowers() {
   const token = localStorage.getItem("token");
   if (!token) {
     showNotification("Not authenticated. Please log in.");
-    window.location.href = "/index.html";
+    window.location.href = "/"; // Redirect to root for Render
     return;
   }
   try {
     const response = await fetch('/towers', {
       headers: { "Authorization": token }
     });
+    if (!response.ok) throw new Error((await response.json()).message);
     const data = await response.json();
-    if (response.ok) {
-      towerStats.basic.unlocked = true;
-      data.towers.forEach(type => {
-        if (towerStats[type]) towerStats[type].unlocked = true;
-      });
-    } else {
-      throw new Error(data.message);
-    }
+    towerStats.basic.unlocked = true;
+    data.towers.forEach(type => {
+      if (towerStats[type]) towerStats[type].unlocked = true;
+    });
   } catch (err) {
-    showNotification("Error loading towers.");
+    console.error("Error loading towers:", err);
+    showNotification("Error loading towers: " + err.message);
   }
 }
 
@@ -64,22 +62,24 @@ async function fetchUserMoney() {
     const response = await fetch('/user', {
       headers: { "Authorization": token }
     });
+    if (!response.ok) throw new Error((await response.json()).message);
     const data = await response.json();
-    if (response.ok) {
-      gameState.money = data.money;
-    } else {
-      throw new Error(data.message);
-    }
+    gameState.money = data.money;
   } catch (err) {
-    showNotification("Error fetching money.");
+    console.error("Error fetching money:", err);
+    showNotification("Error fetching money: " + err.message);
   }
 }
 
 async function updateUserMoney() {
   const token = localStorage.getItem("token");
-  if (!token) return;
+  if (!token) {
+    console.error("No token found. Cannot update money.");
+    showNotification("Not authenticated. Progress not saved.");
+    return false;
+  }
   try {
-    await fetch('/update-money', {
+    const response = await fetch('/update-money', {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -87,8 +87,12 @@ async function updateUserMoney() {
       },
       body: JSON.stringify({ money: gameState.money })
     });
+    if (!response.ok) throw new Error((await response.json()).message);
+    return true;
   } catch (err) {
-    showNotification("Error updating money.");
+    console.error("Error updating money:", err);
+    showNotification("Error saving progress: " + err.message);
+    return false;
   }
 }
 
@@ -185,11 +189,12 @@ function showNotification(message, duration = 3000) {
 }
 
 class Enemy {
-  constructor(type) {
+  constructor(type, wave) {
     this.x = scaledSpawnPoint.x;
     this.y = scaledSpawnPoint.y;
-    this.health = type.health;
-    this.maxHealth = type.health;
+    const healthMultiplier = 1 + ((wave - 1) * 14) / 59; // Scales to 15x at wave 60
+    this.health = Math.floor(type.health * healthMultiplier);
+    this.maxHealth = this.health;
     this.speed = type.speed * scaleX;
     this.radius = type.radius * textScale;
     this.color = type.color;
@@ -606,10 +611,10 @@ function initSidebar() {
 
   const fastForwardButton = document.createElement("div");
   fastForwardButton.id = "fast-forward-button";
-  fastForwardButton.textContent = "Fast Forward (2x)";
+  fastForwardButton.textContent = "Fast Forward (1x)";
   fastForwardButton.addEventListener("click", () => {
-    gameState.gameSpeed = gameState.gameSpeed === 1 ? 2 : 1;
-    fastForwardButton.classList.toggle("active");
+    gameState.gameSpeed = gameState.gameSpeed === 1 ? 2 : gameState.gameSpeed === 2 ? 3 : 1;
+    fastForwardButton.classList.toggle("active", gameState.gameSpeed > 1);
     fastForwardButton.textContent = `Fast Forward (${gameState.gameSpeed}x)`;
     document.getElementById("speed").textContent = `Speed: ${gameState.gameSpeed}x`;
   });
@@ -618,11 +623,22 @@ function initSidebar() {
   const homeButton = document.createElement("div");
   homeButton.id = "home-button";
   homeButton.textContent = "Main Menu";
-  homeButton.addEventListener("click", () => {
-    updateUserMoney();
-    window.location.href = "/index.html";
+  homeButton.addEventListener("click", async () => {
+    const success = await updateUserMoney();
+    if (success) {
+      window.location.href = "/";
+    }
   });
   sidebar.appendChild(homeButton);
+
+  sidebar.addEventListener("click", (e) => {
+    if (e.target.className === "tower-option" || e.target.id === "pause-button" || 
+        e.target.id === "fast-forward-button" || e.target.id === "home-button") return;
+    gameState.selectedTowerType = null;
+    gameState.selectedTower = null;
+    document.querySelectorAll(".tower-option").forEach(o => o.classList.remove("selected"));
+    document.getElementById("tower-info-panel").style.display = "none";
+  });
 }
 
 function spawnWave() {
@@ -639,13 +655,13 @@ function spawnWave() {
       return;
     }
     if (isBossWave) {
-      const boss = new Enemy(bossType);
+      const boss = new Enemy(bossType, gameState.wave);
       boss.isBoss = true;
       gameState.enemies.push(boss);
       window.dispatchEvent(new CustomEvent("bossActive", { detail: { wave: gameState.wave } }));
     } else {
       const type = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
-      gameState.enemies.push(new Enemy(type));
+      gameState.enemies.push(new Enemy(type, gameState.wave));
     }
     spawned++;
   }, 1000 / gameState.gameSpeed);
@@ -688,7 +704,7 @@ function draw() {
     ctx.lineTo(scaledPath[i].x, scaledPath[i].y);
   }
   ctx.strokeStyle = "brown";
-  ctx.lineWidth = 20 * textScale;
+  ctx.lineWidth = 10 * textScale; // Thinner path
   ctx.stroke();
 
   gameState.enemies.forEach(enemy => enemy.draw());
@@ -720,7 +736,6 @@ function draw() {
         ctx.arc(0, 0, 15 * textScale, 0, Math.PI * 2);
         ctx.fillRect(0, -5 * textScale, 20 * textScale, 10 * textScale);
         break;
-      // Add other cases as needed
       default:
         ctx.arc(0, 0, 20 * textScale, 0, Math.PI * 2);
     }
@@ -757,7 +772,7 @@ function endGame(won) {
   endScreen.style.display = "block";
   if (won) {
     gameState.money += maps[selectedMap].moneyReward;
-    updateUserMoney();
+    updateUserMoney(); // Save money on win
   }
 }
 
@@ -793,8 +808,6 @@ canvas.addEventListener("click", (e) => {
       gameState.selectedTower = tower;
       gameState.selectedTowerType = null;
       document.querySelectorAll(".tower-option").forEach(o => o.classList.remove("selected"));
-    } else {
-      gameState.selectedTower = null;
     }
   }
 });
@@ -827,9 +840,11 @@ document.getElementById("restart-button").addEventListener("click", () => {
   spawnWave();
 });
 
-document.getElementById("main-menu-button").addEventListener("click", () => {
-  updateUserMoney();
-  window.location.href = "/index.html";
+document.getElementById("main-menu-button").addEventListener("click", async () => {
+  const success = await updateUserMoney();
+  if (success) {
+    window.location.href = "/";
+  }
 });
 
 function isNearPath(x, y) {
@@ -874,6 +889,7 @@ async function init() {
   gameLoop();
 }
 
+// Keep the gameLoop as is:
 function gameLoop() {
   if (!gameState.gameOver && !gameState.gameWon) {
     update();

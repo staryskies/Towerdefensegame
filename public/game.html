@@ -21,8 +21,8 @@
     #tower-info-panel { position: fixed; bottom: 20px; left: 240px; width: 200px; background: rgba(44, 62, 80, 0.95); color: #ecf0f1; padding: 15px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); display: none; z-index: 10; }
     #upgrade-tower-button { width: 100%; padding: 10px; margin-top: 10px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.3s ease; }
     #upgrade-tower-button:hover { background: #2980b9; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4); }
-    #notification-box { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(44, 62, 80, 0.9); color: #ecf0f1; padding: 10px 20px; border-radius: 8px; z-index: 1000; opacity: 0; transition: opacity 0.3s ease; font-weight: 500; }
-    #notification-box.show { opacity: 1; }
+    #notification-box { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(44, 62, 80, 0.9); color: #ecf0f1; padding: 10px 20px; border-radius: 8px; z-index: 1000; display: none; font-weight: 500; }
+    #notification-box.show { display: block; }
     #end-screen { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(44, 62, 80, 0.95); color: #ecf0f1; padding: 30px; border-radius: 15px; text-align: center; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4); display: none; z-index: 1001; max-width: 400px; }
     #end-screen h2 { font-size: 2em; margin-bottom: 20px; }
     #restart-button, #main-menu-button { padding: 12px 25px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.3s ease; margin: 10px; }
@@ -33,8 +33,8 @@
     .map-option.selected { background: #3498db; transform: translateX(5px); }
     #start-game-button { padding: 12px 25px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.3s ease; margin-top: 20px; }
     #start-game-button:hover { background: #2980b9; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4); }
-    #boss-indicator { position: fixed; top: 70px; left: 50%; transform: translateX(-50%); background: rgba(255, 0, 0, 0.8); color: white; padding: 5px 15px; border-radius: 5px; z-index: 1000; opacity: 0; transition: opacity 0.3s ease; font-weight: 600; }
-    #boss-indicator.show { opacity: 1; }
+    #boss-indicator { position: fixed; top: 70px; left: 50%; transform: translateX(-50%); background: rgba(255, 0, 0, 0.8); color: white; padding: 5px 15px; border-radius: 5px; z-index: 1000; display: none; font-weight: 600; }
+    #boss-indicator.show { display: block; }
   </style>
 </head>
 <body>
@@ -77,8 +77,6 @@
     <button id="restart-button">Restart</button>
     <button id="main-menu-button">Main Menu</button>
   </div>
-  <script src="stats.js"></script>
-  <script src="game.js"></script>
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       const mapOptions = document.querySelectorAll(".map-option");
@@ -102,11 +100,14 @@
       document.getElementById("start-game-button").addEventListener("click", () => {
         if (selectedMap && selectedDifficulty) {
           document.getElementById("map-selection").style.display = "none";
+          // Trigger game initialization after map selection
+          initGame();
         } else {
           alert("Please select a map and difficulty!");
         }
       });
 
+      // Only hide map selection if map and difficulty are already selected
       if (localStorage.getItem("selectedMap") && localStorage.getItem("selectedDifficulty")) {
         document.getElementById("map-selection").style.display = "none";
       }
@@ -118,6 +119,17 @@
       bossIndicator.classList.add("show");
       setTimeout(() => bossIndicator.classList.remove("show"), 5000);
     });
+
+    // Placeholder to ensure init() is called only after map selection
+    function initGame() {
+      if (typeof init === "function") {
+        init(); // Call game.js's init() function
+      } else {
+        console.error("Game initialization function not found. Ensure game.js is loaded.");
+      }
+    }
   </script>
+  <script src="/stats.js"></script>
+  <script src="/game.js"></script>
 </body>
 </html>
