@@ -168,13 +168,13 @@ const enemyTypes = enemyThemes[mapTheme][selectedDifficulty];
 const bossType = enemyThemes[mapTheme].boss[selectedDifficulty];
 
 const themeBackgrounds = {
-  grassland: "#90EE90",
-  forest: "#228B22",
-  mountain: "#808080",
-  desert: "#EDC9AF",
-  river: "#00CED1",
-  canyon: "#FF4500",
-  arctic: "#F0F8FF",
+  grassland: "#B2E0B2",
+  forest: "#A8D5A8",
+  mountain: "#D3D3D3",
+  desert: "#F5E8C7",
+  river: "#B0E0E6",
+  canyon: "#FFDAB9",
+  arctic: "#F0FFFF",
 };
 
 function showNotification(message, duration = 3000) {
@@ -231,7 +231,6 @@ class Enemy {
   }
 }
 
-// Merged from tower.js
 class Projectile {
   constructor(x, y, target, damage, speed, type) {
     this.x = x;
@@ -286,7 +285,8 @@ class Projectile {
           break;
         case "freeze":
           this.target.speed *= 0.5;
-          setTimeout(() => this.target.speed /= 0.5, 2000);
+          this.target.color = "lightblue";
+          setTimeout(() => { if (this.target) { this.target.speed /= 0.5; this.target.color = enemyThemes[mapTheme][selectedDifficulty][0].color; } }, 2000);
           break;
         case "mortar":
           gameState.enemies.forEach(enemy => {
@@ -315,6 +315,7 @@ class Projectile {
           let burnInterval = setInterval(() => {
             if (this.target && this.target.health > 0) {
               this.target.health -= 10;
+              this.target.color = "orange";
               if (this.target.health <= 0) {
                 gameState.score += this.target.isBoss ? 50 : 10;
                 gameState.money += this.target.isBoss ? 100 : 20;
@@ -332,6 +333,7 @@ class Projectile {
               let poisonInterval = setInterval(() => {
                 if (enemy.health > 0) {
                   enemy.health -= 5;
+                  enemy.color = "limegreen";
                   if (enemy.health <= 0) {
                     gameState.score += enemy.isBoss ? 50 : 10;
                     gameState.money += enemy.isBoss ? 100 : 20;
@@ -352,14 +354,49 @@ class Projectile {
 
   draw() {
     ctx.beginPath();
-    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-    ctx.fillStyle = this.color;
+    switch (this.type) {
+      case "archer":
+        ctx.moveTo(this.x, this.y - 5 * textScale);
+        ctx.lineTo(this.x - 5 * textScale, this.y + 5 * textScale);
+        ctx.lineTo(this.x + 5 * textScale, this.y + 5 * textScale);
+        break;
+      case "cannon":
+        ctx.arc(this.x, this.y, 8 * textScale, 0, Math.PI * 2);
+        break;
+      case "freeze":
+        ctx.arc(this.x, this.y, 5 * textScale, 0, Math.PI * 2);
+        ctx.fillStyle = "lightblue";
+        break;
+      case "tesla":
+        ctx.moveTo(this.x - 5 * textScale, this.y);
+        ctx.lineTo(this.x + 5 * textScale, this.y);
+        break;
+      case "flamethrower":
+        ctx.arc(this.x, this.y, 5 * textScale, 0, Math.PI * 2);
+        ctx.fillStyle = "orange";
+        break;
+      case "poison":
+        ctx.arc(this.x, this.y, 5 * textScale, 0, Math.PI * 2);
+        ctx.fillStyle = "limegreen";
+        break;
+      default:
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+    }
     ctx.fill();
     ctx.closePath();
+
+    if (this.type === "tesla" && this.target) {
+      ctx.beginPath();
+      ctx.moveTo(this.x, this.y);
+      ctx.lineTo(this.target.x, this.target.y);
+      ctx.strokeStyle = "yellow";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
   }
 }
 
-// Merged from tower.js
 class Tower {
   constructor(x, y, type) {
     this.x = x;
@@ -393,6 +430,12 @@ class Tower {
               gameState.enemies.forEach(enemy => {
                 if (Math.hypot(enemy.x - this.x, enemy.y - this.y) < this.range) {
                   enemy.health -= this.damage / 5;
+                  ctx.beginPath();
+                  ctx.moveTo(this.x, this.y);
+                  ctx.lineTo(enemy.x, enemy.y);
+                  ctx.strokeStyle = "red";
+                  ctx.lineWidth = 2;
+                  ctx.stroke();
                   if (enemy.health <= 0) {
                     gameState.score += enemy.isBoss ? 50 : 10;
                     gameState.money += enemy.isBoss ? 100 : 20;
@@ -415,6 +458,11 @@ class Tower {
                 if (distance > 50 * scaleX) {
                   enemy.x += (dx / distance) * 50 * scaleX;
                   enemy.y += (dy / distance) * 50 * scaleY;
+                  ctx.beginPath();
+                  ctx.arc(this.x, this.y, 20 * textScale, 0, Math.PI * 2);
+                  ctx.strokeStyle = "purple";
+                  ctx.lineWidth = 2;
+                  ctx.stroke();
                 }
               }
             });
@@ -424,31 +472,94 @@ class Tower {
         default:
           gameState.projectiles.push(new Projectile(this.x, this.y, target, this.damage, 5 * scaleX, this.type));
           this.lastShot = now;
-          break;
       }
     }
   }
 
   draw() {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+
+    let target = gameState.enemies.find(enemy => Math.hypot(enemy.x - this.x, enemy.y - this.y) < this.range);
+    if (target) {
+      const angle = Math.atan2(target.y - this.y, target.x - this.x);
+      ctx.rotate(angle + Math.PI / 2);
+    }
+
     ctx.beginPath();
-    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-    ctx.fillStyle = this.color;
+    switch (this.type) {
+      case "basic":
+        ctx.rect(-10 * textScale, -10 * textScale, 20 * textScale, 20 * textScale);
+        break;
+      case "archer":
+        ctx.moveTo(0, -15 * textScale);
+        ctx.lineTo(-10 * textScale, 10 * textScale);
+        ctx.lineTo(10 * textScale, 10 * textScale);
+        break;
+      case "cannon":
+        ctx.arc(0, 0, 15 * textScale, 0, Math.PI * 2);
+        ctx.fillRect(0, -5 * textScale, 20 * textScale, 10 * textScale);
+        break;
+      case "sniper":
+        ctx.rect(-5 * textScale, -20 * textScale, 10 * textScale, 40 * textScale);
+        break;
+      case "freeze":
+        ctx.moveTo(0, -15 * textScale);
+        ctx.lineTo(-12 * textScale, 0);
+        ctx.lineTo(0, 15 * textScale);
+        ctx.lineTo(12 * textScale, 0);
+        break;
+      case "mortar":
+        ctx.arc(0, 0, 20 * textScale, 0, Math.PI * 2);
+        break;
+      case "laser":
+        ctx.rect(-15 * textScale, -15 * textScale, 30 * textScale, 30 * textScale);
+        ctx.moveTo(0, -20 * textScale);
+        ctx.lineTo(0, 20 * textScale);
+        ctx.moveTo(-20 * textScale, 0);
+        ctx.lineTo(20 * textScale, 0);
+        break;
+      case "tesla":
+        ctx.moveTo(0, -20 * textScale);
+        ctx.lineTo(-15 * textScale, 10 * textScale);
+        ctx.lineTo(15 * textScale, 10 * textScale);
+        break;
+      case "flamethrower":
+        ctx.arc(0, 0, 15 * textScale, 0, Math.PI * 2);
+        ctx.fillRect(0, -10 * textScale, 15 * textScale, 20 * textScale);
+        break;
+      case "missile":
+        ctx.moveTo(0, -20 * textScale);
+        ctx.lineTo(-10 * textScale, 10 * textScale);
+        ctx.lineTo(10 * textScale, 10 * textScale);
+        break;
+      case "poison":
+        ctx.arc(0, 0, 15 * textScale, 0, Math.PI * 2);
+        ctx.arc(5 * textScale, 5 * textScale, 5 * textScale, 0, Math.PI * 2);
+        break;
+      case "vortex":
+        ctx.arc(0, 0, 20 * textScale, 0, Math.PI);
+        ctx.arc(0, 0, 15 * textScale, Math.PI, 0);
+        break;
+    }
+    ctx.fillStyle = this.color || "gray";
     ctx.fill();
     ctx.closePath();
 
     if (gameState.selectedTower === this) {
       ctx.beginPath();
-      ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
+      ctx.arc(0, 0, this.range, 0, Math.PI * 2);
       ctx.strokeStyle = "rgba(0, 255, 0, 0.3)";
       ctx.lineWidth = 2;
       ctx.stroke();
-      ctx.closePath();
     }
 
     ctx.fillStyle = "white";
     ctx.font = `${12 * textScale}px Arial`;
     ctx.textAlign = "center";
-    ctx.fillText(this.type.charAt(0).toUpperCase() + this.type.slice(1), this.x, this.y + 5 * textScale);
+    ctx.fillText(this.type.charAt(0).toUpperCase() + this.type.slice(1), 0, 25 * textScale);
+
+    ctx.restore();
   }
 
   upgrade() {
@@ -584,15 +695,38 @@ function draw() {
   gameState.towers.forEach(tower => tower.draw());
   gameState.projectiles.forEach(projectile => projectile.draw());
 
-  if (gameState.selectedTowerType && !gameState.isPaused) {
-    const mouseX = canvas.width / 2;
-    const mouseY = canvas.height / 2;
+  if (gameState.selectedTowerType && !gameState.isPaused && lastMousePos) {
+    const { x, y } = lastMousePos;
     ctx.beginPath();
-    ctx.arc(mouseX, mouseY, towerStats[gameState.selectedTowerType].range * scaleX, 0, Math.PI * 2);
+    ctx.arc(x, y, towerStats[gameState.selectedTowerType].range * scaleX, 0, Math.PI * 2);
     ctx.strokeStyle = "rgba(0, 255, 0, 0.3)";
     ctx.lineWidth = 2;
     ctx.stroke();
     ctx.closePath();
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.beginPath();
+    switch (gameState.selectedTowerType) {
+      case "basic":
+        ctx.rect(-10 * textScale, -10 * textScale, 20 * textScale, 20 * textScale);
+        break;
+      case "archer":
+        ctx.moveTo(0, -15 * textScale);
+        ctx.lineTo(-10 * textScale, 10 * textScale);
+        ctx.lineTo(10 * textScale, 10 * textScale);
+        break;
+      case "cannon":
+        ctx.arc(0, 0, 15 * textScale, 0, Math.PI * 2);
+        ctx.fillRect(0, -5 * textScale, 20 * textScale, 10 * textScale);
+        break;
+      // Add other cases as needed
+      default:
+        ctx.arc(0, 0, 20 * textScale, 0, Math.PI * 2);
+    }
+    ctx.fillStyle = "rgba(128, 128, 128, 0.5)";
+    ctx.fill();
+    ctx.restore();
   }
 }
 
@@ -627,6 +761,15 @@ function endGame(won) {
   }
 }
 
+let lastMousePos = null;
+canvas.addEventListener("mousemove", (e) => {
+  const rect = canvas.getBoundingClientRect();
+  lastMousePos = {
+    x: (e.clientX - rect.left) * (canvas.width / rect.width),
+    y: (e.clientY - rect.top) * (canvas.height / rect.height),
+  };
+});
+
 canvas.addEventListener("click", (e) => {
   const rect = canvas.getBoundingClientRect();
   const x = (e.clientX - rect.left) * (canvas.width / rect.width);
@@ -634,13 +777,15 @@ canvas.addEventListener("click", (e) => {
 
   if (gameState.selectedTowerType) {
     const cost = towerStats[gameState.selectedTowerType].unlockCost || 50;
-    if (gameState.money >= cost && !isNearPath(x, y)) {
+    const tooCloseToPath = isNearPath(x, y);
+    const tooCloseToTower = gameState.towers.some(t => Math.hypot(t.x - x, t.y - y) < 50 * scaleX);
+    if (gameState.money >= cost && !tooCloseToPath && !tooCloseToTower) {
       gameState.towers.push(new Tower(x, y, gameState.selectedTowerType));
       gameState.money -= cost;
       gameState.selectedTowerType = null;
       document.querySelectorAll(".tower-option").forEach(o => o.classList.remove("selected"));
     } else {
-      showNotification("Not enough money or too close to path!");
+      showNotification(tooCloseToTower ? "Too close to another tower!" : "Not enough money or too close to path!");
     }
   } else {
     const tower = gameState.towers.find(t => Math.hypot(t.x - x, t.y - y) < t.radius);

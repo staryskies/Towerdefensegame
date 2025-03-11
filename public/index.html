@@ -331,8 +331,10 @@
     <div id="global-money">Money: $0</div>
     <div id="shop-items"></div>
   </div>
+  <script src="stats.js"></script>
   <script>
     console.log("Script loaded and running");
+    
     const BASE_URL = '';
     let globalMoney = 0;
     const originalWidth = 1200;
@@ -487,6 +489,8 @@
         showNotification("Error fetching user data.");
       }
     }
+
+    
 
     document.getElementById("show-signup").addEventListener("click", () => {
       console.log("Switching to signup form");
