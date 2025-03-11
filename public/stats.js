@@ -12,7 +12,7 @@ export const towerStats = {
     damage: 20, // Slight boost
     range: 120,
     fireRate: 800,
-    unlockCost: 300, // Doubled from 50
+    unlockCost: 100, // Doubled from 50
     ability: "Multi-Shot: Fires 2 arrows every 2 seconds"
   },
   cannon: {
@@ -20,7 +20,7 @@ export const towerStats = {
     damage: 40, // Boosted
     range: 150,
     fireRate: 2000,
-    unlockCost: 550, // 2.5x from 100
+    unlockCost: 250, // 2.5x from 100
     ability: "Splash Damage: Deals 50% damage in a 50-unit radius"
   },
   sniper: {
@@ -28,7 +28,7 @@ export const towerStats = {
     damage: 70, // Boosted
     range: 250,
     fireRate: 3000,
-    unlockCost: 900, // 3x from 200
+    unlockCost: 600, // 3x from 200
     ability: "Critical Hit: 20% chance to deal double damage"
   },
   freeze: {
@@ -36,7 +36,7 @@ export const towerStats = {
     damage: 25, // Slight boost
     range: 130,
     fireRate: 1500,
-    unlockCost: 800, // ~2.7x from 150
+    unlockCost: 400, // ~2.7x from 150
     ability: "Slow: Reduces enemy speed by 50% for 2 seconds"
   },
   mortar: {
@@ -44,7 +44,7 @@ export const towerStats = {
     damage: 50, // Boosted
     range: 200,
     fireRate: 2500,
-    unlockCost: 1750, // 3x from 250
+    unlockCost: 750, // 3x from 250
     ability: "Area Blast: Deals 75% damage in a 75-unit radius every 3 seconds"
   },
   laser: {
@@ -52,7 +52,7 @@ export const towerStats = {
     damage: 80, // Boosted
     range: 180,
     fireRate: 1000,
-    unlockCost: 2000, // ~3.3x from 300
+    unlockCost: 1000, // ~3.3x from 300
     ability: "Beam: Continuously damages enemies in range for 5 seconds every 10 seconds"
   },
   tesla: {
@@ -60,7 +60,7 @@ export const towerStats = {
     damage: 35, // Boosted
     range: 140,
     fireRate: 1200,
-    unlockCost: 1000, // ~2.8x from 180
+    unlockCost: 500, // ~2.8x from 180
     ability: "Chain Lightning: Jumps to 2 nearby enemies, dealing 50% damage"
   },
   flamethrower: {
@@ -68,7 +68,7 @@ export const towerStats = {
     damage: 45, // Boosted
     range: 110,
     fireRate: 900,
-    unlockCost: 1650, // ~3x from 220
+    unlockCost: 650, // ~3x from 220
     ability: "Burn: Deals 10 damage per second for 3 seconds after hit"
   },
   missile: {
@@ -76,7 +76,7 @@ export const towerStats = {
     damage: 100, // Boosted
     range: 220,
     fireRate: 4000,
-    unlockCost: 2500, // ~4.3x from 350
+    unlockCost: 1500, // ~4.3x from 350
     ability: "Homing Missile: Tracks the strongest enemy, dealing 100% damage on hit"
   },
   poison: {
@@ -84,7 +84,7 @@ export const towerStats = {
     damage: 20, // Slight boost
     range: 160,
     fireRate: 1800,
-    unlockCost: 1600, // 3x from 200
+    unlockCost: 600, // 3x from 200
     ability: "Poison Cloud: Deals 5 damage per second to all enemies in range for 4 seconds"
   },
   vortex: {
@@ -92,7 +92,7 @@ export const towerStats = {
     damage: 60, // Boosted
     range: 190,
     fireRate: 3000,
-    unlockCost: 2200, // ~4.3x from 280
+    unlockCost: 1200, // ~4.3x from 280
     ability: "Pull: Pulls enemies 50 units toward the tower every 5 seconds"
   }
 };
