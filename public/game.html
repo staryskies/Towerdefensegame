@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tower Defense Game</title>
   <style>
-    /* Existing styles remain unchanged */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #2c3e50; }
     #gameCanvas { display: block; width: 100%; height: 100%; background: #ecf0f1; }
@@ -78,17 +77,18 @@
     <button id="restart-button">Restart</button>
     <button id="main-menu-button">Main Menu</button>
   </div>
-  <script type="module" src="stats.js"></script>
-  <script type="module" src="tower.js"></script>
-  <script type="module" src="game.js"></script>
+  <script src="stats.js"></script>
+  <script src="game.js"></script>
   <script>
-    // JavaScript to handle map selection and game start
     document.addEventListener("DOMContentLoaded", () => {
       const mapOptions = document.querySelectorAll(".map-option");
       let selectedMap = localStorage.getItem("selectedMap") || "map1";
       let selectedDifficulty = localStorage.getItem("selectedDifficulty") || "easy";
 
       mapOptions.forEach(option => {
+        if (option.getAttribute("data-map") === selectedMap) {
+          option.classList.add("selected");
+        }
         option.addEventListener("click", () => {
           mapOptions.forEach(o => o.classList.remove("selected"));
           option.classList.add("selected");
@@ -102,19 +102,16 @@
       document.getElementById("start-game-button").addEventListener("click", () => {
         if (selectedMap && selectedDifficulty) {
           document.getElementById("map-selection").style.display = "none";
-          // Game logic is handled in game.js, which will start after this
         } else {
           alert("Please select a map and difficulty!");
         }
       });
 
-      // Check if already in game (e.g., refresh)
       if (localStorage.getItem("selectedMap") && localStorage.getItem("selectedDifficulty")) {
         document.getElementById("map-selection").style.display = "none";
       }
     });
 
-    // Placeholder for boss indicator (to be updated in game.js)
     window.addEventListener("bossActive", (e) => {
       const bossIndicator = document.getElementById("boss-indicator");
       bossIndicator.textContent = `Boss Active: Wave ${e.detail.wave}`;

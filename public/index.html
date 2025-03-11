@@ -11,7 +11,6 @@
       box-sizing: border-box;
       font-family: Arial, sans-serif;
     }
-
     body {
       background: #1a2a44;
       color: #fff;
@@ -21,9 +20,8 @@
       height: 100vh;
       overflow: hidden;
       position: relative;
-      font-size: 16px; /* Base font size for rem/em units */
+      font-size: 16px;
     }
-
     .container {
       background: rgba(255, 255, 255, 0.95);
       padding: 2vw;
@@ -35,24 +33,20 @@
       color: #333;
       position: relative;
     }
-
     h1 {
       margin-bottom: 1.5vw;
       color: #333;
       font-size: 2rem;
     }
-
     .form-group {
       margin-bottom: 1vw;
       text-align: left;
     }
-
     .form-group label {
       display: block;
       margin-bottom: 0.5vw;
       font-size: 1rem;
     }
-
     input {
       width: 100%;
       padding: 0.8vw;
@@ -61,7 +55,6 @@
       border-radius: 5px;
       font-size: 1rem;
     }
-
     button {
       background: #4a90e2;
       color: #fff;
@@ -72,38 +65,31 @@
       margin: 0.5vw;
       font-size: 1rem;
     }
-
     button:disabled {
       background: #ccc;
       cursor: not-allowed;
     }
-
     button:hover:not(:disabled) {
       background: #357abd;
     }
-
     a {
       color: #4a90e2;
       text-decoration: none;
       font-size: 0.9rem;
     }
-
     a:hover {
       text-decoration: underline;
     }
-
     #main-menu {
       display: none;
       flex-direction: column;
       align-items: center;
     }
-
     #user-money {
       margin: 1vw 0;
       font-size: 1.2rem;
       color: #333;
     }
-
     #map-menu, #tower-shop {
       display: none;
       position: fixed;
@@ -121,7 +107,6 @@
       color: #333;
       z-index: 1000;
     }
-
     #map-menu h2, #tower-shop h2 {
       margin-bottom: 1vw;
       color: #333;
@@ -129,7 +114,6 @@
       padding-right: 2vw;
       font-size: 1.5rem;
     }
-
     .close-btn {
       position: absolute;
       top: 0.8vw;
@@ -149,7 +133,6 @@
       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
       transition: transform 0.1s ease, background 0.3s ease;
     }
-
     .close-btn::before,
     .close-btn::after {
       content: '';
@@ -160,30 +143,24 @@
       background: #fff;
       border-radius: 2px;
     }
-
     .close-btn::before {
       transform: rotate(45deg);
     }
-
     .close-btn::after {
       transform: rotate(-45deg);
     }
-
     .close-btn:hover {
       background: #e60000;
       transform: scale(1.1);
     }
-
     .close-btn:active {
       transform: scale(0.95);
     }
-
     #map-list, #shop-items {
       display: flex;
       flex-direction: column;
       gap: 0.8vw;
     }
-
     .map-option, .shop-item {
       background: #f0f0f0;
       padding: 0.8vw;
@@ -192,62 +169,50 @@
       text-align: left;
       transition: background 0.2s;
     }
-
     .map-option:hover, .shop-item:hover {
       background: #e0e0e0;
     }
-
     .map-option.selected {
       background: #4a90e2;
       color: #fff;
     }
-
     .shop-item h4 {
       margin-bottom: 0.4vw;
       font-size: 1.1rem;
     }
-
     .shop-item p {
       margin: 0.2vw 0;
       font-size: 0.9rem;
     }
-
     .unlock-btn {
       background: #28a745;
       padding: 0.4vw 0.8vw;
       margin-top: 0.4vw;
       font-size: 0.9rem;
     }
-
     .unlock-btn:disabled {
       background: #ccc;
     }
-
     .unlock-btn:hover:not(:disabled) {
       background: #218838;
     }
-
     #global-money {
       margin: 1vw 0;
       font-size: 1.2rem;
       color: #333;
     }
-
     #difficulty-selector {
       margin: 1vw 0;
       font-size: 1rem;
     }
-
     #difficulty-selector label {
       margin-right: 0.5vw;
     }
-
     #difficulty-selector select {
       padding: 0.4vw;
       border-radius: 5px;
       font-size: 1rem;
     }
-
     #notification-box {
       position: fixed;
       bottom: 2vw;
@@ -262,11 +227,9 @@
       max-width: 25vw;
       word-wrap: break-word;
     }
-
     #notification-box.show {
       display: block;
     }
-
     body.shop-open::before {
       content: '';
       position: fixed;
@@ -277,44 +240,35 @@
       background: rgba(0, 0, 0, 0.5);
       z-index: 999;
     }
-
-    /* Responsive Design for Mobile */
     @media (max-width: 768px) {
       .container, #map-menu, #tower-shop {
         padding: 3vw;
         max-width: 90%;
       }
-
       h1 {
         font-size: 1.8rem;
       }
-
       button {
         padding: 1vw 2vw;
         font-size: 0.9rem;
       }
-
       #notification-box {
         bottom: 5vw;
         right: 5vw;
         max-width: 50vw;
       }
     }
-
     @media (max-width: 480px) {
       .container, #map-menu, #tower-shop {
         padding: 4vw;
       }
-
       h1 {
         font-size: 1.5rem;
       }
-
       button {
         padding: 1.5vw 3vw;
         font-size: 0.8rem;
       }
-
       #notification-box {
         bottom: 8vw;
         right: 8vw;
@@ -325,7 +279,6 @@
 </head>
 <body>
   <div id="notification-box"></div>
-
   <div class="container" id="auth-screen">
     <h1>Tower Defense</h1>
     <div id="login-form">
@@ -353,7 +306,6 @@
       <p><a href="#" id="show-login">Already have an account? Log in</a></p>
     </div>
   </div>
-
   <div class="container" id="main-menu">
     <h1>Tower Defense</h1>
     <div id="user-money">Money: $0</div>
@@ -371,23 +323,17 @@
     <button id="logout-button">Logout</button>
     <div id="map-menu">
       <h2>Select Map <button class="close-btn" id="close-map-menu" aria-label="Close Map Menu"></button></h2>
-      <div id="map-list">
-        <!-- Maps will be populated here -->
-      </div>
+      <div id="map-list"></div>
     </div>
   </div>
-
   <div id="tower-shop">
     <h2>Tower Shop <button class="close-btn" id="close-shop" aria-label="Close Tower Shop"></button></h2>
     <div id="global-money">Money: $0</div>
     <div id="shop-items"></div>
   </div>
-
-  <script type="module">
-    import { towerStats } from './stats.js';
+  <script>
     console.log("Script loaded and running");
-
-    const BASE_URL = ''; // Adjust if backend is hosted elsewhere
+    const BASE_URL = '';
     let globalMoney = 0;
     const originalWidth = 1200;
     const originalHeight = 600;
@@ -420,24 +366,18 @@
       scaleX = window.innerWidth / originalWidth;
       scaleY = window.innerHeight / originalHeight;
       const uiScale = Math.min(scaleX, scaleY) * 0.70;
-
-      // Scale font sizes for main menu elements
       document.querySelectorAll('#main-menu h1, #main-menu button, #user-money, #difficulty-selector label, #difficulty-selector select').forEach(el => {
         el.style.fontSize = `${parseFloat(getComputedStyle(el).fontSize) * uiScale}px`;
       });
-
-      // Scale map menu and tower shop elements
       document.querySelectorAll('#map-menu h2, #map-menu .map-option h4, #map-menu .map-option p, #tower-shop h2, #tower-shop .shop-item h4, #tower-shop .shop-item p, #tower-shop .unlock-btn, #global-money').forEach(el => {
         el.style.fontSize = `${parseFloat(getComputedStyle(el).fontSize) * uiScale}px`;
       });
-
-      // Scale notification box
       const notificationBox = document.getElementById('notification-box');
       notificationBox.style.fontSize = `${16 * uiScale}px`;
     }
 
     window.addEventListener('resize', resizeElements);
-    resizeElements(); // Initial scaling
+    resizeElements();
 
     function showNotification(message, duration = 3000) {
       console.log("Notification:", message);
@@ -496,7 +436,7 @@
         `;
         shopItems.appendChild(item);
       }
-      resizeElements(); // Reapply scaling after DOM update
+      resizeElements();
       console.log("Shop initialized");
     }
 
@@ -515,7 +455,7 @@
         `;
         mapList.appendChild(mapOption);
       }
-      resizeElements(); // Reapply scaling after DOM update
+      resizeElements();
       console.log("Map menu initialized");
     }
 
@@ -568,7 +508,6 @@
         showNotification("Please enter username and password");
         return;
       }
-
       try {
         console.log("Attempting login for username:", username);
         const response = await fetch(`${BASE_URL}/login`, {
@@ -600,7 +539,6 @@
         showNotification("Please enter username and password");
         return;
       }
-
       try {
         console.log("Attempting signup for username:", username);
         const response = await fetch(`${BASE_URL}/signup`, {
@@ -637,7 +575,7 @@
       if (!document.getElementById("start-game").disabled) {
         localStorage.setItem("selectedDifficulty", difficultySelect.value);
         console.log("Proceeding to game page with difficulty:", difficultySelect.value);
-        window.location.href = "/game";
+        window.location.href = "/game.html";
       } else {
         console.log("Start game button is disabled");
         showNotification("Please select a map first.");
@@ -691,7 +629,6 @@
         const cost = towerStats[type].unlockCost;
         const token = localStorage.getItem("token");
         console.log("Unlock tower clicked:", type, "Cost:", cost);
-
         try {
           console.log("Attempting to unlock tower with token:", token);
           const response = await fetch(`${BASE_URL}/unlock-tower`, {
