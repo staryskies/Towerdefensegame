@@ -21,44 +21,56 @@
       height: 100vh;
       overflow: hidden;
       position: relative;
+      font-size: 16px; /* Base font size for rem/em units */
     }
 
     .container {
       background: rgba(255, 255, 255, 0.95);
-      padding: 20px;
+      padding: 2vw;
       border-radius: 10px;
       box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
-      width: 400px;
+      width: 90%;
+      max-width: 400px;
       text-align: center;
       color: #333;
       position: relative;
     }
 
     h1 {
-      margin-bottom: 20px;
+      margin-bottom: 1.5vw;
       color: #333;
+      font-size: 2rem;
     }
 
     .form-group {
-      margin-bottom: 15px;
+      margin-bottom: 1vw;
+      text-align: left;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5vw;
+      font-size: 1rem;
     }
 
     input {
       width: 100%;
-      padding: 10px;
-      margin: 5px 0;
+      padding: 0.8vw;
+      margin: 0.5vw 0;
       border: 1px solid #ccc;
       border-radius: 5px;
+      font-size: 1rem;
     }
 
     button {
       background: #4a90e2;
       color: #fff;
-      padding: 10px 20px;
+      padding: 0.8vw 1.6vw;
       border: none;
       border-radius: 5px;
       cursor: pointer;
-      margin: 5px;
+      margin: 0.5vw;
+      font-size: 1rem;
     }
 
     button:disabled {
@@ -73,6 +85,7 @@
     a {
       color: #4a90e2;
       text-decoration: none;
+      font-size: 0.9rem;
     }
 
     a:hover {
@@ -86,8 +99,8 @@
     }
 
     #user-money {
-      margin: 10px 0;
-      font-size: 1.2em;
+      margin: 1vw 0;
+      font-size: 1.2rem;
       color: #333;
     }
 
@@ -98,33 +111,37 @@
       left: 50%;
       transform: translate(-50%, -50%);
       background: rgba(255, 255, 255, 0.95);
-      padding: 20px;
+      padding: 2vw;
       border-radius: 10px;
       box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
-      width: 300px;
-      max-height: 400px;
+      width: 90%;
+      max-width: 400px;
+      max-height: 70vh;
       overflow-y: auto;
       color: #333;
       z-index: 1000;
     }
 
     #map-menu h2, #tower-shop h2 {
-      margin-bottom: 15px;
+      margin-bottom: 1vw;
       color: #333;
       position: relative;
-      padding-right: 30px;
+      padding-right: 2vw;
+      font-size: 1.5rem;
     }
 
     .close-btn {
       position: absolute;
-      top: 10px;
-      right: 10px;
+      top: 0.8vw;
+      right: 0.8vw;
       background: #ff4d4d;
       color: transparent;
       border: none;
       border-radius: 50%;
-      width: 30px;
-      height: 30px;
+      width: 2vw;
+      min-width: 30px;
+      height: 2vw;
+      min-height: 30px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -137,7 +154,8 @@
     .close-btn::after {
       content: '';
       position: absolute;
-      width: 16px;
+      width: 1vw;
+      min-width: 16px;
       height: 2px;
       background: #fff;
       border-radius: 2px;
@@ -163,12 +181,12 @@
     #map-list, #shop-items {
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 0.8vw;
     }
 
     .map-option, .shop-item {
       background: #f0f0f0;
-      padding: 10px;
+      padding: 0.8vw;
       border-radius: 5px;
       cursor: pointer;
       text-align: left;
@@ -185,19 +203,20 @@
     }
 
     .shop-item h4 {
-      margin-bottom: 5px;
+      margin-bottom: 0.4vw;
+      font-size: 1.1rem;
     }
 
     .shop-item p {
-      margin: 2px 0;
-      font-size: 0.9em;
+      margin: 0.2vw 0;
+      font-size: 0.9rem;
     }
 
     .unlock-btn {
       background: #28a745;
-      padding: 5px 10px;
-      margin-top: 5px;
-      font-size: 0.9em;
+      padding: 0.4vw 0.8vw;
+      margin-top: 0.4vw;
+      font-size: 0.9rem;
     }
 
     .unlock-btn:disabled {
@@ -209,22 +228,39 @@
     }
 
     #global-money {
-      margin: 10px 0;
-      font-size: 1.2em;
+      margin: 1vw 0;
+      font-size: 1.2rem;
       color: #333;
+    }
+
+    #difficulty-selector {
+      margin: 1vw 0;
+      font-size: 1rem;
+    }
+
+    #difficulty-selector label {
+      margin-right: 0.5vw;
+    }
+
+    #difficulty-selector select {
+      padding: 0.4vw;
+      border-radius: 5px;
+      font-size: 1rem;
     }
 
     #notification-box {
       position: fixed;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
+      bottom: 2vw;
+      right: 2vw;
       background: #333;
       color: #fff;
-      padding: 10px 20px;
+      padding: 1vw;
       border-radius: 5px;
       display: none;
       z-index: 1000;
+      font-size: 1rem;
+      max-width: 25vw;
+      word-wrap: break-word;
     }
 
     #notification-box.show {
@@ -241,6 +277,50 @@
       background: rgba(0, 0, 0, 0.5);
       z-index: 999;
     }
+
+    /* Responsive Design for Mobile */
+    @media (max-width: 768px) {
+      .container, #map-menu, #tower-shop {
+        padding: 3vw;
+        max-width: 90%;
+      }
+
+      h1 {
+        font-size: 1.8rem;
+      }
+
+      button {
+        padding: 1vw 2vw;
+        font-size: 0.9rem;
+      }
+
+      #notification-box {
+        bottom: 5vw;
+        right: 5vw;
+        max-width: 50vw;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .container, #map-menu, #tower-shop {
+        padding: 4vw;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+      }
+
+      button {
+        padding: 1.5vw 3vw;
+        font-size: 0.8rem;
+      }
+
+      #notification-box {
+        bottom: 8vw;
+        right: 8vw;
+        max-width: 70vw;
+      }
+    }
   </style>
 </head>
 <body>
@@ -250,20 +330,24 @@
     <h1>Tower Defense</h1>
     <div id="login-form">
       <div class="form-group">
-        <input type="text" id="login-username" placeholder="Username">
+        <label for="login-username">Username</label>
+        <input type="text" id="login-username" placeholder="Username" aria-required="true">
       </div>
       <div class="form-group">
-        <input type="password" id="login-password" placeholder="Password">
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" placeholder="Password" aria-required="true">
       </div>
       <button id="login-button">Login</button>
       <p><a href="#" id="show-signup">Need an account? Sign up</a></p>
     </div>
     <div id="signup-form" style="display: none;">
       <div class="form-group">
-        <input type="text" id="signup-username" placeholder="Username">
+        <label for="signup-username">Username</label>
+        <input type="text" id="signup-username" placeholder="Username" aria-required="true">
       </div>
       <div class="form-group">
-        <input type="password" id="signup-password" placeholder="Password">
+        <label for="signup-password">Password</label>
+        <input type="password" id="signup-password" placeholder="Password" aria-required="true">
       </div>
       <button id="signup-button">Sign Up</button>
       <p><a href="#" id="show-login">Already have an account? Log in</a></p>
@@ -275,10 +359,18 @@
     <div id="user-money">Money: $0</div>
     <button id="start-game" disabled>Start Game</button>
     <button id="select-map">Select Map</button>
+    <div id="difficulty-selector">
+      <label for="difficulty">Difficulty:</label>
+      <select id="difficulty">
+        <option value="easy">Easy</option>
+        <option value="medium">Medium</option>
+        <option value="hard">Hard</option>
+      </select>
+    </div>
     <button id="open-tower-shop">Tower Shop</button>
     <button id="logout-button">Logout</button>
     <div id="map-menu">
-      <h2>Select Map <button class="close-btn" id="close-map-menu"></button></h2>
+      <h2>Select Map <button class="close-btn" id="close-map-menu" aria-label="Close Map Menu"></button></h2>
       <div id="map-list">
         <!-- Maps will be populated here -->
       </div>
@@ -286,17 +378,21 @@
   </div>
 
   <div id="tower-shop">
-    <h2>Tower Shop <button class="close-btn" id="close-shop"></button></h2>
+    <h2>Tower Shop <button class="close-btn" id="close-shop" aria-label="Close Tower Shop"></button></h2>
     <div id="global-money">Money: $0</div>
     <div id="shop-items"></div>
   </div>
 
   <script type="module">
     import { towerStats } from './stats.js';
-    console.log("Script loaded and running"); // Debug: Confirm script starts
+    console.log("Script loaded and running");
 
-    const BASE_URL = ''; // Relative path for same-origin requests
+    const BASE_URL = ''; // Adjust if backend is hosted elsewhere
     let globalMoney = 0;
+    const originalWidth = 1200;
+    const originalHeight = 600;
+    let scaleX = 1;
+    let scaleY = 1;
 
     const authScreen = document.getElementById("auth-screen");
     const mainMenu = document.getElementById("main-menu");
@@ -306,21 +402,45 @@
     const shop = document.getElementById("tower-shop");
     const shopItems = document.getElementById("shop-items");
     const mapList = document.getElementById("map-list");
+    const difficultySelect = document.getElementById("difficulty");
 
     const maps = {
-      map1: { name: "Beginner Path", path: [{ x: 0, y: 300 }, { x: 100, y: 200 }, { x: 200, y: 400 }, { x: 300, y: 300 }, { x: 400, y: 100 }, { x: 500, y: 300 }, { x: 600, y: 200 }, { x: 700, y: 400 }, { x: 800, y: 300 }, { x: 900, y: 100 }, { x: 1000, y: 300 }, { x: 1100, y: 200 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 50, difficulty: "easy", restrictedAreas: [] },
-      map2: { name: "Zigzag Path", path: [{ x: 0, y: 150 }, { x: 400, y: 150 }, { x: 400, y: 450 }, { x: 800, y: 450 }, { x: 1200, y: 150 }], spawnPoint: { x: 0, y: 150 }, moneyReward: 75, difficulty: "medium", restrictedAreas: [] },
-      map3: { name: "Snake Path", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 400, y: 300 }, { x: 600, y: 100 }, { x: 800, y: 300 }, { x: 1000, y: 100 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 150, difficulty: "hard", restrictedAreas: [{ x: 300, y: 200, width: 200, height: 200 }, { x: 700, y: 200, width: 200, height: 200 }] },
-      map4: { name: "Forest Trail", path: [{ x: 0, y: 200 }, { x: 100, y: 400 }, { x: 200, y: 150 }, { x: 300, y: 350 }, { x: 400, y: 250 }, { x: 500, y: 400 }, { x: 600, y: 200 }, { x: 700, y: 350 }, { x: 800, y: 150 }, { x: 900, y: 300 }, { x: 1000, y: 400 }, { x: 1100, y: 250 }, { x: 1200, y: 200 }], spawnPoint: { x: 0, y: 200 }, moneyReward: 60, difficulty: "easy", restrictedAreas: [] },
-      map5: { name: "Mountain Pass", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 400, y: 400 }, { x: 800, y: 100 }, { x: 1000, y: 400 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 90, difficulty: "medium", restrictedAreas: [] },
-      map6: { name: "Desert Maze", path: [{ x: 0, y: 150 }, { x: 300, y: 300 }, { x: 500, y: 150 }, { x: 700, y: 300 }, { x: 900, y: 150 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 150 }, moneyReward: 180, difficulty: "hard", restrictedAreas: [{ x: 400, y: 200, width: 200, height: 200 }, { x: 800, y: 200, width: 200, height: 200 }] },
-      map7: { name: "River Bend", path: [{ x: 0, y: 250 }, { x: 100, y: 100 }, { x: 200, y: 350 }, { x: 300, y: 150 }, { x: 400, y: 300 }, { x: 500, y: 200 }, { x: 600, y: 400 }, { x: 700, y: 250 }, { x: 800, y: 100 }, { x: 900, y: 350 }, { x: 1000, y: 200 }, { x: 1100, y: 300 }, { x: 1200, y: 250 }], spawnPoint: { x: 0, y: 250 }, moneyReward: 65, difficulty: "easy", restrictedAreas: [] },
-      map8: { name: "Canyon Run", path: [{ x: 0, y: 200 }, { x: 300, y: 400 }, { x: 600, y: 200 }, { x: 900, y: 400 }, { x: 1200, y: 200 }], spawnPoint: { x: 0, y: 200 }, moneyReward: 100, difficulty: "medium", restrictedAreas: [] },
-      map9: { name: "Arctic Path", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 500, y: 400 }, { x: 800, y: 100 }, { x: 1000, y: 400 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 200, difficulty: "hard", restrictedAreas: [{ x: 300, y: 200, width: 200, height: 200 }, { x: 600, y: 200, width: 200, height: 200 }, { x: 900, y: 200, width: 200, height: 200 }] },
+      map1: { name: "Beginner Path", path: [{ x: 0, y: 300 }, { x: 100, y: 200 }, { x: 200, y: 400 }, { x: 300, y: 300 }, { x: 400, y: 100 }, { x: 500, y: 300 }, { x: 600, y: 200 }, { x: 700, y: 400 }, { x: 800, y: 300 }, { x: 900, y: 100 }, { x: 1000, y: 300 }, { x: 1100, y: 200 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 50, difficulty: "easy", restrictedAreas: [], theme: "grassland" },
+      map2: { name: "Zigzag Path", path: [{ x: 0, y: 150 }, { x: 400, y: 150 }, { x: 400, y: 450 }, { x: 800, y: 450 }, { x: 1200, y: 150 }], spawnPoint: { x: 0, y: 150 }, moneyReward: 75, difficulty: "medium", restrictedAreas: [], theme: "grassland" },
+      map3: { name: "Snake Path", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 400, y: 300 }, { x: 600, y: 100 }, { x: 800, y: 300 }, { x: 1000, y: 100 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 150, difficulty: "hard", restrictedAreas: [{ x: 300, y: 200, width: 200, height: 200 }, { x: 700, y: 200, width: 200, height: 200 }], theme: "grassland" },
+      map4: { name: "Forest Trail", path: [{ x: 0, y: 200 }, { x: 100, y: 400 }, { x: 200, y: 150 }, { x: 300, y: 350 }, { x: 400, y: 250 }, { x: 500, y: 400 }, { x: 600, y: 200 }, { x: 700, y: 350 }, { x: 800, y: 150 }, { x: 900, y: 300 }, { x: 1000, y: 400 }, { x: 1100, y: 250 }, { x: 1200, y: 200 }], spawnPoint: { x: 0, y: 200 }, moneyReward: 60, difficulty: "easy", restrictedAreas: [], theme: "forest" },
+      map5: { name: "Mountain Pass", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 400, y: 400 }, { x: 800, y: 100 }, { x: 1000, y: 400 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 90, difficulty: "medium", restrictedAreas: [], theme: "mountain" },
+      map6: { name: "Desert Maze", path: [{ x: 0, y: 150 }, { x: 300, y: 300 }, { x: 500, y: 150 }, { x: 700, y: 300 }, { x: 900, y: 150 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 150 }, moneyReward: 180, difficulty: "hard", restrictedAreas: [{ x: 400, y: 200, width: 200, height: 200 }, { x: 800, y: 200, width: 200, height: 200 }], theme: "desert" },
+      map7: { name: "River Bend", path: [{ x: 0, y: 250 }, { x: 100, y: 100 }, { x: 200, y: 350 }, { x: 300, y: 150 }, { x: 400, y: 300 }, { x: 500, y: 200 }, { x: 600, y: 400 }, { x: 700, y: 250 }, { x: 800, y: 100 }, { x: 900, y: 350 }, { x: 1000, y: 200 }, { x: 1100, y: 300 }, { x: 1200, y: 250 }], spawnPoint: { x: 0, y: 250 }, moneyReward: 65, difficulty: "easy", restrictedAreas: [], theme: "river" },
+      map8: { name: "Canyon Run", path: [{ x: 0, y: 200 }, { x: 300, y: 400 }, { x: 600, y: 200 }, { x: 900, y: 400 }, { x: 1200, y: 200 }], spawnPoint: { x: 0, y: 200 }, moneyReward: 100, difficulty: "medium", restrictedAreas: [], theme: "canyon" },
+      map9: { name: "Arctic Path", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 500, y: 400 }, { x: 800, y: 100 }, { x: 1000, y: 400 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 200, difficulty: "hard", restrictedAreas: [{ x: 300, y: 200, width: 200, height: 200 }, { x: 600, y: 200, width: 200, height: 200 }, { x: 900, y: 200, width: 200, height: 200 }], theme: "arctic" },
     };
 
+    function resizeElements() {
+      scaleX = window.innerWidth / originalWidth;
+      scaleY = window.innerHeight / originalHeight;
+      const uiScale = Math.min(scaleX, scaleY);
+
+      // Scale font sizes for main menu elements
+      document.querySelectorAll('#main-menu h1, #main-menu button, #user-money, #difficulty-selector label, #difficulty-selector select').forEach(el => {
+        el.style.fontSize = `${parseFloat(getComputedStyle(el).fontSize) * uiScale}px`;
+      });
+
+      // Scale map menu and tower shop elements
+      document.querySelectorAll('#map-menu h2, #map-menu .map-option h4, #map-menu .map-option p, #tower-shop h2, #tower-shop .shop-item h4, #tower-shop .shop-item p, #tower-shop .unlock-btn, #global-money').forEach(el => {
+        el.style.fontSize = `${parseFloat(getComputedStyle(el).fontSize) * uiScale}px`;
+      });
+
+      // Scale notification box
+      const notificationBox = document.getElementById('notification-box');
+      notificationBox.style.fontSize = `${16 * uiScale}px`;
+    }
+
+    window.addEventListener('resize', resizeElements);
+    resizeElements(); // Initial scaling
+
     function showNotification(message, duration = 3000) {
-      console.log("Notification:", message); // Debug: Log notifications
+      console.log("Notification:", message);
       const box = document.getElementById("notification-box");
       box.textContent = message;
       box.classList.add("show");
@@ -328,37 +448,37 @@
     }
 
     async function loadUnlockedTowers() {
-      console.log("loadUnlockedTowers called"); // Debug: Function entry
+      console.log("loadUnlockedTowers called");
       const token = localStorage.getItem("token");
       if (!token) {
-        console.log("No token found in localStorage"); // Debug: Token check
+        console.log("No token found in localStorage");
         return;
       }
       try {
-        console.log("Fetching towers with token:", token); // Debug: Before fetch
+        console.log("Fetching towers with token:", token);
         const response = await fetch(`${BASE_URL}/towers`, {
           headers: { "Authorization": token }
         });
-        console.log("Towers response status:", response.status); // Debug: Response status
+        console.log("Towers response status:", response.status);
         const data = await response.json();
-        console.log("Towers response data:", data); // Debug: Parsed response
+        console.log("Towers response data:", data);
         if (response.ok) {
           towerStats.basic.unlocked = true;
           data.towers.forEach(type => {
             if (towerStats[type]) towerStats[type].unlocked = true;
           });
-          console.log("Unlocked towers:", data.towers); // Debug: Successful load
+          console.log("Unlocked towers:", data.towers);
         } else {
           throw new Error(data.message);
         }
       } catch (err) {
-        console.error("Error loading towers:", err); // Debug: Error catch
+        console.error("Error loading towers:", err);
         showNotification("Error loading towers.");
       }
     }
 
     function initShop() {
-      console.log("initShop called"); // Debug: Function entry
+      console.log("initShop called");
       shopItems.innerHTML = "";
       document.getElementById("global-money").textContent = `Money: $${globalMoney}`;
       for (const [type, stats] of Object.entries(towerStats)) {
@@ -376,11 +496,12 @@
         `;
         shopItems.appendChild(item);
       }
-      console.log("Shop initialized"); // Debug: Shop setup complete
+      resizeElements(); // Reapply scaling after DOM update
+      console.log("Shop initialized");
     }
 
     function initMapMenu() {
-      console.log("initMapMenu called"); // Debug: Function entry
+      console.log("initMapMenu called");
       mapList.innerHTML = "";
       for (const [mapId, map] of Object.entries(maps)) {
         const mapOption = document.createElement("div");
@@ -394,79 +515,70 @@
         `;
         mapList.appendChild(mapOption);
       }
-      console.log("Map menu initialized"); // Debug: Map menu setup complete
+      resizeElements(); // Reapply scaling after DOM update
+      console.log("Map menu initialized");
     }
 
     async function fetchUserData() {
-      console.log("fetchUserData called"); // Debug: Function entry
+      console.log("fetchUserData called");
       const token = localStorage.getItem("token");
       if (!token) {
-        console.log("No token found in localStorage"); // Debug: Token check
+        console.log("No token found in localStorage");
         return;
       }
       try {
-        console.log("Fetching user data with token:", token); // Debug: Before fetch
+        console.log("Fetching user data with token:", token);
         const response = await fetch(`${BASE_URL}/user`, {
           headers: { "Authorization": token }
         });
-        console.log("User response status:", response.status); // Debug: Response status
+        console.log("User response status:", response.status);
         const data = await response.json();
-        console.log("User response data:", data); // Debug: Parsed response
+        console.log("User response data:", data);
         if (response.ok) {
           globalMoney = data.money;
           document.getElementById("user-money").textContent = `Money: $${globalMoney}`;
           document.getElementById("global-money").textContent = `Money: $${globalMoney}`;
-          console.log("User money loaded:", globalMoney); // Debug: Successful load
+          console.log("User money loaded:", globalMoney);
         } else {
           throw new Error(data.message);
         }
       } catch (err) {
-        console.error("Error fetching user data:", err); // Debug: Error catch
+        console.error("Error fetching user data:", err);
         showNotification("Error fetching user data.");
       }
     }
 
-    // Hard mode damage multiplier for good towers (sniper, mortar, laser, missile, poison, vortex)
-    function applyHardModeDamage(towerType) {
-      const goodTowers = ["sniper", "mortar", "laser", "missile", "poison", "vortex"];
-      const difficulty = localStorage.getItem("selectedDifficulty");
-      if (difficulty === "hard" && goodTowers.includes(towerType)) {
-        return towerStats[towerType].damage * 1.5; // 50% damage boost on hard mode
-      }
-      return towerStats[towerType].damage;
-    }
-
     document.getElementById("show-signup").addEventListener("click", () => {
-      console.log("Switching to signup form"); // Debug: UI switch
+      console.log("Switching to signup form");
       loginForm.style.display = "none";
       signupForm.style.display = "block";
     });
 
     document.getElementById("show-login").addEventListener("click", () => {
-      console.log("Switching to login form"); // Debug: UI switch
+      console.log("Switching to login form");
       signupForm.style.display = "none";
       loginForm.style.display = "block";
     });
 
     document.getElementById("login-button").addEventListener("click", async () => {
-      console.log("Login button clicked"); // Debug: Button click
-      const username = document.getElementById("login-username").value;
-      const password = document.getElementById("login-password").value;
+      console.log("Login button clicked");
+      const username = document.getElementById("login-username").value.trim();
+      const password = document.getElementById("login-password").value.trim();
       if (!username || !password) {
         showNotification("Please enter username and password");
         return;
       }
 
       try {
-        console.log("Attempting login for username:", username); // Debug: Before fetch
+        console.log("Attempting login for username:", username);
         const response = await fetch(`${BASE_URL}/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username, password })
         });
-        console.log("Login response status:", response.status); // Debug: Response status
+        console.log("Login response status:", response.status);
         const data = await response.json();
-        console.log("Login response data:", data); // Debug: Response data
+        console.log("Login response data:", data);
         if (response.ok) {
           localStorage.setItem("token", data.token);
           globalMoney = data.money;
@@ -475,30 +587,30 @@
           showNotification(data.message);
         }
       } catch (err) {
-        console.error("Login error:", err); // Debug: Error catch
-        showNotification("Error logging in.");
+        console.error("Login error:", err);
+        showNotification("Error logging in. Please check your connection.");
       }
     });
 
     document.getElementById("signup-button").addEventListener("click", async () => {
-      console.log("Signup button clicked"); // Debug: Button click
-      const username = document.getElementById("signup-username").value;
-      const password = document.getElementById("signup-password").value;
+      console.log("Signup button clicked");
+      const username = document.getElementById("signup-username").value.trim();
+      const password = document.getElementById("signup-password").value.trim();
       if (!username || !password) {
         showNotification("Please enter username and password");
         return;
       }
 
       try {
-        console.log("Attempting signup for username:", username); // Debug: Before fetch
+        console.log("Attempting signup for username:", username);
         const response = await fetch(`${BASE_URL}/signup`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username, password })
         });
-        console.log("Signup response status:", response.status); // Debug: Response status
+        console.log("Signup response status:", response.status);
         const data = await response.json();
-        console.log("Signup response data:", data); // Debug: Response data
+        console.log("Signup response data:", data);
         if (response.ok) {
           localStorage.setItem("token", data.token);
           globalMoney = data.money;
@@ -507,32 +619,33 @@
           showNotification(data.message);
         }
       } catch (err) {
-        console.error("Signup error:", err); // Debug: Error catch
-        showNotification("Error signing up.");
+        console.error("Signup error:", err);
+        showNotification("Error signing up. Please check your connection.");
       }
     });
 
     document.getElementById("select-map").addEventListener("click", () => {
-      console.log("Select map clicked"); // Debug: Button click
-      initMapMenu(); // Call initMapMenu to populate the map list
+      console.log("Select map clicked");
+      initMapMenu();
       mapMenu.style.display = "block";
-      document.body.classList.add("shop-open"); // Reuse overlay for map menu
-      console.log("mapList children:", mapList.children.length); // Debug: Check if map list is populated
+      document.body.classList.add("shop-open");
+      console.log("mapList children:", mapList.children.length);
     });
 
     document.getElementById("start-game").addEventListener("click", () => {
-      console.log("Start game clicked"); // Debug: Button click
+      console.log("Start game clicked");
       if (!document.getElementById("start-game").disabled) {
-        console.log("Proceeding to game page"); // Debug: Confirming navigation
+        localStorage.setItem("selectedDifficulty", difficultySelect.value);
+        console.log("Proceeding to game page with difficulty:", difficultySelect.value);
         window.location.href = "/game";
       } else {
-        console.log("Start game button is disabled"); // Debug: Check if disabled
+        console.log("Start game button is disabled");
         showNotification("Please select a map first.");
       }
     });
 
     document.getElementById("close-map-menu").addEventListener("click", () => {
-      console.log("Closing map menu"); // Debug: Button click
+      console.log("Closing map menu");
       mapMenu.style.display = "none";
       document.body.classList.remove("shop-open");
     });
@@ -540,9 +653,8 @@
     mapList.addEventListener("click", e => {
       const option = e.target.closest(".map-option");
       if (option) {
-        console.log("Map selected:", option.getAttribute("data-map")); // Debug: Map selection
+        console.log("Map selected:", option.getAttribute("data-map"));
         localStorage.setItem("selectedMap", option.getAttribute("data-map"));
-        localStorage.setItem("selectedDifficulty", option.getAttribute("data-difficulty"));
         document.getElementById("start-game").disabled = false;
         document.querySelectorAll(".map-option").forEach(btn => btn.classList.remove("selected"));
         option.classList.add("selected");
@@ -552,21 +664,23 @@
     });
 
     document.getElementById("open-tower-shop").addEventListener("click", () => {
-      console.log("Opening tower shop"); // Debug: Button click
+      console.log("Opening tower shop");
       initShop();
       shop.style.display = "block";
       document.body.classList.add("shop-open");
     });
 
     document.getElementById("close-shop").addEventListener("click", () => {
-      console.log("Closing tower shop"); // Debug: Button click
+      console.log("Closing tower shop");
       shop.style.display = "none";
       document.body.classList.remove("shop-open");
     });
 
     document.getElementById("logout-button").addEventListener("click", () => {
-      console.log("Logout button clicked"); // Debug: Button click
+      console.log("Logout button clicked");
       localStorage.removeItem("token");
+      localStorage.removeItem("selectedMap");
+      localStorage.removeItem("selectedDifficulty");
       mainMenu.style.display = "none";
       authScreen.style.display = "flex";
     });
@@ -576,10 +690,10 @@
         const type = e.target.getAttribute("data-type");
         const cost = towerStats[type].unlockCost;
         const token = localStorage.getItem("token");
-        console.log("Unlock tower clicked:", type, "Cost:", cost); // Debug: Button click
+        console.log("Unlock tower clicked:", type, "Cost:", cost);
 
         try {
-          console.log("Attempting to unlock tower with token:", token); // Debug: Before fetch
+          console.log("Attempting to unlock tower with token:", token);
           const response = await fetch(`${BASE_URL}/unlock-tower`, {
             method: "POST",
             headers: {
@@ -588,9 +702,9 @@
             },
             body: JSON.stringify({ towerType: type, cost })
           });
-          console.log("Unlock tower response status:", response.status); // Debug: Response status
+          console.log("Unlock tower response status:", response.status);
           const data = await response.json();
-          console.log("Unlock tower response data:", data); // Debug: Response data
+          console.log("Unlock tower response data:", data);
           if (response.ok) {
             globalMoney -= cost;
             towerStats[type].unlocked = true;
@@ -601,27 +715,28 @@
             showNotification(data.message);
           }
         } catch (err) {
-          console.error("Error unlocking tower:", err); // Debug: Error catch
-          showNotification("Error unlocking tower.");
+          console.error("Error unlocking tower:", err);
+          showNotification("Error unlocking tower. Please check your connection.");
         }
       }
     });
 
     async function showMainMenu() {
-      console.log("showMainMenu called"); // Debug: Function entry
+      console.log("showMainMenu called");
       authScreen.style.display = "none";
       mainMenu.style.display = "flex";
       initMapMenu();
       await loadUnlockedTowers();
       await fetchUserData();
-      console.log("Main menu displayed"); // Debug: Function exit
+      resizeElements();
+      console.log("Main menu displayed");
     }
 
     if (localStorage.getItem("token")) {
-      console.log("Token found, showing main menu"); // Debug: Initial check
+      console.log("Token found, showing main menu");
       showMainMenu();
     } else {
-      console.log("No token, showing auth screen"); // Debug: Initial check
+      console.log("No token, showing auth screen");
     }
   </script>
 </body>

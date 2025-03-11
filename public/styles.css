@@ -6,6 +6,7 @@ body, html {
   width: 100%;
   height: 100%;
   font-family: Arial, sans-serif;
+  font-size: 16px; /* Base font size for rem/em units */
 }
 
 /* Auth Screen */
@@ -19,40 +20,43 @@ body, html {
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1002; /* Ensure it appears above other elements */
+  z-index: 1002;
 }
 
 #auth-form {
   background-color: white;
-  padding: 20px;
+  padding: 2vw; /* Scale padding */
   border-radius: 10px;
   text-align: center;
-  width: 300px;
+  width: 90%;
+  max-width: 300px; /* Limit width for larger screens */
 }
 
 #auth-form h2 {
-  margin: 0 0 20px 0;
-  font-size: 24px;
+  margin: 0 0 1.5vw 0;
+  font-size: 1.5rem; /* Scale with base font */
 }
 
 #auth-form input {
   display: block;
   width: 100%;
-  padding: 10px;
-  margin: 10px 0;
+  padding: 0.8vw;
+  margin: 0.8vw 0;
   border: 1px solid #ccc;
   border-radius: 5px;
+  font-size: 1rem;
 }
 
 #auth-form button {
-  padding: 10px 20px;
+  padding: 0.8vw 1.6vw;
   background-color: #444;
   color: white;
   border: none;
   border-radius: 5px;
   cursor: pointer;
-  margin: 10px 0;
+  margin: 0.8vw 0;
   width: 100%;
+  font-size: 1rem;
 }
 
 #auth-form button:hover {
@@ -63,6 +67,7 @@ body, html {
   color: #444;
   text-decoration: underline;
   cursor: pointer;
+  font-size: 0.9rem;
 }
 
 /* Main Menu */
@@ -77,24 +82,24 @@ body, html {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  z-index: 1001; /* Ensure it appears above other elements */
+  z-index: 1001;
 }
 
 #main-menu h1 {
   color: white;
-  font-size: 36px;
-  margin-bottom: 20px;
+  font-size: 2.5rem;
+  margin-bottom: 1.5vw;
 }
 
 #main-menu button {
-  padding: 15px 30px;
+  padding: 1vw 2vw;
   background-color: #444;
   color: white;
   border: none;
   border-radius: 5px;
   cursor: pointer;
-  margin: 10px 0;
-  font-size: 18px;
+  margin: 0.8vw 0;
+  font-size: 1.2rem;
 }
 
 #main-menu button:hover {
@@ -107,24 +112,31 @@ body, html {
 }
 
 #map-selector {
-  margin-top: 20px;
+  margin-top: 1.5vw;
+  background-color: white;
+  padding: 1.5vw;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  width: 90%;
+  max-width: 500px;
 }
 
 #map-selector h2 {
-  color: white;
-  font-size: 24px;
-  margin-bottom: 10px;
+  color: #333; /* Better contrast against white background */
+  font-size: 1.5rem;
+  margin-bottom: 1vw;
+  text-align: center;
 }
 
 #map-selector button {
-  padding: 10px 20px;
+  padding: 0.8vw 1.6vw;
   background-color: #444;
   color: white;
   border: none;
   border-radius: 5px;
   cursor: pointer;
-  margin: 5px;
-  font-size: 16px;
+  margin: 0.4vw;
+  font-size: 1rem;
 }
 
 #map-selector button.active {
@@ -144,29 +156,36 @@ body, html {
   position: fixed;
   top: 0;
   left: 0;
-  width: 200px;
+  width: 15vw; /* Scale width relative to viewport */
+  min-width: 200px; /* Minimum width for usability */
   height: 100%;
   background-color: #333;
   color: white;
-  padding: 10px;
+  padding: 1vw;
   box-sizing: border-box;
   overflow-y: auto;
+  z-index: 1000;
 }
 
 .tower-option {
-  margin-bottom: 10px;
-  padding: 10px;
+  margin-bottom: 0.8vw;
+  padding: 0.8vw;
   background-color: #444;
   cursor: pointer;
+  font-size: 1rem; /* Will be overridden by JS */
 }
 
 .tower-option:hover {
   background-color: #555;
 }
 
+.tower-option.selected {
+  background-color: #666;
+}
+
 .tower-stats {
-  font-size: 12px;
-  color: #ccc;
+  font-size: 0.8rem;
+  color: #ddd; /* Improved contrast */
 }
 
 /* Stats Panel */
@@ -174,43 +193,54 @@ body, html {
   position: fixed;
   top: 0;
   right: 0;
-  width: 200px;
+  width: 15vw;
+  min-width: 200px;
   background-color: #333;
   color: white;
-  padding: 10px;
+  padding: 1vw;
   box-sizing: border-box;
+  z-index: 1000;
 }
 
 #stats-panel h3 {
-  margin: 0 0 10px 0;
+  margin: 0 0 0.8vw 0;
+  font-size: 1.2rem;
+}
+
+#score, #money, #health, #wave, #speed {
+  font-size: 1rem; /* Will be overridden by JS */
 }
 
 /* Tower Info Panel */
 #tower-info-panel {
   position: fixed;
   bottom: 0;
-  left: 200px;
-  width: 200px;
+  left: 15vw; /* Align with sidebar */
+  width: 15vw;
+  min-width: 200px;
   background-color: #333;
   color: white;
-  padding: 10px;
+  padding: 1vw;
   box-sizing: border-box;
-  display: none; /* Hidden by default */
+  display: none;
+  z-index: 1000;
 }
 
 #tower-info-panel h3 {
-  margin: 0 0 10px 0;
+  margin: 0 0 0.8vw 0;
+  font-size: 1.2rem;
 }
 
 #upgrade-tower-button {
   width: 100%;
-  padding: 10px;
-  margin-top: 10px;
+  padding: 0.8vw;
+  margin-top: 0.8vw;
   background-color: #444;
   color: white;
   border: none;
   border-radius: 5px;
   cursor: pointer;
+  font-size: 1rem; /* Will be overridden by JS */
 }
 
 #upgrade-tower-button:hover {
@@ -220,22 +250,22 @@ body, html {
 /* Notification Box */
 #notification-box {
   position: fixed;
-  bottom: 20px;
-  right: 20px;
+  bottom: 2vw;
+  right: 2vw;
   background-color: #333;
   color: white;
-  padding: 15px;
+  padding: 1vw;
   border-radius: 5px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-  display: none; /* Hidden by default */
-  z-index: 1000; /* Ensure it appears above other elements */
-  font-size: 14px;
-  max-width: 300px;
+  display: none;
+  z-index: 1000;
+  font-size: 1rem; /* Will be overridden by JS */
+  max-width: 25vw;
   word-wrap: break-word;
 }
 
 #notification-box.show {
-  display: block; /* Show the notification */
+  display: block;
 }
 
 /* End Screen */
@@ -246,50 +276,52 @@ body, html {
   transform: translate(-50%, -50%);
   background-color: rgba(0, 0, 0, 0.8);
   color: white;
-  padding: 20px;
+  padding: 2vw;
   border-radius: 10px;
   text-align: center;
-  display: none; /* Hidden by default */
-  z-index: 1001; /* Ensure it appears above other elements */
+  display: none;
+  z-index: 1001;
+  width: 90%;
+  max-width: 400px;
 }
 
 #end-screen h2 {
-  margin: 0 0 10px 0;
-  font-size: 24px;
+  margin: 0 0 1vw 0;
+  font-size: 1.5rem;
 }
 
 #end-screen p {
-  margin: 0 0 20px 0;
-  font-size: 18px;
+  margin: 0 0 1.5vw 0;
+  font-size: 1rem; /* Will be overridden by JS */
 }
 
 #restart-button {
-  padding: 10px 20px;
+  padding: 0.8vw 1.6vw;
   background-color: #444;
   color: white;
   border: none;
   border-radius: 5px;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 1rem; /* Will be overridden by JS */
 }
 
 #restart-button:hover {
   background-color: #555;
 }
 
-/* Add these styles to the <style> section in your HTML or to your styles.css file */
+/* Tower Shop */
 #tower-shop {
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   background-color: white;
-  padding: 20px;
+  padding: 2vw;
   border-radius: 10px;
-  box-shadow: 0 0 20px rgba(0,0,0,0.3);
-  max-width: 500px;
-  width: 90%;
-  max-height: 80vh; /* Limit height to 80% of viewport height */
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+  max-width: 90%;
+  width: 500px;
+  max-height: 80vh;
   z-index: 1000;
   display: flex;
   flex-direction: column;
@@ -297,17 +329,18 @@ body, html {
 
 #tower-shop h2 {
   margin-top: 0;
+  font-size: 1.5rem;
 }
 
 #tower-shop-items {
-  overflow-y: auto; /* Make this container scrollable */
-  max-height: calc(80vh - 150px); /* Leave space for header and footer */
-  padding-right: 5px; /* Space for scrollbar */
+  overflow-y: auto;
+  max-height: calc(80vh - 150px);
+  padding-right: 0.4vw;
 }
 
 .shop-item {
-  margin-bottom: 15px;
-  padding: 15px;
+  margin-bottom: 1vw;
+  padding: 1vw;
   border: 1px solid #ddd;
   border-radius: 5px;
   background-color: #f9f9f9;
@@ -316,16 +349,18 @@ body, html {
 .shop-item h3 {
   margin-top: 0;
   color: #333;
+  font-size: 1.2rem;
 }
 
 .unlock-button {
   background-color: #4CAF50;
   color: white;
   border: none;
-  padding: 8px 16px;
+  padding: 0.6vw 1.2vw;
   border-radius: 4px;
   cursor: pointer;
-  margin-top: 10px;
+  margin-top: 0.8vw;
+  font-size: 1rem;
 }
 
 .unlock-button:disabled {
@@ -339,15 +374,16 @@ body, html {
 
 #close-shop-button {
   display: block;
-  margin: 20px auto 0;
-  /* Ensure the close button stays at the bottom */
+  margin: 1.5vw auto 0;
   margin-top: auto;
-  padding: 10px 20px;
+  padding: 0.8vw 1.6vw;
+  font-size: 1rem;
 }
 
 #shop-global-money {
   font-weight: bold;
   color: #2196F3;
+  font-size: 1rem;
 }
 
 /* Custom scrollbar styling */
@@ -369,12 +405,13 @@ body, html {
   background: #555;
 }
 
+/* Map Selector */
 #map-selector {
   background-color: white;
-  padding: 20px;
+  padding: 1.5vw;
   border-radius: 10px;
-  box-shadow: 0 0 10px rgba(0,0,0,0.1);
-  margin: 20px 0;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  margin: 1.5vw 0;
   width: 100%;
   max-width: 500px;
 }
@@ -382,28 +419,30 @@ body, html {
 #map-selector h2 {
   margin-top: 0;
   text-align: center;
-  margin-bottom: 15px;
+  margin-bottom: 1vw;
+  font-size: 1.5rem;
 }
 
 #map-container {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 0.8vw;
   max-height: 200px;
   overflow-y: auto;
-  padding-right: 5px;
+  padding-right: 0.4vw;
 }
 
 #map-container button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 15px;
+  padding: 0.8vw 1vw;
   background-color: #f0f0f0;
   border: 1px solid #ddd;
   border-radius: 5px;
   text-align: left;
   transition: all 0.2s ease;
+  font-size: 1rem;
 }
 
 #map-container button:hover:not(.active) {
@@ -435,9 +474,82 @@ body, html {
   background: #555;
 }
 
-/* Add a map icon for better visuals (optional) */
+/* Map icon */
 #map-container button::before {
   content: "🗺️";
-  margin-right: 8px;
+  margin-right: 0.5vw;
 }
 
+/* Responsive Design for Mobile */
+@media (max-width: 768px) {
+  #sidebar {
+    width: 30vw;
+    min-width: 150px;
+    padding: 2vw;
+  }
+
+  #stats-panel {
+    width: 30vw;
+    min-width: 150px;
+    padding: 2vw;
+  }
+
+  #tower-info-panel {
+    left: 30vw;
+    width: 30vw;
+    min-width: 150px;
+    padding: 2vw;
+  }
+
+  #notification-box {
+    bottom: 5vw;
+    right: 5vw;
+    max-width: 50vw;
+  }
+
+  #auth-form, #tower-shop, #map-selector {
+    padding: 3vw;
+  }
+
+  #main-menu h1 {
+    font-size: 2rem;
+  }
+
+  #main-menu button {
+    padding: 2vw 4vw;
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  #sidebar {
+    width: 40vw;
+    min-width: 120px;
+  }
+
+  #stats-panel {
+    width: 40vw;
+    min-width: 120px;
+  }
+
+  #tower-info-panel {
+    left: 40vw;
+    width: 40vw;
+    min-width: 120px;
+  }
+
+  #notification-box {
+    bottom: 8vw;
+    right: 8vw;
+    max-width: 70vw;
+  }
+
+  #main-menu h1 {
+    font-size: 1.5rem;
+  }
+
+  #main-menu button {
+    padding: 3vw 6vw;
+    font-size: 0.9rem;
+  }
+}
