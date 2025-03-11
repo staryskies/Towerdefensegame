@@ -11,13 +11,10 @@ let scaleY = 1;
 function resizeCanvas() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
-  scaleX = canvas.width / originalWidth;
-  scaleY = canvas.height / originalHeight;
+  scaleX = Math.min(canvas.width / originalWidth, 2); // Cap scaling at 2x
+  scaleY = Math.min(canvas.height / originalHeight, 2); // Cap scaling at 2x
   updateScaledPathAndSpawnPoint();
 }
-
-resizeCanvas();
-window.addEventListener("resize", resizeCanvas);
 
 let gameState = {
   enemies: [],
@@ -36,8 +33,6 @@ let gameState = {
   gameWon: false,
 };
 
-const BASE_URL = ''; // Adjust if backend is hosted elsewhere
-
 async function loadUnlockedTowers() {
   const token = localStorage.getItem("token");
   if (!token) {
@@ -46,7 +41,7 @@ async function loadUnlockedTowers() {
     return;
   }
   try {
-    const response = await fetch(`${BASE_URL}/towers`, {
+    const response = await fetch('/towers', {
       headers: { "Authorization": token }
     });
     const data = await response.json();
@@ -67,7 +62,7 @@ async function fetchUserMoney() {
   const token = localStorage.getItem("token");
   if (!token) return;
   try {
-    const response = await fetch(`${BASE_URL}/user`, {
+    const response = await fetch('/user', {
       headers: { "Authorization": token }
     });
     const data = await response.json();
@@ -85,7 +80,7 @@ async function updateUserMoney() {
   const token = localStorage.getItem("token");
   if (!token) return;
   try {
-    await fetch(`${BASE_URL}/update-money`, {
+    await fetch('/update-money', {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -121,7 +116,10 @@ function updateScaledPathAndSpawnPoint() {
   scaledPath = path.map(point => ({ x: point.x * scaleX, y: point.y * scaleY }));
   scaledSpawnPoint = { x: spawnPoint.x * scaleX, y: spawnPoint.y * scaleY };
 }
-updateScaledPathAndSpawnPoint();
+
+// Call resizeCanvas after path and spawnPoint are defined
+resizeCanvas();
+window.addEventListener("resize", resizeCanvas);
 
 const enemyThemes = {
   grassland: {
@@ -175,8 +173,8 @@ class Enemy {
     this.y = spawnPoint.y;
     this.health = type.health;
     this.maxHealth = type.health;
-    this.speed = type.speed * Math.min(scaleX, scaleY);
-    this.radius = type.radius * Math.min(scaleX, scaleY);
+    this.speed = type.speed; // Keep in original units, scale in update
+    this.radius = type.radius; // Keep in original units, scale when drawing
     this.color = type.color;
     this.pathIndex = 1;
     this.slowed = false;
@@ -190,7 +188,7 @@ class Enemy {
 
   update(gameState) {
     if (this.pathIndex >= this.path.length) {
-      gameState.playerHealth -= this.radius / (10 * Math.min(scaleX, scaleY));
+      gameState.playerHealth -= this.radius / 10; // Damage in original units
       gameState.enemies = gameState.enemies.filter(e => e !== this);
       checkGameEnd();
       return;
@@ -229,7 +227,7 @@ class Enemy {
     const dx = target.x - this.x;
     const dy = target.y - this.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
-    const effectiveSpeed = this.slowed ? this.speed * 0.5 : this.speed;
+    const effectiveSpeed = (this.slowed ? this.speed * 0.5 : this.speed) * Math.min(scaleX, scaleY);
     if (distance < effectiveSpeed) {
       this.x = target.x;
       this.y = target.y;
@@ -240,9 +238,9 @@ class Enemy {
     }
   }
 
-  draw(ctx, scaleX, scaleY) {
+  draw(ctx) {
     ctx.beginPath();
-    ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
+    ctx.arc(this.x, this.y, this.radius * Math.min(scaleX, scaleY), 0, 2 * Math.PI);
     ctx.fillStyle = this.color;
     ctx.fill();
     const barWidth = 20 * Math.min(scaleX, scaleY);
@@ -274,7 +272,7 @@ function gameLoop() {
     gameState.projectiles = gameState.projectiles.filter(p => p.isActive && p.target && p.target.health > 0);
   }
 
-  gameState.enemies.forEach(enemy => enemy.draw(ctx, scaleX, scaleY));
+  gameState.enemies.forEach(enemy => enemy.draw(ctx));
   gameState.towers.forEach(tower => tower.draw(ctx, scaleX, scaleY));
   gameState.projectiles.forEach(projectile => projectile.draw(ctx, scaleX, scaleY));
 
@@ -471,14 +469,14 @@ function drawTowerFootprint() {
   ctx.beginPath();
   ctx.arc(mouseX, mouseY, stats.range * Math.min(scaleX, scaleY), 0, 2 * Math.PI);
   ctx.strokeStyle = "rgba(0, 255, 0, 0.5)";
-  ctx.lineWidth = 2 * Math.min(scaleX, scaleY);
+  ctx.lineWidth = 2;
   ctx.stroke();
   ctx.fillStyle = "rgba(0, 255, 0, 0.2)";
   ctx.fillRect(mouseX - 20 * Math.min(scaleX, scaleY), mouseY - 20 * Math.min(scaleX, scaleY), 40 * Math.min(scaleX, scaleY), 40 * Math.min(scaleX, scaleY));
 }
 
 function canPlaceTower(x, y) {
-  const minDistance = 40 * Math.min(scaleX, scaleY);
+  const minDistance = 40; // Use original units for placement logic
   for (let tower of gameState.towers) {
     const dx = x - tower.x;
     const dy = y - tower.y;
@@ -492,7 +490,7 @@ canvas.addEventListener("click", e => {
   const rect = canvas.getBoundingClientRect();
   const canvasX = e.clientX - rect.left;
   const canvasY = e.clientY - rect.top;
-  const x = canvasX / scaleX;
+  const x = canvasX / scaleX; // Convert to original game coordinates
   const y = canvasY / scaleY;
 
   if (gameState.selectedTowerType) {
