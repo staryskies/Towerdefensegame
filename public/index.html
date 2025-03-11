@@ -5,169 +5,341 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tower Defense</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background: #2c3e50; }
-    body { display: flex; justify-content: center; align-items: center; }
-
-    /* Container for Auth and Main Menu */
-    .container { 
-      background: rgba(44, 62, 80, 0.95); 
-      padding: 30px; 
-      border-radius: 15px; 
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4); 
-      width: 90%; 
-      max-width: 400px; 
-      text-align: center; 
-      color: #ecf0f1; 
-      position: relative; 
-    }
-    h1 { font-size: 2em; margin-bottom: 20px; color: #ecf0f1; }
-    .form-group { margin-bottom: 15px; text-align: left; }
-    .form-group label { display: block; margin-bottom: 5px; font-size: 1rem; color: #bdc3c7; }
-    input { 
-      width: 100%; 
-      padding: 10px; 
-      margin: 5px 0; 
-      border: 1px solid #34495e; 
-      border-radius: 5px; 
-      background: #3e5c76; 
-      color: #ecf0f1; 
-      font-size: 1rem; 
-    }
-    input::placeholder { color: #bdc3c7; }
-    button { 
-      padding: 12px 25px; 
-      background: #3498db; 
-      color: white; 
-      border: none; 
-      border-radius: 8px; 
-      cursor: pointer; 
-      font-weight: bold; 
-      transition: all 0.3s ease; 
-      margin: 10px 5px; 
-    }
-    button:disabled { background: #34495e; cursor: not-allowed; }
-    button:hover:not(:disabled) { 
-      background: #2980b9; 
-      transform: translateY(-2px); 
-      box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4); 
-    }
-    a { color: #3498db; text-decoration: none; font-size: 0.9rem; }
-    a:hover { text-decoration: underline; }
-
-    /* Main Menu Specific */
-    #main-menu { display: none; flex-direction: column; align-items: center; }
-    #user-money { margin: 15px 0; font-size: 1.2rem; color: #ecf0f1; }
-
-    /* Map Menu and Tower Shop */
-    #map-menu, #tower-shop { 
-      display: none; 
-      position: fixed; 
-      top: 50%; 
-      left: 50%; 
-      transform: translate(-50%, -50%); 
-      background: rgba(44, 62, 80, 0.95); 
-      padding: 30px; 
-      border-radius: 15px; 
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4); 
-      width: 90%; 
-      max-width: 400px; 
-      max-height: 70vh; 
-      overflow-y: auto; 
-      color: #ecf0f1; 
-      z-index: 1000; 
-    }
-    #map-menu h2, #tower-shop h2 { font-size: 1.5rem; margin-bottom: 15px; position: relative; padding-right: 40px; }
-    .close-btn { 
-      position: absolute; 
-      top: 10px; 
-      right: 10px; 
-      background: #ff4d4d; 
-      color: transparent; 
-      border: none; 
-      border-radius: 50%; 
-      width: 30px; 
-      height: 30px; 
-      display: flex; 
-      align-items: center; 
-      justify-content: center; 
-      cursor: pointer; 
-      transition: all 0.3s ease; 
-    }
-    .close-btn::before, .close-btn::after { 
-      content: ''; 
-      position: absolute; 
-      width: 16px; 
-      height: 2px; 
-      background: #fff; 
-    }
-    .close-btn::before { transform: rotate(45deg); }
-    .close-btn::after { transform: rotate(-45deg); }
-    .close-btn:hover { background: #e60000; transform: scale(1.1); }
-    .close-btn:active { transform: scale(0.95); }
-    .map-option, .shop-item { 
-      background: #34495e; 
-      padding: 12px; 
-      margin: 10px 0; 
-      border-radius: 8px; 
-      cursor: pointer; 
-      transition: all 0.3s ease; 
-      text-align: left; 
-    }
-    .map-option:hover, .shop-item:hover { background: #3e5c76; }
-    .map-option.selected { background: #3498db; }
-    .shop-item h4 { margin-bottom: 5px; font-size: 1.1rem; }
-    .shop-item p { margin: 5px 0; font-size: 0.9rem; color: #bdc3c7; }
-    .unlock-btn { 
-      background: #28a745; 
-      padding: 8px 16px; 
-      margin-top: 5px; 
-      font-size: 0.9rem; 
-    }
-    .unlock-btn:disabled { background: #34495e; }
-    .unlock-btn:hover:not(:disabled) { background: #218838; }
-    #global-money { margin: 15px 0; font-size: 1.2rem; }
-
-    /* Notification Box */
-    #notification-box { 
-      position: fixed; 
-      bottom: 20px; 
-      right: 20px; 
-      background: rgba(44, 62, 80, 0.9); 
-      color: #ecf0f1; 
-      padding: 10px 20px; 
-      border-radius: 8px; 
-      z-index: 1000; 
-      display: none; 
-      font-weight: 500; 
-      max-width: 300px; 
-    }
-    #notification-box.show { display: block; }
-
-    /* Backdrop for modals */
-    body.shop-open::before { 
-      content: ''; 
-      position: fixed; 
-      top: 0; 
-      left: 0; 
-      width: 100%; 
-      height: 100%; 
-      background: rgba(0, 0, 0, 0.5); 
-      z-index: 999; 
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
 
-    /* Responsive Adjustments */
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: linear-gradient(135deg, #1a2634, #2c3e50);
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .container {
+      background: rgba(44, 62, 80, 0.98);
+      padding: 35px;
+      border-radius: 20px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+      width: 90%;
+      max-width: 450px;
+      text-align: center;
+      color: #ecf0f1;
+      position: relative;
+      transition: transform 0.3s ease;
+    }
+
+    .container:hover {
+      transform: translateY(-5px);
+    }
+
+    h1 {
+      font-size: 2.2em;
+      margin-bottom: 25px;
+      color: #ecf0f1;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+      text-align: left;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 1.1rem;
+      color: #bdc3c7;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      margin: 5px 0;
+      border: 2px solid #34495e;
+      border-radius: 8px;
+      background: #3e5c76;
+      color: #ecf0f1;
+      font-size: 1rem;
+      transition: border-color 0.3s ease;
+    }
+
+    input:focus {
+      border-color: #3498db;
+      outline: none;
+    }
+
+    input::placeholder {
+      color: #95a5a6;
+    }
+
+    button {
+      padding: 14px 30px;
+      background: linear-gradient(135deg, #3498db, #2980b9);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      margin: 10px 8px;
+    }
+
+    button:disabled {
+      background: #34495e;
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+
+    button:hover:not(:disabled) {
+      background: linear-gradient(135deg, #2980b9, #1f6391);
+      transform: translateY(-3px);
+      box-shadow: 0 6px 20px rgba(52, 152, 219, 0.5);
+    }
+
+    button:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+
+    a {
+      color: #3498db;
+      text-decoration: none;
+      font-size: 0.95rem;
+      transition: color 0.3s ease;
+    }
+
+    a:hover {
+      color: #2980b9;
+      text-decoration: underline;
+    }
+
+    #main-menu {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #user-money {
+      margin: 20px 0;
+      font-size: 1.3rem;
+      color: #ecf0f1;
+      background: rgba(52, 73, 94, 0.8);
+      padding: 8px 15px;
+      border-radius: 8px;
+    }
+
+    #map-menu, #tower-shop {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(44, 62, 80, 0.98);
+      padding: 35px;
+      border-radius: 20px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+      width: 90%;
+      max-width: 500px;
+      max-height: 80vh;
+      overflow-y: auto;
+      color: #ecf0f1;
+      z-index: 1000;
+      transition: transform 0.3s ease;
+    }
+
+    #map-menu.show, #tower-shop.show {
+      transform: translate(-50%, -50%) scale(1.02);
+    }
+
+    #map-menu h2, #tower-shop h2 {
+      font-size: 1.8rem;
+      margin-bottom: 20px;
+      position: relative;
+      padding-right: 40px;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background: #e74c3c;
+      border: none;
+      border-radius: 50%;
+      width: 35px;
+      height: 35px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .close-btn::before, .close-btn::after {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 3px;
+      background: #fff;
+    }
+
+    .close-btn::before {
+      transform: rotate(45deg);
+    }
+
+    .close-btn::after {
+      transform: rotate(-45deg);
+    }
+
+    .close-btn:hover {
+      background: #c0392b;
+      transform: scale(1.1);
+    }
+
+    .close-btn:active {
+      transform: scale(0.95);
+    }
+
+    .map-option, .shop-item {
+      background: #34495e;
+      padding: 15px;
+      margin: 12px 0;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-align: left;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .map-option:hover, .shop-item:hover {
+      background: #3e5c76;
+      transform: translateY(-2px);
+    }
+
+    .map-option.selected {
+      background: linear-gradient(135deg, #3498db, #2980b9);
+      color: #fff;
+    }
+
+    .shop-item h4 {
+      margin-bottom: 8px;
+      font-size: 1.2rem;
+      color: #ecf0f1;
+    }
+
+    .shop-item p {
+      margin: 5px 0;
+      font-size: 0.95rem;
+      color: #bdc3c7;
+    }
+
+    .unlock-btn {
+      background: linear-gradient(135deg, #27ae60, #219653);
+      padding: 10px 20px;
+      margin-top: 8px;
+      font-size: 0.95rem;
+      border-radius: 8px;
+    }
+
+    .unlock-btn:disabled {
+      background: #34495e;
+      cursor: not-allowed;
+    }
+
+    .unlock-btn:hover:not(:disabled) {
+      background: linear-gradient(135deg, #219653, #1b7742);
+      transform: translateY(-2px);
+    }
+
+    #global-money {
+      margin: 20px 0;
+      font-size: 1.3rem;
+      background: rgba(52, 73, 94, 0.8);
+      padding: 8px 15px;
+      border-radius: 8px;
+    }
+
+    #notification-box {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: rgba(39, 174, 96, 0.95);
+      color: #fff;
+      padding: 15px 25px;
+      border-radius: 10px;
+      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+      z-index: 1000;
+      display: none;
+      font-weight: 500;
+      max-width: 350px;
+      transition: opacity 0.3s ease;
+    }
+
+    #notification-box.show {
+      display: block;
+      opacity: 1;
+    }
+
+    body.shop-open::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 999;
+    }
+
     @media (max-width: 768px) {
-      .container, #map-menu, #tower-shop { padding: 20px; max-width: 90%; }
-      h1 { font-size: 1.8rem; }
-      button { padding: 10px 20px; font-size: 0.9rem; }
-      #notification-box { bottom: 15px; right: 15px; max-width: 50vw; }
+      .container, #map-menu, #tower-shop {
+        padding: 25px;
+        max-width: 90%;
+      }
+      h1 {
+        font-size: 2rem;
+      }
+      button {
+        padding: 12px 25px;
+        font-size: 0.95rem;
+      }
+      #notification-box {
+        bottom: 20px;
+        right: 20px;
+        max-width: 60vw;
+      }
     }
+
     @media (max-width: 480px) {
-      .container, #map-menu, #tower-shop { padding: 15px; }
-      h1 { font-size: 1.5rem; }
-      button { padding: 8px 15px; font-size: 0.8rem; }
-      #notification-box { bottom: 10px; right: 10px; max-width: 70vw; }
+      .container, #map-menu, #tower-shop {
+        padding: 20px;
+      }
+      h1 {
+        font-size: 1.8rem;
+      }
+      button {
+        padding: 10px 20px;
+        font-size: 0.9rem;
+      }
+      .map-option, .shop-item {
+        padding: 12px;
+      }
+      #notification-box {
+        bottom: 15px;
+        right: 15px;
+        max-width: 80vw;
+        font-size: 0.9rem;
+      }
     }
   </style>
 </head>
@@ -184,7 +356,7 @@
         <label for="login-password">Password</label>
         <input type="password" id="login-password" placeholder="Password" aria-required="true">
       </div>
-      <button id="login-button">Login</button>
+      <button id="login-button" aria-label="Login">Login</button>
       <p><a href="#" id="show-signup">Need an account? Sign up</a></p>
     </div>
     <div id="signup-form" style="display: none;">
@@ -196,35 +368,41 @@
         <label for="signup-password">Password</label>
         <input type="password" id="signup-password" placeholder="Password" aria-required="true">
       </div>
-      <button id="signup-button">Sign Up</button>
+      <button id="signup-button" aria-label="Sign Up">Sign Up</button>
       <p><a href="#" id="show-login">Already have an account? Log in</a></p>
     </div>
   </div>
   <div class="container" id="main-menu">
     <h1>Tower Defense</h1>
-    <div id="user-money">Money: $0</div>
-    <button id="start-game">Start Game</button>
-    <button id="select-map">Map Selection</button>
-    <button id="open-tower-shop">Tower Buyer</button>
-    <button id="logout-button">Logout</button>
+    <div id="user-money">Persistent Money: $0</div>
+    <button id="start-game" aria-label="Start Game">Start Game</button>
+    <button id="select-map" aria-label="Select Map">Map Selection</button>
+    <button id="open-tower-shop" aria-label="Open Tower Shop">Tower Shop</button>
+    <button id="logout-button" aria-label="Logout">Logout</button>
   </div>
   <div id="map-menu">
     <h2>Select Map <button class="close-btn" id="close-map-menu" aria-label="Close Map Menu"></button></h2>
+    <select id="difficulty-select" aria-label="Select Difficulty">
+      <option value="easy">Easy</option>
+      <option value="medium">Medium</option>
+      <option value="hard">Hard</option>
+    </select>
     <div id="map-list"></div>
   </div>
   <div id="tower-shop">
-    <h2>Tower Buyer <button class="close-btn" id="close-shop" aria-label="Close Tower Shop"></button></h2>
-    <div id="global-money">Money: $0</div>
+    <h2>Tower Shop <button class="close-btn" id="close-shop" aria-label="Close Tower Shop"></button></h2>
+    <div id="global-money">Persistent Money: $0</div>
     <div id="shop-items"></div>
   </div>
   <script src="/stats.js"></script>
   <script>
-    const BASE_URL = ''; // Empty since Render uses relative paths
+    const BASE_URL = '';
     let globalMoney = 0;
     const originalWidth = 1200;
     const originalHeight = 600;
     let scaleX = 1;
     let scaleY = 1;
+    let textScale = 1;
 
     const authScreen = document.getElementById("auth-screen");
     const mainMenu = document.getElementById("main-menu");
@@ -234,6 +412,7 @@
     const shop = document.getElementById("tower-shop");
     const shopItems = document.getElementById("shop-items");
     const mapList = document.getElementById("map-list");
+    const difficultySelect = document.getElementById("difficulty-select");
 
     const maps = {
       map1: { name: "Beginner Path", path: [{ x: 0, y: 300 }, { x: 100, y: 200 }, { x: 200, y: 400 }, { x: 300, y: 300 }, { x: 400, y: 100 }, { x: 500, y: 300 }, { x: 600, y: 200 }, { x: 700, y: 400 }, { x: 800, y: 300 }, { x: 900, y: 100 }, { x: 1000, y: 300 }, { x: 1100, y: 200 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 50, difficulty: "easy", theme: "grassland" },
@@ -248,16 +427,13 @@
     };
 
     function resizeElements() {
-      scaleX = window.innerWidth / originalWidth;
-      scaleY = window.innerHeight / originalHeight;
-      const uiScale = Math.min(scaleX, scaleY) * 0.70;
-      document.querySelectorAll('#main-menu h1, #main-menu button, #user-money').forEach(el => {
-        el.style.fontSize = `${parseFloat(getComputedStyle(el).fontSize) * uiScale}px`;
+      scaleX = Math.min(window.innerWidth / originalWidth, 2);
+      scaleY = Math.min(window.innerHeight / originalHeight, 2);
+      textScale = Math.min(scaleY, 1.5);
+      document.querySelectorAll('#main-menu h1, #main-menu button, #user-money, #map-menu h2, #map-menu .map-option, #tower-shop h2, #tower-shop .shop-item, #tower-shop .unlock-btn, #global-money, #difficulty-select').forEach(el => {
+        el.style.fontSize = `${16 * textScale}px`;
       });
-      document.querySelectorAll('#map-menu h2, #map-menu .map-option, #tower-shop h2, #tower-shop .shop-item, #tower-shop .unlock-btn, #global-money').forEach(el => {
-        el.style.fontSize = `${parseFloat(getComputedStyle(el).fontSize) * uiScale}px`;
-      });
-      document.getElementById('notification-box').style.fontSize = `${16 * uiScale}px`;
+      document.getElementById('notification-box').style.fontSize = `${16 * textScale}px`;
     }
 
     window.addEventListener('resize', resizeElements);
@@ -294,7 +470,7 @@
 
     function initShop() {
       shopItems.innerHTML = "";
-      document.getElementById("global-money").textContent = `Money: $${globalMoney}`;
+      document.getElementById("global-money").textContent = `Persistent Money: $${globalMoney}`;
       for (const [type, stats] of Object.entries(towerStats)) {
         if (type === "basic") continue;
         const item = document.createElement("div");
@@ -303,7 +479,7 @@
           <h4>${type.charAt(0).toUpperCase() + type.slice(1)}</h4>
           <p>Damage: ${stats.damage} | Range: ${stats.range}</p>
           <p>Fire Rate: ${stats.fireRate / 1000}s | Ability: ${stats.ability}</p>
-          <p>${stats.unlocked ? "Unlocked" : `Cost: $${stats.unlockCost}`}</p>
+          <p>${stats.unlocked ? "Unlocked" : `Cost: $${stats.persistentCost}`}</p>
           <button class="unlock-btn" data-type="${type}" ${stats.unlocked ? "disabled" : ""}>
             ${stats.unlocked ? "Unlocked" : "Unlock"}
           </button>
@@ -315,13 +491,14 @@
 
     function initMapMenu() {
       mapList.innerHTML = "";
+      difficultySelect.value = localStorage.getItem("selectedDifficulty") || "easy";
       for (const [mapId, map] of Object.entries(maps)) {
         const mapOption = document.createElement("div");
         mapOption.className = "map-option";
         mapOption.setAttribute("data-map", mapId);
         mapOption.innerHTML = `
           <h4>${map.name}</h4>
-          <p>Difficulty: ${map.difficulty.charAt(0).toUpperCase() + map.difficulty.slice(1)}</p>
+          <p>Base Difficulty: ${map.difficulty.charAt(0).toUpperCase() + map.difficulty.slice(1)}</p>
           <p>Money Reward: $${map.moneyReward}</p>
         `;
         if (localStorage.getItem("selectedMap") === mapId) mapOption.classList.add("selected");
@@ -339,9 +516,9 @@
         });
         const data = await response.json();
         if (response.ok) {
-          globalMoney = data.money;
-          document.getElementById("user-money").textContent = `Money: $${globalMoney}`;
-          document.getElementById("global-money").textContent = `Money: $${globalMoney}`;
+          globalMoney = data.money || 0;
+          document.getElementById("user-money").textContent = `Persistent Money: $${globalMoney}`;
+          document.getElementById("global-money").textContent = `Persistent Money: $${globalMoney}`;
         } else {
           throw new Error(data.message);
         }
@@ -351,12 +528,14 @@
       }
     }
 
-    document.getElementById("show-signup").addEventListener("click", () => {
+    document.getElementById("show-signup").addEventListener("click", (e) => {
+      e.preventDefault();
       loginForm.style.display = "none";
       signupForm.style.display = "block";
     });
 
-    document.getElementById("show-login").addEventListener("click", () => {
+    document.getElementById("show-login").addEventListener("click", (e) => {
+      e.preventDefault();
       signupForm.style.display = "none";
       loginForm.style.display = "block";
     });
@@ -426,11 +605,13 @@
     document.getElementById("select-map").addEventListener("click", () => {
       initMapMenu();
       mapMenu.style.display = "block";
+      mapMenu.classList.add("show");
       document.body.classList.add("shop-open");
     });
 
     document.getElementById("close-map-menu").addEventListener("click", () => {
       mapMenu.style.display = "none";
+      mapMenu.classList.remove("show");
       document.body.classList.remove("shop-open");
     });
 
@@ -438,10 +619,11 @@
       const option = e.target.closest(".map-option");
       if (option) {
         localStorage.setItem("selectedMap", option.getAttribute("data-map"));
-        localStorage.setItem("selectedDifficulty", maps[option.getAttribute("data-map")].difficulty);
+        localStorage.setItem("selectedDifficulty", difficultySelect.value);
         document.querySelectorAll(".map-option").forEach(btn => btn.classList.remove("selected"));
         option.classList.add("selected");
         mapMenu.style.display = "none";
+        mapMenu.classList.remove("show");
         document.body.classList.remove("shop-open");
       }
     });
@@ -449,11 +631,13 @@
     document.getElementById("open-tower-shop").addEventListener("click", () => {
       initShop();
       shop.style.display = "block";
+      shop.classList.add("show");
       document.body.classList.add("shop-open");
     });
 
     document.getElementById("close-shop").addEventListener("click", () => {
       shop.style.display = "none";
+      shop.classList.remove("show");
       document.body.classList.remove("shop-open");
     });
 
@@ -462,14 +646,18 @@
       localStorage.removeItem("selectedMap");
       localStorage.removeItem("selectedDifficulty");
       mainMenu.style.display = "none";
-      authScreen.style.display = "flex";
+      authScreen.style.display = "block";
     });
 
     shopItems.addEventListener("click", async e => {
       if (e.target.classList.contains("unlock-btn") && !e.target.disabled) {
         const type = e.target.getAttribute("data-type");
-        const cost = towerStats[type].unlockCost;
+        const cost = towerStats[type].persistentCost;
         const token = localStorage.getItem("token");
+        if (globalMoney < cost) {
+          showNotification("Not enough persistent money!");
+          return;
+        }
         try {
           const response = await fetch(`${BASE_URL}/unlock-tower`, {
             method: "POST",
@@ -477,21 +665,21 @@
               "Content-Type": "application/json",
               "Authorization": token
             },
-            body: JSON.stringify({ towerType: type, cost })
+            body: JSON.stringify({ tower: type })
           });
           const data = await response.json();
           if (response.ok) {
             globalMoney -= cost;
             towerStats[type].unlocked = true;
             initShop();
-            document.getElementById("user-money").textContent = `Money: $${globalMoney}`;
+            document.getElementById("user-money").textContent = `Persistent Money: $${globalMoney}`;
             showNotification(`${type.charAt(0).toUpperCase() + type.slice(1)} Tower unlocked!`);
           } else {
             showNotification(data.message);
           }
         } catch (err) {
           console.error("Error unlocking tower:", err);
-          showNotification("Error unlocking tower. Please check your connection.");
+          showNotification("Error unlocking tower.");
         }
       }
     });
