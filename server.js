@@ -143,22 +143,19 @@ async function startServer() {
     }
   });
 
-  app.post("/unlock-tower", authenticateToken, async (req, res) => {
-    const { towerType, cost } = req.body;
-    try {
-      const result = await client.query("SELECT money FROM users WHERE id = $1", [req.user.id]);
-      const user = result.rows[0];
-      if (user.money < cost) return res.status(400).json({ message: "Not enough money." });
-
-      await client.query(
-        "INSERT INTO user_towers (user_id, tower_type) VALUES ($1, $2) ON CONFLICT DO NOTHING",
-        [req.user.id, towerType]
-      );
-      await client.query("UPDATE users SET money = money - $1 WHERE id = $2", [cost, req.user.id]);
-      res.json({ message: "Tower unlocked successfully." });
-    } catch (err) {
-      console.error("Error unlocking tower:", err);
-      res.status(500).json({ message: "Error unlocking tower." });
+  app.post('/unlock-tower', authenticateToken, async (req, res) => {
+    const { tower } = req.body;
+    if (!tower || !towerStats[tower]) return res.status(400).json({ message: "Invalid tower type" });
+    const user = await User.findById(req.user.userId);
+    const cost = towerStats[tower].persistentCost;
+    if (user.money < cost) return res.status(400).json({ message: "Insufficient persistent money" });
+    if (!user.towers.includes(tower)) {
+      user.towers.push(tower);
+      user.money -= cost;
+      await user.save();
+      res.json({ message: `${tower} unlocked`, towers: user.towers });
+    } else {
+      res.status(400).json({ message: "Tower already unlocked" });
     }
   });
 

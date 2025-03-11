@@ -21,7 +21,8 @@ let gameState = {
   projectiles: [],
   wave: 1,
   score: 0,
-  money: 200,
+  gameMoney: 200, // In-game currency, resets per game
+  persistentMoney: 0, // Out-of-game currency, persists across games
   selectedTowerType: null,
   gameOver: false,
   playerHealth: 20,
@@ -32,7 +33,7 @@ let gameState = {
   gameWon: false,
 };
 
-// Proxy to log changes to selectedTowerType
+// Proxy for debugging selectedTowerType
 gameState = new Proxy(gameState, {
   set(target, prop, value) {
     if (prop === "selectedTowerType") {
@@ -47,7 +48,7 @@ async function loadUnlockedTowers() {
   const token = localStorage.getItem("token");
   if (!token) {
     showNotification("Not authenticated. Please log in.");
-    window.location.href = "/"; // Redirect to root for Render
+    window.location.href = "/";
     return;
   }
   try {
@@ -57,12 +58,9 @@ async function loadUnlockedTowers() {
     if (!response.ok) throw new Error((await response.json()).message);
     const data = await response.json();
     console.log("Unlocked towers from server:", data.towers);
-    towerStats.basic.unlocked = true;
+    towerStats.basic.unlocked = true; // Basic always unlocked
     data.towers.forEach(type => {
-      if (towerStats[type]) {
-        towerStats[type].unlocked = true;
-        console.log(`Tower ${type} marked as unlocked`);
-      }
+      if (towerStats[type]) towerStats[type].unlocked = true;
     });
   } catch (err) {
     console.error("Error loading towers:", err);
@@ -79,8 +77,9 @@ async function fetchUserMoney() {
     });
     if (!response.ok) throw new Error((await response.json()).message);
     const data = await response.json();
-    gameState.money = data.money;
-    console.log("User money fetched:", gameState.money);
+    gameState.persistentMoney = data.money || 0;
+    gameState.gameMoney = 200; // Reset in-game money
+    console.log("Fetched persistent money:", gameState.persistentMoney);
   } catch (err) {
     console.error("Error fetching money:", err);
     showNotification("Error fetching money: " + err.message);
@@ -90,7 +89,6 @@ async function fetchUserMoney() {
 async function updateUserMoney() {
   const token = localStorage.getItem("token");
   if (!token) {
-    console.error("No token found. Cannot update money.");
     showNotification("Not authenticated. Progress not saved.");
     return false;
   }
@@ -101,15 +99,47 @@ async function updateUserMoney() {
         "Content-Type": "application/json",
         "Authorization": token
       },
-      body: JSON.stringify({ money: gameState.money })
+      body: JSON.stringify({ money: gameState.persistentMoney })
     });
     if (!response.ok) throw new Error((await response.json()).message);
-    console.log("Money updated on server:", gameState.money);
+    console.log("Persistent money updated:", gameState.persistentMoney);
     return true;
   } catch (err) {
     console.error("Error updating money:", err);
     showNotification("Error saving progress: " + err.message);
     return false;
+  }
+}
+
+async function unlockTower(type) {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    showNotification("Not authenticated.");
+    return;
+  }
+  const cost = towerStats[type].persistentCost;
+  if (gameState.persistentMoney < cost) {
+    showNotification("Not enough persistent money!");
+    return;
+  }
+  try {
+    const response = await fetch('/unlock-tower', {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": token
+      },
+      body: JSON.stringify({ tower: type })
+    });
+    if (!response.ok) throw new Error((await response.json()).message);
+    gameState.persistentMoney -= cost;
+    towerStats[type].unlocked = true;
+    await updateUserMoney();
+    showNotification(`${type} unlocked!`);
+    initSidebar();
+  } catch (err) {
+    console.error("Error unlocking tower:", err);
+    showNotification("Error unlocking tower: " + err.message);
   }
 }
 
@@ -259,14 +289,14 @@ class Projectile {
     this.y = y;
     this.target = target;
     this.damage = damage;
-    this.speed = speed;
+    this.speed = speed * scaleX;
     this.type = type;
     this.radius = type === "missile" ? 8 * textScale : 5 * textScale;
     this.color = towerStats[type].color || "black";
   }
 
   move() {
-    if (!this.target) {
+    if (!this.target || !gameState.enemies.includes(this.target)) {
       gameState.projectiles = gameState.projectiles.filter(p => p !== this);
       return;
     }
@@ -286,7 +316,7 @@ class Projectile {
       this.target.health -= this.damage;
       if (this.target.health <= 0) {
         gameState.score += this.target.isBoss ? 50 : 10;
-        gameState.money += this.target.isBoss ? 100 : 20;
+        gameState.gameMoney += this.target.isBoss ? 100 : 20;
         gameState.enemies = gameState.enemies.filter(e => e !== this.target);
       }
       switch (this.type) {
@@ -296,7 +326,7 @@ class Projectile {
               enemy.health -= this.damage * 0.5;
               if (enemy.health <= 0) {
                 gameState.score += enemy.isBoss ? 50 : 10;
-                gameState.money += enemy.isBoss ? 100 : 20;
+                gameState.gameMoney += enemy.isBoss ? 100 : 20;
                 gameState.enemies = gameState.enemies.filter(e => e !== enemy);
               }
             }
@@ -316,7 +346,7 @@ class Projectile {
               enemy.health -= this.damage * 0.75;
               if (enemy.health <= 0) {
                 gameState.score += enemy.isBoss ? 50 : 10;
-                gameState.money += enemy.isBoss ? 100 : 20;
+                gameState.gameMoney += enemy.isBoss ? 100 : 20;
                 gameState.enemies = gameState.enemies.filter(e => e !== enemy);
               }
             }
@@ -328,7 +358,7 @@ class Projectile {
             enemy.health -= this.damage * 0.5;
             if (enemy.health <= 0) {
               gameState.score += enemy.isBoss ? 50 : 10;
-              gameState.money += enemy.isBoss ? 100 : 20;
+              gameState.gameMoney += enemy.isBoss ? 100 : 20;
               gameState.enemies = gameState.enemies.filter(e => e !== enemy);
             }
           });
@@ -340,7 +370,7 @@ class Projectile {
               this.target.color = "orange";
               if (this.target.health <= 0) {
                 gameState.score += this.target.isBoss ? 50 : 10;
-                gameState.money += this.target.isBoss ? 100 : 20;
+                gameState.gameMoney += this.target.isBoss ? 100 : 20;
                 gameState.enemies = gameState.enemies.filter(e => e !== this.target);
               }
             } else {
@@ -358,7 +388,7 @@ class Projectile {
                   enemy.color = "limegreen";
                   if (enemy.health <= 0) {
                     gameState.score += enemy.isBoss ? 50 : 10;
-                    gameState.money += enemy.isBoss ? 100 : 20;
+                    gameState.gameMoney += enemy.isBoss ? 100 : 20;
                     gameState.enemies = gameState.enemies.filter(e => e !== enemy);
                   }
                 } else {
@@ -441,8 +471,8 @@ class Tower {
       switch (this.type) {
         case "archer":
           if (now - this.lastShot >= 2000) {
-            gameState.projectiles.push(new Projectile(this.x, this.y, target, this.damage, 5 * scaleX, this.type));
-            gameState.projectiles.push(new Projectile(this.x, this.y, gameState.enemies.find(e => e !== target && Math.hypot(e.x - this.x, e.y - this.y) < this.range) || target, this.damage, 5 * scaleX, this.type));
+            gameState.projectiles.push(new Projectile(this.x, this.y, target, this.damage, 5, this.type));
+            gameState.projectiles.push(new Projectile(this.x, this.y, gameState.enemies.find(e => e !== target && Math.hypot(e.x - this.x, e.y - this.y) < this.range) || target, this.damage, 5, this.type));
             this.lastShot = now;
           }
           break;
@@ -460,7 +490,7 @@ class Tower {
                   ctx.stroke();
                   if (enemy.health <= 0) {
                     gameState.score += enemy.isBoss ? 50 : 10;
-                    gameState.money += enemy.isBoss ? 100 : 20;
+                    gameState.gameMoney += enemy.isBoss ? 100 : 20;
                     gameState.enemies = gameState.enemies.filter(e => e !== enemy);
                   }
                 }
@@ -492,7 +522,7 @@ class Tower {
           }
           break;
         default:
-          gameState.projectiles.push(new Projectile(this.x, this.y, target, this.damage, 5 * scaleX, this.type));
+          gameState.projectiles.push(new Projectile(this.x, this.y, target, this.damage, 5, this.type));
           this.lastShot = now;
       }
     }
@@ -511,57 +541,70 @@ class Tower {
     ctx.beginPath();
     switch (this.type) {
       case "basic":
-        ctx.rect(-10 * textScale, -10 * textScale, 20 * textScale, 20 * textScale);
+        ctx.arc(0, 0, 10 * textScale, 0, Math.PI * 2);
+        ctx.rect(0, -5 * textScale, 20 * textScale, 10 * textScale);
         break;
       case "archer":
-        ctx.moveTo(0, -15 * textScale);
-        ctx.lineTo(-10 * textScale, 10 * textScale);
+        ctx.moveTo(-10 * textScale, 10 * textScale);
         ctx.lineTo(10 * textScale, 10 * textScale);
+        ctx.lineTo(0, 0);
+        ctx.closePath();
+        ctx.rect(0, -5 * textScale, 15 * textScale, 5 * textScale);
         break;
       case "cannon":
         ctx.arc(0, 0, 15 * textScale, 0, Math.PI * 2);
-        ctx.fillRect(0, -5 * textScale, 20 * textScale, 10 * textScale);
+        ctx.rect(0, -8 * textScale, 25 * textScale, 16 * textScale);
         break;
       case "sniper":
-        ctx.rect(-5 * textScale, -20 * textScale, 10 * textScale, 40 * textScale);
+        ctx.rect(-5 * textScale, -10 * textScale, 10 * textScale, 20 * textScale);
+        ctx.rect(0, -5 * textScale, 30 * textScale, 5 * textScale);
         break;
       case "freeze":
-        ctx.moveTo(0, -15 * textScale);
-        ctx.lineTo(-12 * textScale, 0);
-        ctx.lineTo(0, 15 * textScale);
-        ctx.lineTo(12 * textScale, 0);
+        ctx.moveTo(0, -10 * textScale);
+        ctx.lineTo(-10 * textScale, 0);
+        ctx.lineTo(0, 10 * textScale);
+        ctx.lineTo(10 * textScale, 0);
+        ctx.closePath();
+        ctx.rect(0, -5 * textScale, 15 * textScale, 5 * textScale);
         break;
       case "mortar":
-        ctx.arc(0, 0, 20 * textScale, 0, Math.PI * 2);
+        ctx.arc(0, 0, 15 * textScale, 0, Math.PI * 2);
+        ctx.rect(0, -10 * textScale, 20 * textScale, 15 * textScale);
         break;
       case "laser":
-        ctx.rect(-15 * textScale, -15 * textScale, 30 * textScale, 30 * textScale);
-        ctx.moveTo(0, -20 * textScale);
-        ctx.lineTo(0, 20 * textScale);
-        ctx.moveTo(-20 * textScale, 0);
-        ctx.lineTo(20 * textScale, 0);
+        ctx.rect(-10 * textScale, -10 * textScale, 20 * textScale, 20 * textScale);
+        ctx.rect(0, -5 * textScale, 25 * textScale, 5 * textScale);
         break;
       case "tesla":
-        ctx.moveTo(0, -20 * textScale);
-        ctx.lineTo(-15 * textScale, 10 * textScale);
-        ctx.lineTo(15 * textScale, 10 * textScale);
+        ctx.moveTo(-10 * textScale, 10 * textScale);
+        ctx.lineTo(10 * textScale, 10 * textScale);
+        ctx.lineTo(0, 0);
+        ctx.closePath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(5 * textScale, -5 * textScale);
+        ctx.lineTo(0, -10 * textScale);
+        ctx.lineTo(5 * textScale, -15 * textScale);
         break;
       case "flamethrower":
-        ctx.arc(0, 0, 15 * textScale, 0, Math.PI * 2);
-        ctx.fillRect(0, -10 * textScale, 15 * textScale, 20 * textScale);
+        ctx.arc(0, 0, 10 * textScale, 0, Math.PI * 2);
+        ctx.rect(0, -10 * textScale, 15 * textScale, 15 * textScale);
         break;
       case "missile":
-        ctx.moveTo(0, -20 * textScale);
-        ctx.lineTo(-10 * textScale, 10 * textScale);
+        ctx.moveTo(-10 * textScale, 10 * textScale);
         ctx.lineTo(10 * textScale, 10 * textScale);
+        ctx.lineTo(0, 0);
+        ctx.closePath();
+        ctx.rect(0, -5 * textScale, 20 * textScale, 5 * textScale);
         break;
       case "poison":
-        ctx.arc(0, 0, 15 * textScale, 0, Math.PI * 2);
-        ctx.arc(5 * textScale, 5 * textScale, 5 * textScale, 0, Math.PI * 2);
+        ctx.arc(0, 0, 10 * textScale, 0, Math.PI * 2);
+        ctx.rect(0, -5 * textScale, 15 * textScale, 5 * textScale);
+        ctx.arc(15 * textScale, 0, 3 * textScale, 0, Math.PI * 2);
         break;
       case "vortex":
-        ctx.arc(0, 0, 20 * textScale, 0, Math.PI);
-        ctx.arc(0, 0, 15 * textScale, Math.PI, 0);
+        ctx.arc(0, 0, 12 * textScale, 0, Math.PI * 2);
+        ctx.moveTo(0, 0);
+        ctx.quadraticCurveTo(10 * textScale, -10 * textScale, 20 * textScale, 0);
         break;
     }
     ctx.fillStyle = this.color || "gray";
@@ -576,24 +619,24 @@ class Tower {
       ctx.stroke();
     }
 
+    ctx.restore();
+
     ctx.fillStyle = "white";
     ctx.font = `${12 * textScale}px Arial`;
     ctx.textAlign = "center";
-    ctx.fillText(this.type.charAt(0).toUpperCase() + this.type.slice(1), 0, 25 * textScale);
-
-    ctx.restore();
+    ctx.fillText(this.type.charAt(0).toUpperCase() + this.type.slice(1), this.x, this.y + 25 * textScale);
   }
 
   upgrade() {
-    if (this.level < 3 && gameState.money >= 100 * this.level) {
-      gameState.money -= 100 * this.level;
+    if (this.level < 3 && gameState.gameMoney >= 100 * this.level) {
+      gameState.gameMoney -= 100 * this.level;
       this.level++;
       this.damage *= 1.5;
       this.range *= 1.2;
       this.fireRate *= 0.9;
       showNotification(`${this.type} upgraded to level ${this.level}!`);
     } else {
-      showNotification("Not enough money or max level reached!");
+      showNotification("Not enough in-game money or max level reached!");
     }
   }
 }
@@ -602,24 +645,29 @@ function initSidebar() {
   const sidebar = document.getElementById("sidebar");
   sidebar.innerHTML = "";
   for (const [type, stats] of Object.entries(towerStats)) {
+    const option = document.createElement("div");
+    option.className = "tower-option";
     if (stats.unlocked) {
-      const option = document.createElement("div");
-      option.className = "tower-option";
       option.textContent = `${type.charAt(0).toUpperCase() + type.slice(1)} ($${stats.unlockCost || 50})`;
       option.addEventListener("click", (e) => {
-        e.stopPropagation(); // Prevent bubbling to sidebar
-        console.log("Selected tower type:", type);
+        e.stopPropagation();
         gameState.selectedTowerType = type;
         document.querySelectorAll(".tower-option").forEach(o => o.classList.remove("selected"));
         option.classList.add("selected");
         gameState.selectedTower = null;
         document.getElementById("tower-info-panel").style.display = "none";
       });
-      sidebar.appendChild(option);
     } else {
-      console.log(`Tower ${type} not unlocked`);
+      option.textContent = `${type.charAt(0).toUpperCase() + type.slice(1)} (Unlock: $${stats.persistentCost})`;
+      option.classList.add("locked");
+      option.addEventListener("click", (e) => {
+        e.stopPropagation();
+        unlockTower(type);
+      });
     }
+    sidebar.appendChild(option);
   }
+
   const pauseButton = document.createElement("div");
   pauseButton.id = "pause-button";
   pauseButton.textContent = "Pause";
@@ -646,9 +694,7 @@ function initSidebar() {
   homeButton.textContent = "Main Menu";
   homeButton.addEventListener("click", async () => {
     const success = await updateUserMoney();
-    if (success) {
-      window.location.href = "/";
-    }
+    if (success) window.location.href = "/";
   });
   sidebar.appendChild(homeButton);
 
@@ -656,11 +702,7 @@ function initSidebar() {
     if (e.target.className === "tower-option" || 
         e.target.id === "pause-button" || 
         e.target.id === "fast-forward-button" || 
-        e.target.id === "home-button") {
-      console.log("Click on interactive element, preserving selection:", e.target.className || e.target.id);
-      return;
-    }
-    console.log("Deselecting tower type due to sidebar background click");
+        e.target.id === "home-button") return;
     gameState.selectedTowerType = null;
     gameState.selectedTower = null;
     document.querySelectorAll(".tower-option").forEach(o => o.classList.remove("selected"));
@@ -693,7 +735,8 @@ function spawnWave() {
     spawned++;
   }, 1000 / gameState.gameSpeed);
 
-  if (selectedMap === "map9" && gameState.wave === 60 && !isBossWave) {
+  const maxWaves = selectedDifficulty === "hard" ? 60 : selectedDifficulty === "medium" ? 40 : 20;
+  if (gameState.wave === maxWaves && !isBossWave) {
     gameState.gameWon = true;
     endGame(true);
   }
@@ -701,7 +744,7 @@ function spawnWave() {
 
 function updateStats() {
   document.getElementById("score").textContent = `Score: ${gameState.score}`;
-  document.getElementById("money").textContent = `Money: $${gameState.money}`;
+  document.getElementById("money").textContent = `In-Game: $${gameState.gameMoney} | Persistent: $${gameState.persistentMoney}`;
   document.getElementById("health").textContent = `Health: ${gameState.playerHealth}`;
   document.getElementById("wave").textContent = `Wave: ${gameState.wave}`;
   document.getElementById("speed").textContent = `Speed: ${gameState.gameSpeed}x`;
@@ -798,7 +841,9 @@ function endGame(won) {
   document.getElementById("end-message").textContent = won ? "You Win!" : "Game Over!";
   endScreen.style.display = "block";
   if (won) {
-    gameState.money += maps[selectedMap].moneyReward;
+    const persistentReward = selectedDifficulty === "hard" ? 1000 : selectedDifficulty === "medium" ? 600 : 300;
+    gameState.persistentMoney += persistentReward;
+    showNotification(`Victory! Earned $${persistentReward} persistent money.`);
     updateUserMoney();
   }
 }
@@ -816,48 +861,27 @@ canvas.addEventListener("click", (e) => {
   const rect = canvas.getBoundingClientRect();
   const x = (e.clientX - rect.left) * (canvas.width / rect.width);
   const y = (e.clientY - rect.top) * (canvas.height / rect.height);
-  console.log("Canvas clicked at:", { x, y });
-
-  console.log("Current selectedTowerType:", gameState.selectedTowerType);
 
   if (gameState.selectedTowerType) {
-    console.log("Attempting to place tower:", gameState.selectedTowerType);
     const cost = towerStats[gameState.selectedTowerType].unlockCost || 50;
     const tooCloseToPath = isNearPath(x, y);
     const tooCloseToTower = gameState.towers.some(t => Math.hypot(t.x - x, t.y - y) < 50 * scaleX);
 
-    console.log("Placement conditions:", {
-      money: gameState.money,
-      cost,
-      tooCloseToPath,
-      tooCloseToTower,
-      unlocked: towerStats[gameState.selectedTowerType].unlocked
-    });
-
-    if (gameState.money >= cost && !tooCloseToPath && !tooCloseToTower) {
-      try {
-        const newTower = new Tower(x, y, gameState.selectedTowerType);
-        gameState.towers.push(newTower);
-        gameState.money -= cost;
-        console.log("Tower placed:", gameState.selectedTowerType, "at", { x, y });
-        gameState.selectedTowerType = null;
-        document.querySelectorAll(".tower-option").forEach(o => o.classList.remove("selected"));
-      } catch (error) {
-        console.error("Error placing tower:", error);
-        showNotification("Error placing tower!");
-      }
+    if (gameState.gameMoney >= cost && !tooCloseToPath && !tooCloseToTower) {
+      const newTower = new Tower(x, y, gameState.selectedTowerType);
+      gameState.towers.push(newTower);
+      gameState.gameMoney -= cost;
+      gameState.selectedTowerType = null;
+      document.querySelectorAll(".tower-option").forEach(o => o.classList.remove("selected"));
     } else {
-      let message = "";
-      if (gameState.money < cost) message = "Not enough money!";
-      else if (tooCloseToPath) message = "Too close to path!";
-      else if (tooCloseToTower) message = "Too close to another tower!";
-      showNotification(message);
-      console.log("Placement failed:", message);
+      showNotification(
+        gameState.gameMoney < cost ? "Not enough in-game money!" :
+        tooCloseToPath ? "Too close to path!" : "Too close to another tower!"
+      );
     }
   } else {
     const tower = gameState.towers.find(t => Math.hypot(t.x - x, t.y - y) < t.radius);
     if (tower) {
-      console.log("Tower selected:", tower.type);
       gameState.selectedTower = tower;
       gameState.selectedTowerType = null;
       document.querySelectorAll(".tower-option").forEach(o => o.classList.remove("selected"));
@@ -866,9 +890,7 @@ canvas.addEventListener("click", (e) => {
 });
 
 document.getElementById("upgrade-tower-button").addEventListener("click", () => {
-  if (gameState.selectedTower) {
-    gameState.selectedTower.upgrade();
-  }
+  if (gameState.selectedTower) gameState.selectedTower.upgrade();
 });
 
 document.getElementById("restart-button").addEventListener("click", () => {
@@ -878,7 +900,8 @@ document.getElementById("restart-button").addEventListener("click", () => {
     projectiles: [],
     wave: 1,
     score: 0,
-    money: 200,
+    gameMoney: 200,
+    persistentMoney: gameState.persistentMoney,
     selectedTowerType: null,
     gameOver: false,
     playerHealth: 20,
@@ -895,9 +918,7 @@ document.getElementById("restart-button").addEventListener("click", () => {
 
 document.getElementById("main-menu-button").addEventListener("click", async () => {
   const success = await updateUserMoney();
-  if (success) {
-    window.location.href = "/";
-  }
+  if (success) window.location.href = "/";
 });
 
 function isNearPath(x, y) {
@@ -918,20 +939,9 @@ function pointToLineDistance(px, py, x1, y1, x2, y2) {
   const dot = A * C + B * D;
   const len_sq = C * C + D * D;
   const param = len_sq !== 0 ? dot / len_sq : -1;
-  let xx, yy;
-  if (param < 0) {
-    xx = x1;
-    yy = y1;
-  } else if (param > 1) {
-    xx = x2;
-    yy = y2;
-  } else {
-    xx = x1 + param * C;
-    yy = y1 + param * D;
-  }
-  const dx = px - xx;
-  const dy = py - yy;
-  return Math.sqrt(dx * dx + dy * dy);
+  let xx = param < 0 ? x1 : param > 1 ? x2 : x1 + param * C;
+  let yy = param < 0 ? y1 : param > 1 ? y2 : y1 + param * D;
+  return Math.sqrt((px - xx) ** 2 + (py - yy) ** 2);
 }
 
 async function init() {
@@ -940,7 +950,7 @@ async function init() {
   await fetchUserMoney();
   initSidebar();
   spawnWave();
-  console.log("Game initialized with money:", gameState.money);
+  console.log("Game initialized with persistent money:", gameState.persistentMoney, "and game money:", gameState.gameMoney);
   gameLoop();
 }
 
