@@ -7,12 +7,14 @@ const originalWidth = 1200;
 const originalHeight = 600;
 let scaleX = 1;
 let scaleY = 1;
+let textScale = 1;
 
 function resizeCanvas() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
-  scaleX = Math.min(canvas.width / originalWidth, 2); // Cap scaling at 2x
-  scaleY = Math.min(canvas.height / originalHeight, 2); // Cap scaling at 2x
+  scaleX = Math.min(canvas.width / originalWidth, 2);
+  scaleY = Math.min(canvas.height / originalHeight, 2);
+  textScale = Math.min(canvas.width / originalWidth, 1.5);
   updateScaledPathAndSpawnPoint();
 }
 
@@ -117,7 +119,6 @@ function updateScaledPathAndSpawnPoint() {
   scaledSpawnPoint = { x: spawnPoint.x * scaleX, y: spawnPoint.y * scaleY };
 }
 
-// Call resizeCanvas after path and spawnPoint are defined
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
 
@@ -173,8 +174,8 @@ class Enemy {
     this.y = spawnPoint.y;
     this.health = type.health;
     this.maxHealth = type.health;
-    this.speed = type.speed; // Keep in original units, scale in update
-    this.radius = type.radius; // Keep in original units, scale when drawing
+    this.speed = type.speed;
+    this.radius = type.radius;
     this.color = type.color;
     this.pathIndex = 1;
     this.slowed = false;
@@ -188,7 +189,7 @@ class Enemy {
 
   update(gameState) {
     if (this.pathIndex >= this.path.length) {
-      gameState.playerHealth -= this.radius / 10; // Damage in original units
+      gameState.playerHealth -= this.radius / 10;
       gameState.enemies = gameState.enemies.filter(e => e !== this);
       checkGameEnd();
       return;
@@ -239,15 +240,54 @@ class Enemy {
   }
 
   draw(ctx) {
+    // Base enemy circle
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.radius * Math.min(scaleX, scaleY), 0, 2 * Math.PI);
     ctx.fillStyle = this.color;
     ctx.fill();
+
+    // Health bar
     const barWidth = 20 * Math.min(scaleX, scaleY);
     ctx.fillStyle = "red";
     ctx.fillRect(this.x - barWidth / 2, this.y - 15 * Math.min(scaleX, scaleY), barWidth, 2 * Math.min(scaleX, scaleY));
     ctx.fillStyle = "green";
     ctx.fillRect(this.x - barWidth / 2, this.y - 15 * Math.min(scaleX, scaleY), barWidth * (this.health / this.maxHealth), 2 * Math.min(scaleX, scaleY));
+
+    // Status effects
+    const scaledRadius = this.radius * Math.min(scaleX, scaleY);
+
+    // Slow effect: Blue ring
+    if (this.slowed && this.slowTimer > 0) {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, scaledRadius + 2, 0, 2 * Math.PI);
+      ctx.strokeStyle = "blue";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    // Burn effect: Red flickering outline
+    if (this.burnTimer > 0) {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, scaledRadius + 1, 0, 2 * Math.PI);
+      ctx.strokeStyle = `rgba(255, 0, 0, ${Math.sin(Date.now() * 0.01) * 0.5 + 0.5})`; // Flickering effect
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    // Poison effect: Green cloud-like particles
+    if (this.poisonTimer > 0) {
+      ctx.save();
+      ctx.globalAlpha = 0.5;
+      for (let i = 0; i < 3; i++) {
+        const offsetX = (Math.random() - 0.5) * scaledRadius * 2;
+        const offsetY = (Math.random() - 0.5) * scaledRadius * 2;
+        ctx.beginPath();
+        ctx.arc(this.x + offsetX, this.y + offsetY, scaledRadius * 0.3, 0, 2 * Math.PI);
+        ctx.fillStyle = "lime";
+        ctx.fill();
+      }
+      ctx.restore();
+    }
   }
 }
 
@@ -274,7 +314,7 @@ function gameLoop() {
 
   gameState.enemies.forEach(enemy => enemy.draw(ctx));
   gameState.towers.forEach(tower => tower.draw(ctx, scaleX, scaleY));
-  gameState.projectiles.forEach(projectile => projectile.draw(ctx, scaleX, scaleY));
+  gameState.projectiles.forEach(projectile => projectile.draw(ctx));
 
   if (gameState.selectedTowerType) drawTowerFootprint();
 
@@ -285,6 +325,9 @@ function gameLoop() {
     updateUserMoney();
     document.getElementById("end-screen").style.display = "block";
     document.getElementById("end-message").textContent = `Victory! You survived all 60 waves on Arctic Path! Score: ${gameState.score}. Earned $${earnedMoney}.`;
+    document.getElementById("end-message").style.fontSize = `${20 * textScale}px`;
+    document.getElementById("restart-button").style.fontSize = `${16 * textScale}px`;
+    document.getElementById("main-menu-button").style.fontSize = `${16 * textScale}px`;
     return;
   }
 
@@ -293,12 +336,11 @@ function gameLoop() {
     gameState.wave++;
   }
 
-  const uiScale = Math.min(scaleX, scaleY);
-  document.getElementById("score").style.fontSize = `${16 * uiScale}px`;
-  document.getElementById("money").style.fontSize = `${16 * uiScale}px`;
-  document.getElementById("health").style.fontSize = `${16 * uiScale}px`;
-  document.getElementById("wave").style.fontSize = `${16 * uiScale}px`;
-  document.getElementById("speed").style.fontSize = `${16 * uiScale}px`;
+  document.getElementById("score").style.fontSize = `${16 * textScale}px`;
+  document.getElementById("money").style.fontSize = `${16 * textScale}px`;
+  document.getElementById("health").style.fontSize = `${16 * textScale}px`;
+  document.getElementById("wave").style.fontSize = `${16 * textScale}px`;
+  document.getElementById("speed").style.fontSize = `${16 * textScale}px`;
   document.getElementById("score").textContent = `Score: ${gameState.score}`;
   document.getElementById("money").textContent = `Money: $${gameState.money}`;
   document.getElementById("health").textContent = `Health: ${gameState.playerHealth}`;
@@ -376,13 +418,13 @@ function initSidebar() {
     div.setAttribute("data-type", type);
     div.setAttribute("data-cost", stats.unlockCost);
     div.textContent = `${type.charAt(0).toUpperCase() + type.slice(1)} Tower ($${stats.unlockCost})`;
-    div.style.fontSize = `${16 * Math.min(scaleX, scaleY)}px`;
+    div.style.fontSize = `${16 * textScale}px`;
     sidebar.appendChild(div);
   }
   sidebar.innerHTML += `
-    <div id="pause-button" style="font-size: ${16 * Math.min(scaleX, scaleY)}px">Pause</div>
-    <div id="fast-forward-button" style="font-size: ${16 * Math.min(scaleX, scaleY)}px">Fast Forward (1x)</div>
-    <div id="home-button" style="font-size: ${16 * Math.min(scaleX, scaleY)}px">Home</div>
+    <div id="pause-button" style="font-size: ${16 * textScale}px">Pause</div>
+    <div id="fast-forward-button" style="font-size: ${16 * textScale}px">Fast Forward (1x)</div>
+    <div id="home-button" style="font-size: ${16 * textScale}px">Home</div>
   `;
 }
 
@@ -476,7 +518,7 @@ function drawTowerFootprint() {
 }
 
 function canPlaceTower(x, y) {
-  const minDistance = 40; // Use original units for placement logic
+  const minDistance = 40;
   for (let tower of gameState.towers) {
     const dx = x - tower.x;
     const dy = y - tower.y;
@@ -490,7 +532,7 @@ canvas.addEventListener("click", e => {
   const rect = canvas.getBoundingClientRect();
   const canvasX = e.clientX - rect.left;
   const canvasY = e.clientY - rect.top;
-  const x = canvasX / scaleX; // Convert to original game coordinates
+  const x = canvasX / scaleX;
   const y = canvasY / scaleY;
 
   if (gameState.selectedTowerType) {
@@ -534,7 +576,7 @@ canvas.addEventListener("click", e => {
 function showTowerInfoPanel(tower) {
   const panel = document.getElementById("tower-info-panel");
   panel.style.display = "block";
-  panel.style.fontSize = `${16 * Math.min(scaleX, scaleY)}px`;
+  panel.style.fontSize = `${16 * textScale}px`;
   document.getElementById("tower-type").textContent = `Type: ${tower.type.charAt(0).toUpperCase() + tower.type.slice(1)}`;
   document.getElementById("tower-damage").textContent = `Damage: ${tower.damage}`;
   document.getElementById("tower-range").textContent = `Range: ${tower.range}`;
@@ -542,13 +584,13 @@ function showTowerInfoPanel(tower) {
   document.getElementById("tower-ability").textContent = `Ability: ${tower.ability}`;
   const upgradeCost = 100 * tower.level;
   document.getElementById("upgrade-tower-button").textContent = `Upgrade ($${upgradeCost})`;
-  document.getElementById("upgrade-tower-button").style.fontSize = `${16 * Math.min(scaleX, scaleY)}px`;
+  document.getElementById("upgrade-tower-button").style.fontSize = `${16 * textScale}px`;
 }
 
 function showNotification(message, duration = 3000) {
   const box = document.getElementById("notification-box");
   box.textContent = message;
-  box.style.fontSize = `${16 * Math.min(scaleX, scaleY)}px`;
+  box.style.fontSize = `${16 * textScale}px`;
   box.classList.add("show");
   setTimeout(() => box.classList.remove("show"), duration);
 }
@@ -561,8 +603,8 @@ function checkGameEnd() {
     updateUserMoney();
     document.getElementById("end-screen").style.display = "block";
     document.getElementById("end-message").textContent = `Game Over! Wave: ${gameState.wave}, Score: ${gameState.score}. Earned $${earnedMoney}.`;
-    document.getElementById("end-message").style.fontSize = `${20 * Math.min(scaleX, scaleY)}px`;
-    document.getElementById("restart-button").style.fontSize = `${16 * Math.min(scaleX, scaleY)}px`;
-    document.getElementById("main-menu-button").style.fontSize = `${16 * Math.min(scaleX, scaleY)}px`;
+    document.getElementById("end-message").style.fontSize = `${20 * textScale}px`;
+    document.getElementById("restart-button").style.fontSize = `${16 * textScale}px`;
+    document.getElementById("main-menu-button").style.fontSize = `${16 * textScale}px`;
   }
 }

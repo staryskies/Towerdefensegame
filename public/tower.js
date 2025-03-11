@@ -1,12 +1,14 @@
 import { towerStats } from './stats.js';
 
 class Projectile {
-  constructor(x, y, target, damage, speed, ability = "none", abilityData = {}) {
-    this.x = x;
+  constructor(x, y, target, damage, speed, scaleX, scaleY, ability = "none", abilityData = {}) {
+    this.x = x; // Already in scaled coordinates from Tower.update
     this.y = y;
     this.target = target;
     this.damage = damage;
     this.speed = speed * Math.min(scaleX, scaleY); // Scale speed
+    this.scaleX = scaleX; // Store for abilities and drawing
+    this.scaleY = scaleY;
     this.isActive = true;
     this.ability = ability;
     this.abilityData = abilityData;
@@ -21,7 +23,8 @@ class Projectile {
     const dx = this.target.x - this.x;
     const dy = this.target.y - this.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
-    if (distance < this.speed) {
+    const scaledSpeed = this.speed * gameState.gameSpeed;
+    if (distance < scaledSpeed) {
       this.target.health -= this.damage;
       this.applyAbility(gameState);
       this.isActive = false;
@@ -31,8 +34,8 @@ class Projectile {
         gameState.enemies = gameState.enemies.filter(e => e !== this.target);
       }
     } else {
-      this.x += (dx / distance) * this.speed;
-      this.y += (dy / distance) * this.speed;
+      this.x += (dx / distance) * scaledSpeed;
+      this.y += (dy / distance) * scaledSpeed;
     }
   }
 
@@ -41,7 +44,7 @@ class Projectile {
       case "Multi-Shot":
         if (!this.abilityData.shotCount) {
           this.abilityData.shotCount = 1;
-          gameState.projectiles.push(new Projectile(this.x, this.y, this.target, this.damage, this.speed, this.ability, { shotCount: 2 }));
+          gameState.projectiles.push(new Projectile(this.x, this.y, this.target, this.damage, 5, this.scaleX, this.scaleY, this.ability, { shotCount: 2 }));
         } else if (this.abilityData.shotCount === 2) {
           this.abilityData.shotCount = 0;
         }
@@ -51,7 +54,7 @@ class Projectile {
           const dx = enemy.x - this.target.x;
           const dy = enemy.y - this.target.y;
           const distance = Math.sqrt(dx * dx + dy * dy);
-          if (distance <= 50 * Math.min(scaleX, scaleY)) {
+          if (distance <= 50 * Math.min(this.scaleX, this.scaleY)) {
             enemy.health -= this.damage * 0.5;
             if (enemy.health <= 0) {
               gameState.score += 10;
@@ -75,7 +78,7 @@ class Projectile {
           const dx = enemy.x - this.target.x;
           const dy = enemy.y - this.target.y;
           const distance = Math.sqrt(dx * dx + dy * dy);
-          if (distance <= 75 * Math.min(scaleX, scaleY)) {
+          if (distance <= 75 * Math.min(this.scaleX, this.scaleY)) {
             enemy.health -= this.damage * 0.75;
             if (enemy.health <= 0) {
               gameState.score += 10;
@@ -92,6 +95,7 @@ class Projectile {
         }
         break;
       case "Homing Missile":
+        // Homing logic handled in Tower.update; no additional action needed here
         break;
       case "Poison Cloud":
         if (!this.target.poisonTimer) {
@@ -109,7 +113,7 @@ class Projectile {
               const dx = enemy.x - chainedEnemies[chainedEnemies.length - 1].x;
               const dy = enemy.y - chainedEnemies[chainedEnemies.length - 1].y;
               const distance = Math.sqrt(dx * dx + dy * dy);
-              if (distance < minDistance && distance <= 100 * Math.min(scaleX, scaleY)) {
+              if (distance < minDistance && distance <= 100 * Math.min(this.scaleX, this.scaleY)) {
                 minDistance = distance;
                 closest = enemy;
               }
@@ -127,23 +131,109 @@ class Projectile {
         }
         break;
       case "Pull":
-        this.target.x -= 50 * (this.target.x - this.abilityData.originX) / Math.sqrt((this.target.x - this.abilityData.originX) ** 2 + (this.target.y - this.abilityData.originY) ** 2);
-        this.target.y -= 50 * (this.target.y - this.abilityData.originY) / Math.sqrt((this.target.x - this.abilityData.originX) ** 2 + (this.target.y - this.abilityData.originY) ** 2);
+        const pullDistance = 50 * Math.min(this.scaleX, this.scaleY);
+        const dx = this.target.x - this.abilityData.originX;
+        const dy = this.target.y - this.abilityData.originY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > 0) {
+          this.target.x -= (dx / dist) * pullDistance;
+          this.target.y -= (dy / dist) * pullDistance;
+        }
         break;
     }
   }
 
-  draw(ctx, scaleX, scaleY) {
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, 5 * Math.min(scaleX, scaleY), 0, 2 * Math.PI);
-    ctx.fillStyle = "black";
-    ctx.fill();
+  draw(ctx) {
+    const scaledSize = 5 * Math.min(this.scaleX, this.scaleY);
+    ctx.save();
+    ctx.translate(this.x, this.y);
+  
+    switch (this.ability) {
+      case "none":
+        ctx.beginPath();
+        ctx.arc(0, 0, scaledSize, 0, 2 * Math.PI);
+        ctx.fillStyle = "black";
+        ctx.fill();
+        break;
+      case "Multi-Shot":
+        ctx.beginPath();
+        ctx.arc(0, 0, scaledSize * 0.8, 0, 2 * Math.PI);
+        ctx.fillStyle = "gray";
+        ctx.fill();
+        break;
+      case "Splash Damage":
+        ctx.beginPath();
+        ctx.arc(0, 0, scaledSize * 1.2, 0, 2 * Math.PI);
+        ctx.fillStyle = "orange";
+        ctx.fill();
+        break;
+      case "Critical Hit":
+        ctx.beginPath();
+        ctx.moveTo(-scaledSize, -scaledSize);
+        ctx.lineTo(scaledSize, scaledSize);
+        ctx.lineTo(-scaledSize, scaledSize);
+        ctx.lineTo(scaledSize, -scaledSize);
+        ctx.closePath();
+        ctx.fillStyle = "red";
+        ctx.fill();
+        break;
+      case "Slow":
+        ctx.beginPath();
+        ctx.arc(0, 0, scaledSize, 0, 2 * Math.PI);
+        ctx.fillStyle = "cyan";
+        ctx.fill();
+        break;
+      case "Area Blast":
+        ctx.beginPath();
+        ctx.arc(0, 0, scaledSize * 1.5, 0, 2 * Math.PI);
+        ctx.fillStyle = "darkorange";
+        ctx.fill();
+        break;
+      case "Burn":
+        ctx.beginPath();
+        ctx.arc(0, 0, scaledSize, 0, 2 * Math.PI);
+        ctx.fillStyle = "red";
+        ctx.fill();
+        break;
+      case "Homing Missile":
+        ctx.beginPath();
+        ctx.moveTo(0, -scaledSize * 1.5);
+        ctx.lineTo(scaledSize, scaledSize);
+        ctx.lineTo(-scaledSize, scaledSize);
+        ctx.closePath();
+        ctx.fillStyle = "black";
+        ctx.fill();
+        break;
+      case "Poison Cloud":
+        ctx.beginPath();
+        ctx.arc(0, 0, scaledSize, 0, 2 * Math.PI);
+        ctx.fillStyle = "lime";
+        ctx.fill();
+        break;
+      case "Chain Lightning":
+        ctx.beginPath();
+        ctx.moveTo(-scaledSize, 0);
+        ctx.lineTo(scaledSize, 0);
+        ctx.lineTo(0, -scaledSize);
+        ctx.closePath();
+        ctx.fillStyle = "yellow";
+        ctx.fill();
+        break;
+      case "Pull":
+        ctx.beginPath();
+        ctx.arc(0, 0, scaledSize, 0, 2 * Math.PI);
+        ctx.fillStyle = "purple";
+        ctx.fill();
+        break;
+    }
+  
+    ctx.restore();
   }
 }
 
 class Tower {
   constructor(x, y, type) {
-    this.x = x;
+    this.x = x; // Original coordinates
     this.y = y;
     this.type = type;
     this.level = 1;
@@ -202,7 +292,7 @@ class Tower {
           const dy = enemy.y - towerCanvasY;
           const distance = Math.sqrt(dx * dx + dy * dy);
           if (distance <= this.range * Math.min(scaleX, scaleY)) {
-            gameState.projectiles.push(new Projectile(towerCanvasX, towerCanvasY, enemy, 0, 0, "Pull", { originX: towerCanvasX, originY: towerCanvasY }));
+            gameState.projectiles.push(new Projectile(towerCanvasX, towerCanvasY, enemy, 0, 0, scaleX, scaleY, "Pull", { originX: towerCanvasX, originY: towerCanvasY }));
           }
         });
         this.isActive = false;
@@ -251,10 +341,10 @@ class Tower {
 
     if (target) {
       if (this.ability === "Multi-Shot") {
-        gameState.projectiles.push(new Projectile(towerCanvasX, towerCanvasY, target, this.damage, 5 * Math.min(scaleX, scaleY), this.ability, { shotCount: 1 }));
-        gameState.projectiles.push(new Projectile(towerCanvasX, towerCanvasY, target, this.damage, 5 * Math.min(scaleX, scaleY), this.ability, { shotCount: 2 }));
+        gameState.projectiles.push(new Projectile(towerCanvasX, towerCanvasY, target, this.damage, 5, scaleX, scaleY, this.ability, { shotCount: 1 }));
+        gameState.projectiles.push(new Projectile(towerCanvasX, towerCanvasY, target, this.damage, 5, scaleX, scaleY, this.ability, { shotCount: 2 }));
       } else {
-        gameState.projectiles.push(new Projectile(towerCanvasX, towerCanvasY, target, this.damage, 5 * Math.min(scaleX, scaleY), this.ability));
+        gameState.projectiles.push(new Projectile(towerCanvasX, towerCanvasY, target, this.damage, 5, scaleX, scaleY, this.ability));
       }
       this.lastShot = now;
 
@@ -268,7 +358,6 @@ class Tower {
     const canvasX = this.x * scaleX;
     const canvasY = this.y * scaleY;
     const baseSize = 20 * Math.min(scaleX, scaleY);
-    const complexityFactor = this.stats.unlockCost / 50;
 
     ctx.save();
     ctx.translate(canvasX, canvasY);
@@ -379,8 +468,8 @@ class Tower {
         const distance = Math.sqrt(dx * dx + dy * dy);
         if (distance <= this.range * Math.min(scaleX, scaleY)) {
           ctx.beginPath();
-          ctx.moveTo(0, 0);
-          ctx.lineTo(dx, dy);
+          ctx.moveTo(canvasX, canvasY);
+          ctx.lineTo(enemy.x, enemy.y);
           ctx.strokeStyle = "red";
           ctx.lineWidth = 2 * Math.min(scaleX, scaleY);
           ctx.stroke();
