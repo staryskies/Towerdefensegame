@@ -1,512 +1,955 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tower Defense</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background: #2c3e50; }
-    body { display: flex; justify-content: center; align-items: center; }
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+const originalWidth = 1200;
+const originalHeight = 600;
+let scaleX = 1;
+let scaleY = 1;
+let textScale = 1;
 
-    /* Container for Auth and Main Menu */
-    .container { 
-      background: rgba(44, 62, 80, 0.95); 
-      padding: 30px; 
-      border-radius: 15px; 
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4); 
-      width: 90%; 
-      max-width: 400px; 
-      text-align: center; 
-      color: #ecf0f1; 
-      position: relative; 
-    }
-    h1 { font-size: 2em; margin-bottom: 20px; color: #ecf0f1; }
-    .form-group { margin-bottom: 15px; text-align: left; }
-    .form-group label { display: block; margin-bottom: 5px; font-size: 1rem; color: #bdc3c7; }
-    input { 
-      width: 100%; 
-      padding: 10px; 
-      margin: 5px 0; 
-      border: 1px solid #34495e; 
-      border-radius: 5px; 
-      background: #3e5c76; 
-      color: #ecf0f1; 
-      font-size: 1rem; 
-    }
-    input::placeholder { color: #bdc3c7; }
-    button { 
-      padding: 12px 25px; 
-      background: #3498db; 
-      color: white; 
-      border: none; 
-      border-radius: 8px; 
-      cursor: pointer; 
-      font-weight: bold; 
-      transition: all 0.3s ease; 
-      margin: 10px 5px; 
-    }
-    button:disabled { background: #34495e; cursor: not-allowed; }
-    button:hover:not(:disabled) { 
-      background: #2980b9; 
-      transform: translateY(-2px); 
-      box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4); 
-    }
-    a { color: #3498db; text-decoration: none; font-size: 0.9rem; }
-    a:hover { text-decoration: underline; }
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  scaleX = Math.min(canvas.width / originalWidth, 2);
+  scaleY = Math.min(canvas.height / originalHeight, 2);
+  textScale = Math.min(canvas.height / originalHeight, 1.5);
+  updateScaledPathAndSpawnPoint();
+}
 
-    /* Main Menu Specific */
-    #main-menu { display: none; flex-direction: column; align-items: center; }
-    #user-money { margin: 15px 0; font-size: 1.2rem; color: #ecf0f1; }
+let gameState = {
+  enemies: [],
+  towers: [],
+  projectiles: [],
+  wave: 1,
+  score: 0,
+  money: 200,
+  selectedTowerType: null,
+  gameOver: false,
+  playerHealth: 20,
+  isPaused: false,
+  gameSpeed: 1,
+  selectedTower: null,
+  isSpawning: false,
+  gameWon: false,
+};
 
-    /* Map Menu and Tower Shop */
-    #map-menu, #tower-shop { 
-      display: none; 
-      position: fixed; 
-      top: 50%; 
-      left: 50%; 
-      transform: translate(-50%, -50%); 
-      background: rgba(44, 62, 80, 0.95); 
-      padding: 30px; 
-      border-radius: 15px; 
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4); 
-      width: 90%; 
-      max-width: 400px; 
-      max-height: 70vh; 
-      overflow-y: auto; 
-      color: #ecf0f1; 
-      z-index: 1000; 
+// Proxy to log changes to selectedTowerType
+gameState = new Proxy(gameState, {
+  set(target, prop, value) {
+    if (prop === "selectedTowerType") {
+      console.log(`selectedTowerType changed from ${target[prop]} to ${value}`);
     }
-    #map-menu h2, #tower-shop h2 { font-size: 1.5rem; margin-bottom: 15px; position: relative; padding-right: 40px; }
-    .close-btn { 
-      position: absolute; 
-      top: 10px; 
-      right: 10px; 
-      background: #ff4d4d; 
-      color: transparent; 
-      border: none; 
-      border-radius: 50%; 
-      width: 30px; 
-      height: 30px; 
-      display: flex; 
-      align-items: center; 
-      justify-content: center; 
-      cursor: pointer; 
-      transition: all 0.3s ease; 
-    }
-    .close-btn::before, .close-btn::after { 
-      content: ''; 
-      position: absolute; 
-      width: 16px; 
-      height: 2px; 
-      background: #fff; 
-    }
-    .close-btn::before { transform: rotate(45deg); }
-    .close-btn::after { transform: rotate(-45deg); }
-    .close-btn:hover { background: #e60000; transform: scale(1.1); }
-    .close-btn:active { transform: scale(0.95); }
-    .map-option, .shop-item { 
-      background: #34495e; 
-      padding: 12px; 
-      margin: 10px 0; 
-      border-radius: 8px; 
-      cursor: pointer; 
-      transition: all 0.3s ease; 
-      text-align: left; 
-    }
-    .map-option:hover, .shop-item:hover { background: #3e5c76; }
-    .map-option.selected { background: #3498db; }
-    .shop-item h4 { margin-bottom: 5px; font-size: 1.1rem; }
-    .shop-item p { margin: 5px 0; font-size: 0.9rem; color: #bdc3c7; }
-    .unlock-btn { 
-      background: #28a745; 
-      padding: 8px 16px; 
-      margin-top: 5px; 
-      font-size: 0.9rem; 
-    }
-    .unlock-btn:disabled { background: #34495e; }
-    .unlock-btn:hover:not(:disabled) { background: #218838; }
-    #global-money { margin: 15px 0; font-size: 1.2rem; }
+    target[prop] = value;
+    return true;
+  }
+});
 
-    /* Notification Box */
-    #notification-box { 
-      position: fixed; 
-      bottom: 20px; 
-      right: 20px; 
-      background: rgba(44, 62, 80, 0.9); 
-      color: #ecf0f1; 
-      padding: 10px 20px; 
-      border-radius: 8px; 
-      z-index: 1000; 
-      display: none; 
-      font-weight: 500; 
-      max-width: 300px; 
+async function loadUnlockedTowers() {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    showNotification("Not authenticated. Please log in.");
+    window.location.href = "/"; // Redirect to root for Render
+    return;
+  }
+  try {
+    const response = await fetch('/towers', {
+      headers: { "Authorization": token }
+    });
+    if (!response.ok) throw new Error((await response.json()).message);
+    const data = await response.json();
+    console.log("Unlocked towers from server:", data.towers);
+    towerStats.basic.unlocked = true;
+    data.towers.forEach(type => {
+      if (towerStats[type]) {
+        towerStats[type].unlocked = true;
+        console.log(`Tower ${type} marked as unlocked`);
+      }
+    });
+  } catch (err) {
+    console.error("Error loading towers:", err);
+    showNotification("Error loading towers: " + err.message);
+  }
+}
+
+async function fetchUserMoney() {
+  const token = localStorage.getItem("token");
+  if (!token) return;
+  try {
+    const response = await fetch('/user', {
+      headers: { "Authorization": token }
+    });
+    if (!response.ok) throw new Error((await response.json()).message);
+    const data = await response.json();
+    gameState.money = data.money;
+    console.log("User money fetched:", gameState.money);
+  } catch (err) {
+    console.error("Error fetching money:", err);
+    showNotification("Error fetching money: " + err.message);
+  }
+}
+
+async function updateUserMoney() {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    console.error("No token found. Cannot update money.");
+    showNotification("Not authenticated. Progress not saved.");
+    return false;
+  }
+  try {
+    const response = await fetch('/update-money', {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": token
+      },
+      body: JSON.stringify({ money: gameState.money })
+    });
+    if (!response.ok) throw new Error((await response.json()).message);
+    console.log("Money updated on server:", gameState.money);
+    return true;
+  } catch (err) {
+    console.error("Error updating money:", err);
+    showNotification("Error saving progress: " + err.message);
+    return false;
+  }
+}
+
+const maps = {
+  map1: { name: "Beginner Path", path: [{ x: 0, y: 300 }, { x: 100, y: 200 }, { x: 200, y: 400 }, { x: 300, y: 300 }, { x: 400, y: 100 }, { x: 500, y: 300 }, { x: 600, y: 200 }, { x: 700, y: 400 }, { x: 800, y: 300 }, { x: 900, y: 100 }, { x: 1000, y: 300 }, { x: 1100, y: 200 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 50, difficulty: "easy", theme: "grassland" },
+  map2: { name: "Zigzag Path", path: [{ x: 0, y: 150 }, { x: 400, y: 150 }, { x: 400, y: 450 }, { x: 800, y: 450 }, { x: 1200, y: 150 }], spawnPoint: { x: 0, y: 150 }, moneyReward: 75, difficulty: "medium", theme: "grassland" },
+  map3: { name: "Snake Path", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 400, y: 300 }, { x: 600, y: 100 }, { x: 800, y: 300 }, { x: 1000, y: 100 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 150, difficulty: "hard", theme: "grassland" },
+  map4: { name: "Forest Trail", path: [{ x: 0, y: 200 }, { x: 100, y: 400 }, { x: 200, y: 150 }, { x: 300, y: 350 }, { x: 400, y: 250 }, { x: 500, y: 400 }, { x: 600, y: 200 }, { x: 700, y: 350 }, { x: 800, y: 150 }, { x: 900, y: 300 }, { x: 1000, y: 400 }, { x: 1100, y: 250 }, { x: 1200, y: 200 }], spawnPoint: { x: 0, y: 200 }, moneyReward: 60, difficulty: "easy", theme: "forest" },
+  map5: { name: "Mountain Pass", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 400, y: 400 }, { x: 800, y: 100 }, { x: 1000, y: 400 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 90, difficulty: "medium", theme: "mountain" },
+  map6: { name: "Desert Maze", path: [{ x: 0, y: 150 }, { x: 300, y: 300 }, { x: 500, y: 150 }, { x: 700, y: 300 }, { x: 900, y: 150 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 150 }, moneyReward: 180, difficulty: "hard", theme: "desert" },
+  map7: { name: "River Bend", path: [{ x: 0, y: 250 }, { x: 100, y: 100 }, { x: 200, y: 350 }, { x: 300, y: 150 }, { x: 400, y: 300 }, { x: 500, y: 200 }, { x: 600, y: 400 }, { x: 700, y: 250 }, { x: 800, y: 100 }, { x: 900, y: 350 }, { x: 1000, y: 200 }, { x: 1100, y: 300 }, { x: 1200, y: 250 }], spawnPoint: { x: 0, y: 250 }, moneyReward: 65, difficulty: "easy", theme: "river" },
+  map8: { name: "Canyon Run", path: [{ x: 0, y: 200 }, { x: 300, y: 400 }, { x: 600, y: 200 }, { x: 900, y: 400 }, { x: 1200, y: 200 }], spawnPoint: { x: 0, y: 200 }, moneyReward: 100, difficulty: "medium", theme: "canyon" },
+  map9: { name: "Arctic Path", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 500, y: 400 }, { x: 800, y: 100 }, { x: 1000, y: 400 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 200, difficulty: "hard", theme: "arctic" },
+};
+
+const selectedMap = localStorage.getItem("selectedMap") || "map1";
+const selectedDifficulty = localStorage.getItem("selectedDifficulty") || "easy";
+const path = maps[selectedMap].path;
+const spawnPoint = maps[selectedMap].spawnPoint;
+const mapTheme = maps[selectedMap].theme;
+
+let scaledPath, scaledSpawnPoint;
+function updateScaledPathAndSpawnPoint() {
+  scaledPath = path.map(point => ({ x: point.x * scaleX, y: point.y * scaleY }));
+  scaledSpawnPoint = { x: spawnPoint.x * scaleX, y: spawnPoint.y * scaleY };
+}
+
+resizeCanvas();
+window.addEventListener("resize", resizeCanvas);
+
+const enemyThemes = {
+  grassland: {
+    easy: [{ health: 100, speed: 1, radius: 10, color: "red" }],
+    medium: [{ health: 150, speed: 1.2, radius: 12, color: "blue" }, { health: 75, speed: 1.5, radius: 8, color: "green" }],
+    hard: [{ health: 200, speed: 1.5, radius: 15, color: "purple" }, { health: 100, speed: 2, radius: 10, color: "yellow" }],
+    boss: { easy: { health: 500, speed: 0.7, radius: 20, color: "darkred" }, medium: { health: 800, speed: 0.9, radius: 25, color: "darkblue" }, hard: { health: 1200, speed: 1.1, radius: 30, color: "darkviolet" } },
+  },
+  forest: {
+    easy: [{ health: 110, speed: 0.9, radius: 10, color: "darkgreen" }],
+    medium: [{ health: 160, speed: 1.1, radius: 12, color: "brown" }, { health: 80, speed: 1.4, radius: 8, color: "olive" }],
+    hard: [{ health: 220, speed: 1.4, radius: 15, color: "forestgreen" }, { health: 110, speed: 1.9, radius: 10, color: "limegreen" }],
+    boss: { easy: { health: 550, speed: 0.6, radius: 20, color: "darkgreen" }, medium: { health: 850, speed: 0.8, radius: 25, color: "saddlebrown" }, hard: { health: 1300, speed: 1.0, radius: 30, color: "darkolivegreen" } },
+  },
+  mountain: {
+    easy: [{ health: 120, speed: 0.8, radius: 10, color: "gray" }],
+    medium: [{ health: 170, speed: 1.0, radius: 12, color: "slategray" }, { health: 85, speed: 1.3, radius: 8, color: "lightgray" }],
+    hard: [{ health: 230, speed: 1.3, radius: 15, color: "darkgray" }, { health: 115, speed: 1.8, radius: 10, color: "silver" }],
+    boss: { easy: { health: 600, speed: 0.5, radius: 20, color: "dimgray" }, medium: { health: 900, speed: 0.7, radius: 25, color: "gray" }, hard: { health: 1400, speed: 0.9, radius: 30, color: "darkslategray" } },
+  },
+  desert: {
+    easy: [{ health: 130, speed: 1.1, radius: 10, color: "sandybrown" }],
+    medium: [{ health: 180, speed: 1.3, radius: 12, color: "tan" }, { health: 90, speed: 1.6, radius: 8, color: "khaki" }],
+    hard: [{ health: 240, speed: 1.6, radius: 15, color: "darkorange" }, { health: 120, speed: 2.1, radius: 10, color: "gold" }],
+    boss: { easy: { health: 650, speed: 0.8, radius: 20, color: "sienna" }, medium: { health: 950, speed: 1.0, radius: 25, color: "peru" }, hard: { health: 1500, speed: 1.2, radius: 30, color: "chocolate" } },
+  },
+  river: {
+    easy: [{ health: 115, speed: 1.0, radius: 10, color: "teal" }],
+    medium: [{ health: 165, speed: 1.2, radius: 12, color: "cyan" }, { health: 85, speed: 1.5, radius: 8, color: "lightblue" }],
+    hard: [{ health: 225, speed: 1.5, radius: 15, color: "darkcyan" }, { health: 115, speed: 2.0, radius: 10, color: "skyblue" }],
+    boss: { easy: { health: 575, speed: 0.7, radius: 20, color: "navy" }, medium: { health: 875, speed: 0.9, radius: 25, color: "deepskyblue" }, hard: { health: 1350, speed: 1.1, radius: 30, color: "dodgerblue" } },
+  },
+  canyon: {
+    easy: [{ health: 125, speed: 0.9, radius: 10, color: "coral" }],
+    medium: [{ health: 175, speed: 1.1, radius: 12, color: "tomato" }, { health: 90, speed: 1.4, radius: 8, color: "salmon" }],
+    hard: [{ health: 235, speed: 1.4, radius: 15, color: "crimson" }, { health: 120, speed: 1.9, radius: 10, color: "orangered" }],
+    boss: { easy: { health: 625, speed: 0.6, radius: 20, color: "darkred" }, medium: { health: 925, speed: 0.8, radius: 25, color: "firebrick" }, hard: { health: 1450, speed: 1.0, radius: 30, color: "maroon" } },
+  },
+  arctic: {
+    easy: [{ health: 135, speed: 0.8, radius: 10, color: "aliceblue" }],
+    medium: [{ health: 185, speed: 1.0, radius: 12, color: "lightcyan" }, { health: 95, speed: 1.3, radius: 8, color: "powderblue" }],
+    hard: [{ health: 245, speed: 1.3, radius: 15, color: "deepskyblue" }, { health: 125, speed: 1.8, radius: 10, color: "lightskyblue" }],
+    boss: { easy: { health: 675, speed: 0.5, radius: 20, color: "steelblue" }, medium: { health: 975, speed: 0.7, radius: 25, color: "slateblue" }, hard: { health: 1600, speed: 0.9, radius: 30, color: "darkslateblue" } },
+  },
+};
+
+const enemyTypes = enemyThemes[mapTheme][selectedDifficulty];
+const bossType = enemyThemes[mapTheme].boss[selectedDifficulty];
+
+const themeBackgrounds = {
+  grassland: "#B2E0B2",
+  forest: "#A8D5A8",
+  mountain: "#D3D3D3",
+  desert: "#F5E8C7",
+  river: "#B0E0E6",
+  canyon: "#FFDAB9",
+  arctic: "#F0FFFF",
+};
+
+function showNotification(message, duration = 3000) {
+  const box = document.getElementById("notification-box");
+  box.textContent = message;
+  box.classList.add("show");
+  setTimeout(() => box.classList.remove("show"), duration);
+}
+
+class Enemy {
+  constructor(type, wave) {
+    this.x = scaledSpawnPoint.x;
+    this.y = scaledSpawnPoint.y;
+    const healthMultiplier = 1 + ((wave - 1) * 14) / 59;
+    this.health = Math.floor(type.health * healthMultiplier);
+    this.maxHealth = this.health;
+    this.speed = type.speed * scaleX;
+    this.radius = type.radius * textScale;
+    this.color = type.color;
+    this.pathIndex = 1;
+    this.isBoss = false;
+  }
+
+  move() {
+    if (this.pathIndex >= scaledPath.length) {
+      gameState.playerHealth -= this.isBoss ? 5 : 1;
+      gameState.enemies = gameState.enemies.filter(e => e !== this);
+      return;
     }
-    #notification-box.show { display: block; }
-
-    /* Backdrop for modals */
-    body.shop-open::before { 
-      content: ''; 
-      position: fixed; 
-      top: 0; 
-      left: 0; 
-      width: 100%; 
-      height: 100%; 
-      background: rgba(0, 0, 0, 0.5); 
-      z-index: 999; 
+    const target = scaledPath[this.pathIndex];
+    const dx = target.x - this.x;
+    const dy = target.y - this.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    if (distance < this.speed * gameState.gameSpeed) {
+      this.x = target.x;
+      this.y = target.y;
+      this.pathIndex++;
+    } else {
+      this.x += (dx / distance) * this.speed * gameState.gameSpeed;
+      this.y += (dy / distance) * this.speed * gameState.gameSpeed;
     }
+  }
 
-    /* Responsive Adjustments */
-    @media (max-width: 768px) {
-      .container, #map-menu, #tower-shop { padding: 20px; max-width: 90%; }
-      h1 { font-size: 1.8rem; }
-      button { padding: 10px 20px; font-size: 0.9rem; }
-      #notification-box { bottom: 15px; right: 15px; max-width: 50vw; }
+  draw() {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.fillStyle = this.color;
+    ctx.fill();
+    ctx.closePath();
+
+    ctx.fillStyle = "black";
+    ctx.font = `${12 * textScale}px Arial`;
+    ctx.textAlign = "center";
+    ctx.fillText(`${Math.floor(this.health)}/${this.maxHealth}`, this.x, this.y - this.radius - 5 * textScale);
+  }
+}
+
+class Projectile {
+  constructor(x, y, target, damage, speed, type) {
+    this.x = x;
+    this.y = y;
+    this.target = target;
+    this.damage = damage;
+    this.speed = speed;
+    this.type = type;
+    this.radius = type === "missile" ? 8 * textScale : 5 * textScale;
+    this.color = towerStats[type].color || "black";
+  }
+
+  move() {
+    if (!this.target) {
+      gameState.projectiles = gameState.projectiles.filter(p => p !== this);
+      return;
     }
-    @media (max-width: 480px) {
-      .container, #map-menu, #tower-shop { padding: 15px; }
-      h1 { font-size: 1.5rem; }
-      button { padding: 8px 15px; font-size: 0.8rem; }
-      #notification-box { bottom: 10px; right: 10px; max-width: 70vw; }
+    const dx = this.target.x - this.x;
+    const dy = this.target.y - this.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    if (distance < this.speed) {
+      this.hit();
+    } else {
+      this.x += (dx / distance) * this.speed;
+      this.y += (dy / distance) * this.speed;
     }
-  </style>
-</head>
-<body>
-  <div id="notification-box"></div>
-  <div class="container" id="auth-screen">
-    <h1>Tower Defense</h1>
-    <div id="login-form">
-      <div class="form-group">
-        <label for="login-username">Username</label>
-        <input type="text" id="login-username" placeholder="Username" aria-required="true">
-      </div>
-      <div class="form-group">
-        <label for="login-password">Password</label>
-        <input type="password" id="login-password" placeholder="Password" aria-required="true">
-      </div>
-      <button id="login-button">Login</button>
-      <p><a href="#" id="show-signup">Need an account? Sign up</a></p>
-    </div>
-    <div id="signup-form" style="display: none;">
-      <div class="form-group">
-        <label for="signup-username">Username</label>
-        <input type="text" id="signup-username" placeholder="Username" aria-required="true">
-      </div>
-      <div class="form-group">
-        <label for="signup-password">Password</label>
-        <input type="password" id="signup-password" placeholder="Password" aria-required="true">
-      </div>
-      <button id="signup-button">Sign Up</button>
-      <p><a href="#" id="show-login">Already have an account? Log in</a></p>
-    </div>
-  </div>
-  <div class="container" id="main-menu">
-    <h1>Tower Defense</h1>
-    <div id="user-money">Money: $0</div>
-    <button id="start-game">Start Game</button>
-    <button id="select-map">Map Selection</button>
-    <button id="open-tower-shop">Tower Buyer</button>
-    <button id="logout-button">Logout</button>
-  </div>
-  <div id="map-menu">
-    <h2>Select Map <button class="close-btn" id="close-map-menu" aria-label="Close Map Menu"></button></h2>
-    <div id="map-list"></div>
-  </div>
-  <div id="tower-shop">
-    <h2>Tower Buyer <button class="close-btn" id="close-shop" aria-label="Close Tower Shop"></button></h2>
-    <div id="global-money">Money: $0</div>
-    <div id="shop-items"></div>
-  </div>
-  <script src="/stats.js"></script>
-  <script>
-    const BASE_URL = ''; // Empty since Render uses relative paths
-    let globalMoney = 0;
-    const originalWidth = 1200;
-    const originalHeight = 600;
-    let scaleX = 1;
-    let scaleY = 1;
+  }
 
-    const authScreen = document.getElementById("auth-screen");
-    const mainMenu = document.getElementById("main-menu");
-    const loginForm = document.getElementById("login-form");
-    const signupForm = document.getElementById("signup-form");
-    const mapMenu = document.getElementById("map-menu");
-    const shop = document.getElementById("tower-shop");
-    const shopItems = document.getElementById("shop-items");
-    const mapList = document.getElementById("map-list");
-
-    const maps = {
-      map1: { name: "Beginner Path", path: [{ x: 0, y: 300 }, { x: 100, y: 200 }, { x: 200, y: 400 }, { x: 300, y: 300 }, { x: 400, y: 100 }, { x: 500, y: 300 }, { x: 600, y: 200 }, { x: 700, y: 400 }, { x: 800, y: 300 }, { x: 900, y: 100 }, { x: 1000, y: 300 }, { x: 1100, y: 200 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 50, difficulty: "easy", theme: "grassland" },
-      map2: { name: "Zigzag Path", path: [{ x: 0, y: 150 }, { x: 400, y: 150 }, { x: 400, y: 450 }, { x: 800, y: 450 }, { x: 1200, y: 150 }], spawnPoint: { x: 0, y: 150 }, moneyReward: 75, difficulty: "medium", theme: "grassland" },
-      map3: { name: "Snake Path", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 400, y: 300 }, { x: 600, y: 100 }, { x: 800, y: 300 }, { x: 1000, y: 100 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 150, difficulty: "hard", theme: "grassland" },
-      map4: { name: "Forest Trail", path: [{ x: 0, y: 200 }, { x: 100, y: 400 }, { x: 200, y: 150 }, { x: 300, y: 350 }, { x: 400, y: 250 }, { x: 500, y: 400 }, { x: 600, y: 200 }, { x: 700, y: 350 }, { x: 800, y: 150 }, { x: 900, y: 300 }, { x: 1000, y: 400 }, { x: 1100, y: 250 }, { x: 1200, y: 200 }], spawnPoint: { x: 0, y: 200 }, moneyReward: 60, difficulty: "easy", theme: "forest" },
-      map5: { name: "Mountain Pass", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 400, y: 400 }, { x: 800, y: 100 }, { x: 1000, y: 400 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 90, difficulty: "medium", theme: "mountain" },
-      map6: { name: "Desert Maze", path: [{ x: 0, y: 150 }, { x: 300, y: 300 }, { x: 500, y: 150 }, { x: 700, y: 300 }, { x: 900, y: 150 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 150 }, moneyReward: 180, difficulty: "hard", theme: "desert" },
-      map7: { name: "River Bend", path: [{ x: 0, y: 250 }, { x: 100, y: 100 }, { x: 200, y: 350 }, { x: 300, y: 150 }, { x: 400, y: 300 }, { x: 500, y: 200 }, { x: 600, y: 400 }, { x: 700, y: 250 }, { x: 800, y: 100 }, { x: 900, y: 350 }, { x: 1000, y: 200 }, { x: 1100, y: 300 }, { x: 1200, y: 250 }], spawnPoint: { x: 0, y: 250 }, moneyReward: 65, difficulty: "easy", theme: "river" },
-      map8: { name: "Canyon Run", path: [{ x: 0, y: 200 }, { x: 300, y: 400 }, { x: 600, y: 200 }, { x: 900, y: 400 }, { x: 1200, y: 200 }], spawnPoint: { x: 0, y: 200 }, moneyReward: 100, difficulty: "medium", theme: "canyon" },
-      map9: { name: "Arctic Path", path: [{ x: 0, y: 300 }, { x: 200, y: 100 }, { x: 500, y: 400 }, { x: 800, y: 100 }, { x: 1000, y: 400 }, { x: 1200, y: 300 }], spawnPoint: { x: 0, y: 300 }, moneyReward: 200, difficulty: "hard", theme: "arctic" },
-    };
-
-    function resizeElements() {
-      scaleX = window.innerWidth / originalWidth;
-      scaleY = window.innerHeight / originalHeight;
-      const uiScale = Math.min(scaleX, scaleY) * 0.70;
-      document.querySelectorAll('#main-menu h1, #main-menu button, #user-money').forEach(el => {
-        el.style.fontSize = `${parseFloat(getComputedStyle(el).fontSize) * uiScale}px`;
-      });
-      document.querySelectorAll('#map-menu h2, #map-menu .map-option, #tower-shop h2, #tower-shop .shop-item, #tower-shop .unlock-btn, #global-money').forEach(el => {
-        el.style.fontSize = `${parseFloat(getComputedStyle(el).fontSize) * uiScale}px`;
-      });
-      document.getElementById('notification-box').style.fontSize = `${16 * uiScale}px`;
-    }
-
-    window.addEventListener('resize', resizeElements);
-    resizeElements();
-
-    function showNotification(message, duration = 3000) {
-      const box = document.getElementById("notification-box");
-      box.textContent = message;
-      box.classList.add("show");
-      setTimeout(() => box.classList.remove("show"), duration);
-    }
-
-    async function loadUnlockedTowers() {
-      const token = localStorage.getItem("token");
-      if (!token) return;
-      try {
-        const response = await fetch(`${BASE_URL}/towers`, {
-          headers: { "Authorization": token }
-        });
-        const data = await response.json();
-        if (response.ok) {
-          towerStats.basic.unlocked = true;
-          data.towers.forEach(type => {
-            if (towerStats[type]) towerStats[type].unlocked = true;
+  hit() {
+    if (this.target) {
+      this.target.health -= this.damage;
+      if (this.target.health <= 0) {
+        gameState.score += this.target.isBoss ? 50 : 10;
+        gameState.money += this.target.isBoss ? 100 : 20;
+        gameState.enemies = gameState.enemies.filter(e => e !== this.target);
+      }
+      switch (this.type) {
+        case "cannon":
+          gameState.enemies.forEach(enemy => {
+            if (enemy !== this.target && Math.hypot(enemy.x - this.x, enemy.y - this.y) < 50 * scaleX) {
+              enemy.health -= this.damage * 0.5;
+              if (enemy.health <= 0) {
+                gameState.score += enemy.isBoss ? 50 : 10;
+                gameState.money += enemy.isBoss ? 100 : 20;
+                gameState.enemies = gameState.enemies.filter(e => e !== enemy);
+              }
+            }
           });
-        } else {
-          throw new Error(data.message);
-        }
-      } catch (err) {
-        console.error("Error loading towers:", err);
-        showNotification("Error loading towers.");
-      }
-    }
-
-    function initShop() {
-      shopItems.innerHTML = "";
-      document.getElementById("global-money").textContent = `Money: $${globalMoney}`;
-      for (const [type, stats] of Object.entries(towerStats)) {
-        if (type === "basic") continue;
-        const item = document.createElement("div");
-        item.className = "shop-item";
-        item.innerHTML = `
-          <h4>${type.charAt(0).toUpperCase() + type.slice(1)}</h4>
-          <p>Damage: ${stats.damage} | Range: ${stats.range}</p>
-          <p>Fire Rate: ${stats.fireRate / 1000}s | Ability: ${stats.ability}</p>
-          <p>${stats.unlocked ? "Unlocked" : `Cost: $${stats.unlockCost}`}</p>
-          <button class="unlock-btn" data-type="${type}" ${stats.unlocked ? "disabled" : ""}>
-            ${stats.unlocked ? "Unlocked" : "Unlock"}
-          </button>
-        `;
-        shopItems.appendChild(item);
-      }
-      resizeElements();
-    }
-
-    function initMapMenu() {
-      mapList.innerHTML = "";
-      for (const [mapId, map] of Object.entries(maps)) {
-        const mapOption = document.createElement("div");
-        mapOption.className = "map-option";
-        mapOption.setAttribute("data-map", mapId);
-        mapOption.innerHTML = `
-          <h4>${map.name}</h4>
-          <p>Difficulty: ${map.difficulty.charAt(0).toUpperCase() + map.difficulty.slice(1)}</p>
-          <p>Money Reward: $${map.moneyReward}</p>
-        `;
-        if (localStorage.getItem("selectedMap") === mapId) mapOption.classList.add("selected");
-        mapList.appendChild(mapOption);
-      }
-      resizeElements();
-    }
-
-    async function fetchUserData() {
-      const token = localStorage.getItem("token");
-      if (!token) return;
-      try {
-        const response = await fetch(`${BASE_URL}/user`, {
-          headers: { "Authorization": token }
-        });
-        const data = await response.json();
-        if (response.ok) {
-          globalMoney = data.money;
-          document.getElementById("user-money").textContent = `Money: $${globalMoney}`;
-          document.getElementById("global-money").textContent = `Money: $${globalMoney}`;
-        } else {
-          throw new Error(data.message);
-        }
-      } catch (err) {
-        console.error("Error fetching user data:", err);
-        showNotification("Error fetching user data.");
-      }
-    }
-
-    document.getElementById("show-signup").addEventListener("click", () => {
-      loginForm.style.display = "none";
-      signupForm.style.display = "block";
-    });
-
-    document.getElementById("show-login").addEventListener("click", () => {
-      signupForm.style.display = "none";
-      loginForm.style.display = "block";
-    });
-
-    document.getElementById("login-button").addEventListener("click", async () => {
-      const username = document.getElementById("login-username").value.trim();
-      const password = document.getElementById("login-password").value.trim();
-      if (!username || !password) {
-        showNotification("Please enter username and password");
-        return;
-      }
-      try {
-        const response = await fetch(`${BASE_URL}/login`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, password })
-        });
-        const data = await response.json();
-        if (response.ok) {
-          localStorage.setItem("token", data.token);
-          globalMoney = data.money;
-          showMainMenu();
-        } else {
-          showNotification(data.message);
-        }
-      } catch (err) {
-        console.error("Login error:", err);
-        showNotification("Error logging in. Please check your connection.");
-      }
-    });
-
-    document.getElementById("signup-button").addEventListener("click", async () => {
-      const username = document.getElementById("signup-username").value.trim();
-      const password = document.getElementById("signup-password").value.trim();
-      if (!username || !password) {
-        showNotification("Please enter username and password");
-        return;
-      }
-      try {
-        const response = await fetch(`${BASE_URL}/signup`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, password })
-        });
-        const data = await response.json();
-        if (response.ok) {
-          localStorage.setItem("token", data.token);
-          globalMoney = data.money;
-          showMainMenu();
-        } else {
-          showNotification(data.message);
-        }
-      } catch (err) {
-        console.error("Signup error:", err);
-        showNotification("Error signing up. Please check your connection.");
-      }
-    });
-
-    document.getElementById("start-game").addEventListener("click", () => {
-      if (!localStorage.getItem("selectedMap")) {
-        showNotification("Please select a map first.");
-        return;
-      }
-      window.location.href = "/game";
-    });
-
-    document.getElementById("select-map").addEventListener("click", () => {
-      initMapMenu();
-      mapMenu.style.display = "block";
-      document.body.classList.add("shop-open");
-    });
-
-    document.getElementById("close-map-menu").addEventListener("click", () => {
-      mapMenu.style.display = "none";
-      document.body.classList.remove("shop-open");
-    });
-
-    mapList.addEventListener("click", e => {
-      const option = e.target.closest(".map-option");
-      if (option) {
-        localStorage.setItem("selectedMap", option.getAttribute("data-map"));
-        localStorage.setItem("selectedDifficulty", maps[option.getAttribute("data-map")].difficulty);
-        document.querySelectorAll(".map-option").forEach(btn => btn.classList.remove("selected"));
-        option.classList.add("selected");
-        mapMenu.style.display = "none";
-        document.body.classList.remove("shop-open");
-      }
-    });
-
-    document.getElementById("open-tower-shop").addEventListener("click", () => {
-      initShop();
-      shop.style.display = "block";
-      document.body.classList.add("shop-open");
-    });
-
-    document.getElementById("close-shop").addEventListener("click", () => {
-      shop.style.display = "none";
-      document.body.classList.remove("shop-open");
-    });
-
-    document.getElementById("logout-button").addEventListener("click", () => {
-      localStorage.removeItem("token");
-      localStorage.removeItem("selectedMap");
-      localStorage.removeItem("selectedDifficulty");
-      mainMenu.style.display = "none";
-      authScreen.style.display = "flex";
-    });
-
-    shopItems.addEventListener("click", async e => {
-      if (e.target.classList.contains("unlock-btn") && !e.target.disabled) {
-        const type = e.target.getAttribute("data-type");
-        const cost = towerStats[type].unlockCost;
-        const token = localStorage.getItem("token");
-        try {
-          const response = await fetch(`${BASE_URL}/unlock-tower`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": token
-            },
-            body: JSON.stringify({ towerType: type, cost })
+          break;
+        case "sniper":
+          if (Math.random() < 0.2) this.target.health -= this.damage;
+          break;
+        case "freeze":
+          this.target.speed *= 0.5;
+          this.target.color = "lightblue";
+          setTimeout(() => { if (this.target) { this.target.speed /= 0.5; this.target.color = enemyThemes[mapTheme][selectedDifficulty][0].color; } }, 2000);
+          break;
+        case "mortar":
+          gameState.enemies.forEach(enemy => {
+            if (Math.hypot(enemy.x - this.x, enemy.y - this.y) < 75 * scaleX) {
+              enemy.health -= this.damage * 0.75;
+              if (enemy.health <= 0) {
+                gameState.score += enemy.isBoss ? 50 : 10;
+                gameState.money += enemy.isBoss ? 100 : 20;
+                gameState.enemies = gameState.enemies.filter(e => e !== enemy);
+              }
+            }
           });
-          const data = await response.json();
-          if (response.ok) {
-            globalMoney -= cost;
-            towerStats[type].unlocked = true;
-            initShop();
-            document.getElementById("user-money").textContent = `Money: $${globalMoney}`;
-            showNotification(`${type.charAt(0).toUpperCase() + type.slice(1)} Tower unlocked!`);
-          } else {
-            showNotification(data.message);
+          break;
+        case "tesla":
+          let chainTargets = gameState.enemies.filter(e => e !== this.target && Math.hypot(e.x - this.target.x, e.y - this.target.y) < 100 * scaleX).slice(0, 2);
+          chainTargets.forEach(enemy => {
+            enemy.health -= this.damage * 0.5;
+            if (enemy.health <= 0) {
+              gameState.score += enemy.isBoss ? 50 : 10;
+              gameState.money += enemy.isBoss ? 100 : 20;
+              gameState.enemies = gameState.enemies.filter(e => e !== enemy);
+            }
+          });
+          break;
+        case "flamethrower":
+          let burnInterval = setInterval(() => {
+            if (this.target && this.target.health > 0) {
+              this.target.health -= 10;
+              this.target.color = "orange";
+              if (this.target.health <= 0) {
+                gameState.score += this.target.isBoss ? 50 : 10;
+                gameState.money += this.target.isBoss ? 100 : 20;
+                gameState.enemies = gameState.enemies.filter(e => e !== this.target);
+              }
+            } else {
+              clearInterval(burnInterval);
+            }
+          }, 1000);
+          setTimeout(() => clearInterval(burnInterval), 3000);
+          break;
+        case "poison":
+          gameState.enemies.forEach(enemy => {
+            if (Math.hypot(enemy.x - this.x, enemy.y - this.y) < 160 * scaleX) {
+              let poisonInterval = setInterval(() => {
+                if (enemy.health > 0) {
+                  enemy.health -= 5;
+                  enemy.color = "limegreen";
+                  if (enemy.health <= 0) {
+                    gameState.score += enemy.isBoss ? 50 : 10;
+                    gameState.money += enemy.isBoss ? 100 : 20;
+                    gameState.enemies = gameState.enemies.filter(e => e !== enemy);
+                  }
+                } else {
+                  clearInterval(poisonInterval);
+                }
+              }, 1000);
+              setTimeout(() => clearInterval(poisonInterval), 4000);
+            }
+          });
+          break;
+      }
+      gameState.projectiles = gameState.projectiles.filter(p => p !== this);
+    }
+  }
+
+  draw() {
+    ctx.beginPath();
+    switch (this.type) {
+      case "archer":
+        ctx.moveTo(this.x, this.y - 5 * textScale);
+        ctx.lineTo(this.x - 5 * textScale, this.y + 5 * textScale);
+        ctx.lineTo(this.x + 5 * textScale, this.y + 5 * textScale);
+        break;
+      case "cannon":
+        ctx.arc(this.x, this.y, 8 * textScale, 0, Math.PI * 2);
+        break;
+      case "freeze":
+        ctx.arc(this.x, this.y, 5 * textScale, 0, Math.PI * 2);
+        ctx.fillStyle = "lightblue";
+        break;
+      case "tesla":
+        ctx.moveTo(this.x - 5 * textScale, this.y);
+        ctx.lineTo(this.x + 5 * textScale, this.y);
+        break;
+      case "flamethrower":
+        ctx.arc(this.x, this.y, 5 * textScale, 0, Math.PI * 2);
+        ctx.fillStyle = "orange";
+        break;
+      case "poison":
+        ctx.arc(this.x, this.y, 5 * textScale, 0, Math.PI * 2);
+        ctx.fillStyle = "limegreen";
+        break;
+      default:
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+    }
+    ctx.fill();
+    ctx.closePath();
+
+    if (this.type === "tesla" && this.target) {
+      ctx.beginPath();
+      ctx.moveTo(this.x, this.y);
+      ctx.lineTo(this.target.x, this.target.y);
+      ctx.strokeStyle = "yellow";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+  }
+}
+
+class Tower {
+  constructor(x, y, type) {
+    this.x = x;
+    this.y = y;
+    this.type = type;
+    this.damage = towerStats[type].damage;
+    this.range = towerStats[type].range * scaleX;
+    this.fireRate = towerStats[type].fireRate;
+    this.lastShot = 0;
+    this.radius = 20 * textScale;
+    this.level = 1;
+    this.color = towerStats[type].color || "gray";
+  }
+
+  shoot() {
+    const now = Date.now();
+    if (now - this.lastShot < this.fireRate / gameState.gameSpeed) return;
+    let target = gameState.enemies.find(enemy => Math.hypot(enemy.x - this.x, enemy.y - this.y) < this.range);
+    if (target) {
+      switch (this.type) {
+        case "archer":
+          if (now - this.lastShot >= 2000) {
+            gameState.projectiles.push(new Projectile(this.x, this.y, target, this.damage, 5 * scaleX, this.type));
+            gameState.projectiles.push(new Projectile(this.x, this.y, gameState.enemies.find(e => e !== target && Math.hypot(e.x - this.x, e.y - this.y) < this.range) || target, this.damage, 5 * scaleX, this.type));
+            this.lastShot = now;
           }
-        } catch (err) {
-          console.error("Error unlocking tower:", err);
-          showNotification("Error unlocking tower. Please check your connection.");
-        }
+          break;
+        case "laser":
+          if (now - this.lastShot >= 10000) {
+            let beamInterval = setInterval(() => {
+              gameState.enemies.forEach(enemy => {
+                if (Math.hypot(enemy.x - this.x, enemy.y - this.y) < this.range) {
+                  enemy.health -= this.damage / 5;
+                  ctx.beginPath();
+                  ctx.moveTo(this.x, this.y);
+                  ctx.lineTo(enemy.x, enemy.y);
+                  ctx.strokeStyle = "red";
+                  ctx.lineWidth = 2;
+                  ctx.stroke();
+                  if (enemy.health <= 0) {
+                    gameState.score += enemy.isBoss ? 50 : 10;
+                    gameState.money += enemy.isBoss ? 100 : 20;
+                    gameState.enemies = gameState.enemies.filter(e => e !== enemy);
+                  }
+                }
+              });
+            }, 1000);
+            setTimeout(() => clearInterval(beamInterval), 5000);
+            this.lastShot = now;
+          }
+          break;
+        case "vortex":
+          if (now - this.lastShot >= 5000) {
+            gameState.enemies.forEach(enemy => {
+              if (Math.hypot(enemy.x - this.x, enemy.y - this.y) < this.range) {
+                const dx = this.x - enemy.x;
+                const dy = this.y - enemy.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance > 50 * scaleX) {
+                  enemy.x += (dx / distance) * 50 * scaleX;
+                  enemy.y += (dy / distance) * 50 * scaleY;
+                  ctx.beginPath();
+                  ctx.arc(this.x, this.y, 20 * textScale, 0, Math.PI * 2);
+                  ctx.strokeStyle = "purple";
+                  ctx.lineWidth = 2;
+                  ctx.stroke();
+                }
+              }
+            });
+            this.lastShot = now;
+          }
+          break;
+        default:
+          gameState.projectiles.push(new Projectile(this.x, this.y, target, this.damage, 5 * scaleX, this.type));
+          this.lastShot = now;
       }
+    }
+  }
+
+  draw() {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+
+    let target = gameState.enemies.find(enemy => Math.hypot(enemy.x - this.x, enemy.y - this.y) < this.range);
+    if (target) {
+      const angle = Math.atan2(target.y - this.y, target.x - this.x);
+      ctx.rotate(angle + Math.PI / 2);
+    }
+
+    ctx.beginPath();
+    switch (this.type) {
+      case "basic":
+        ctx.rect(-10 * textScale, -10 * textScale, 20 * textScale, 20 * textScale);
+        break;
+      case "archer":
+        ctx.moveTo(0, -15 * textScale);
+        ctx.lineTo(-10 * textScale, 10 * textScale);
+        ctx.lineTo(10 * textScale, 10 * textScale);
+        break;
+      case "cannon":
+        ctx.arc(0, 0, 15 * textScale, 0, Math.PI * 2);
+        ctx.fillRect(0, -5 * textScale, 20 * textScale, 10 * textScale);
+        break;
+      case "sniper":
+        ctx.rect(-5 * textScale, -20 * textScale, 10 * textScale, 40 * textScale);
+        break;
+      case "freeze":
+        ctx.moveTo(0, -15 * textScale);
+        ctx.lineTo(-12 * textScale, 0);
+        ctx.lineTo(0, 15 * textScale);
+        ctx.lineTo(12 * textScale, 0);
+        break;
+      case "mortar":
+        ctx.arc(0, 0, 20 * textScale, 0, Math.PI * 2);
+        break;
+      case "laser":
+        ctx.rect(-15 * textScale, -15 * textScale, 30 * textScale, 30 * textScale);
+        ctx.moveTo(0, -20 * textScale);
+        ctx.lineTo(0, 20 * textScale);
+        ctx.moveTo(-20 * textScale, 0);
+        ctx.lineTo(20 * textScale, 0);
+        break;
+      case "tesla":
+        ctx.moveTo(0, -20 * textScale);
+        ctx.lineTo(-15 * textScale, 10 * textScale);
+        ctx.lineTo(15 * textScale, 10 * textScale);
+        break;
+      case "flamethrower":
+        ctx.arc(0, 0, 15 * textScale, 0, Math.PI * 2);
+        ctx.fillRect(0, -10 * textScale, 15 * textScale, 20 * textScale);
+        break;
+      case "missile":
+        ctx.moveTo(0, -20 * textScale);
+        ctx.lineTo(-10 * textScale, 10 * textScale);
+        ctx.lineTo(10 * textScale, 10 * textScale);
+        break;
+      case "poison":
+        ctx.arc(0, 0, 15 * textScale, 0, Math.PI * 2);
+        ctx.arc(5 * textScale, 5 * textScale, 5 * textScale, 0, Math.PI * 2);
+        break;
+      case "vortex":
+        ctx.arc(0, 0, 20 * textScale, 0, Math.PI);
+        ctx.arc(0, 0, 15 * textScale, Math.PI, 0);
+        break;
+    }
+    ctx.fillStyle = this.color || "gray";
+    ctx.fill();
+    ctx.closePath();
+
+    if (gameState.selectedTower === this) {
+      ctx.beginPath();
+      ctx.arc(0, 0, this.range, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(0, 255, 0, 0.3)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = "white";
+    ctx.font = `${12 * textScale}px Arial`;
+    ctx.textAlign = "center";
+    ctx.fillText(this.type.charAt(0).toUpperCase() + this.type.slice(1), 0, 25 * textScale);
+
+    ctx.restore();
+  }
+
+  upgrade() {
+    if (this.level < 3 && gameState.money >= 100 * this.level) {
+      gameState.money -= 100 * this.level;
+      this.level++;
+      this.damage *= 1.5;
+      this.range *= 1.2;
+      this.fireRate *= 0.9;
+      showNotification(`${this.type} upgraded to level ${this.level}!`);
+    } else {
+      showNotification("Not enough money or max level reached!");
+    }
+  }
+}
+
+function initSidebar() {
+  const sidebar = document.getElementById("sidebar");
+  sidebar.innerHTML = "";
+  for (const [type, stats] of Object.entries(towerStats)) {
+    if (stats.unlocked) {
+      const option = document.createElement("div");
+      option.className = "tower-option";
+      option.textContent = `${type.charAt(0).toUpperCase() + type.slice(1)} ($${stats.unlockCost || 50})`;
+      option.addEventListener("click", (e) => {
+        e.stopPropagation(); // Prevent bubbling to sidebar
+        console.log("Selected tower type:", type);
+        gameState.selectedTowerType = type;
+        document.querySelectorAll(".tower-option").forEach(o => o.classList.remove("selected"));
+        option.classList.add("selected");
+        gameState.selectedTower = null;
+        document.getElementById("tower-info-panel").style.display = "none";
+      });
+      sidebar.appendChild(option);
+    } else {
+      console.log(`Tower ${type} not unlocked`);
+    }
+  }
+  const pauseButton = document.createElement("div");
+  pauseButton.id = "pause-button";
+  pauseButton.textContent = "Pause";
+  pauseButton.addEventListener("click", () => {
+    gameState.isPaused = !gameState.isPaused;
+    pauseButton.classList.toggle("active");
+    pauseButton.textContent = gameState.isPaused ? "Resume" : "Pause";
+  });
+  sidebar.appendChild(pauseButton);
+
+  const fastForwardButton = document.createElement("div");
+  fastForwardButton.id = "fast-forward-button";
+  fastForwardButton.textContent = "Fast Forward (1x)";
+  fastForwardButton.addEventListener("click", () => {
+    gameState.gameSpeed = gameState.gameSpeed === 1 ? 2 : gameState.gameSpeed === 2 ? 3 : 1;
+    fastForwardButton.classList.toggle("active", gameState.gameSpeed > 1);
+    fastForwardButton.textContent = `Fast Forward (${gameState.gameSpeed}x)`;
+    document.getElementById("speed").textContent = `Speed: ${gameState.gameSpeed}x`;
+  });
+  sidebar.appendChild(fastForwardButton);
+
+  const homeButton = document.createElement("div");
+  homeButton.id = "home-button";
+  homeButton.textContent = "Main Menu";
+  homeButton.addEventListener("click", async () => {
+    const success = await updateUserMoney();
+    if (success) {
+      window.location.href = "/";
+    }
+  });
+  sidebar.appendChild(homeButton);
+
+  sidebar.addEventListener("click", (e) => {
+    if (e.target.className === "tower-option" || 
+        e.target.id === "pause-button" || 
+        e.target.id === "fast-forward-button" || 
+        e.target.id === "home-button") {
+      console.log("Click on interactive element, preserving selection:", e.target.className || e.target.id);
+      return;
+    }
+    console.log("Deselecting tower type due to sidebar background click");
+    gameState.selectedTowerType = null;
+    gameState.selectedTower = null;
+    document.querySelectorAll(".tower-option").forEach(o => o.classList.remove("selected"));
+    document.getElementById("tower-info-panel").style.display = "none";
+  });
+}
+
+function spawnWave() {
+  if (gameState.isSpawning || gameState.gameOver || gameState.gameWon) return;
+  gameState.isSpawning = true;
+  const isBossWave = gameState.wave % 5 === 0;
+  const enemyCount = isBossWave ? 1 : Math.min(gameState.wave * 2 + 5, 20);
+  let spawned = 0;
+
+  const spawnInterval = setInterval(() => {
+    if (spawned >= enemyCount || gameState.gameOver || gameState.gameWon) {
+      clearInterval(spawnInterval);
+      gameState.isSpawning = false;
+      return;
+    }
+    if (isBossWave) {
+      const boss = new Enemy(bossType, gameState.wave);
+      boss.isBoss = true;
+      gameState.enemies.push(boss);
+      window.dispatchEvent(new CustomEvent("bossActive", { detail: { wave: gameState.wave } }));
+    } else {
+      const type = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
+      gameState.enemies.push(new Enemy(type, gameState.wave));
+    }
+    spawned++;
+  }, 1000 / gameState.gameSpeed);
+
+  if (selectedMap === "map9" && gameState.wave === 60 && !isBossWave) {
+    gameState.gameWon = true;
+    endGame(true);
+  }
+}
+
+function updateStats() {
+  document.getElementById("score").textContent = `Score: ${gameState.score}`;
+  document.getElementById("money").textContent = `Money: $${gameState.money}`;
+  document.getElementById("health").textContent = `Health: ${gameState.playerHealth}`;
+  document.getElementById("wave").textContent = `Wave: ${gameState.wave}`;
+  document.getElementById("speed").textContent = `Speed: ${gameState.gameSpeed}x`;
+}
+
+function updateTowerInfo() {
+  const panel = document.getElementById("tower-info-panel");
+  if (gameState.selectedTower) {
+    panel.style.display = "block";
+    document.getElementById("tower-type").textContent = `Type: ${gameState.selectedTower.type}`;
+    document.getElementById("tower-damage").textContent = `Damage: ${gameState.selectedTower.damage}`;
+    document.getElementById("tower-range").textContent = `Range: ${Math.round(gameState.selectedTower.range / scaleX)}`;
+    document.getElementById("tower-level").textContent = `Level: ${gameState.selectedTower.level}`;
+    document.getElementById("tower-ability").textContent = `Ability: ${towerStats[gameState.selectedTower.type].ability}`;
+  } else {
+    panel.style.display = "none";
+  }
+}
+
+function draw() {
+  ctx.fillStyle = themeBackgrounds[mapTheme];
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.beginPath();
+  ctx.moveTo(scaledPath[0].x, scaledPath[0].y);
+  for (let i = 1; i < scaledPath.length; i++) {
+    ctx.lineTo(scaledPath[i].x, scaledPath[i].y);
+  }
+  ctx.strokeStyle = "brown";
+  ctx.lineWidth = 10 * textScale;
+  ctx.stroke();
+
+  gameState.enemies.forEach(enemy => enemy.draw());
+  gameState.towers.forEach(tower => tower.draw());
+  gameState.projectiles.forEach(projectile => projectile.draw());
+
+  if (gameState.selectedTowerType && !gameState.isPaused && lastMousePos) {
+    const { x, y } = lastMousePos;
+    ctx.beginPath();
+    ctx.arc(x, y, towerStats[gameState.selectedTowerType].range * scaleX, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(0, 255, 0, 0.3)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.closePath();
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.beginPath();
+    switch (gameState.selectedTowerType) {
+      case "basic":
+        ctx.rect(-10 * textScale, -10 * textScale, 20 * textScale, 20 * textScale);
+        break;
+      case "archer":
+        ctx.moveTo(0, -15 * textScale);
+        ctx.lineTo(-10 * textScale, 10 * textScale);
+        ctx.lineTo(10 * textScale, 10 * textScale);
+        break;
+      case "cannon":
+        ctx.arc(0, 0, 15 * textScale, 0, Math.PI * 2);
+        ctx.fillRect(0, -5 * textScale, 20 * textScale, 10 * textScale);
+        break;
+      default:
+        ctx.arc(0, 0, 20 * textScale, 0, Math.PI * 2);
+    }
+    ctx.fillStyle = "rgba(128, 128, 128, 0.5)";
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function update() {
+  if (gameState.isPaused || gameState.gameOver || gameState.gameWon) return;
+
+  gameState.enemies.forEach(enemy => enemy.move());
+  gameState.towers.forEach(tower => tower.shoot());
+  gameState.projectiles.forEach(projectile => projectile.move());
+
+  if (gameState.playerHealth <= 0) {
+    gameState.gameOver = true;
+    endGame(false);
+  }
+
+  if (gameState.enemies.length === 0 && !gameState.isSpawning && !gameState.gameWon) {
+    gameState.wave++;
+    spawnWave();
+  }
+
+  updateStats();
+  updateTowerInfo();
+}
+
+function endGame(won) {
+  const endScreen = document.getElementById("end-screen");
+  document.getElementById("end-message").textContent = won ? "You Win!" : "Game Over!";
+  endScreen.style.display = "block";
+  if (won) {
+    gameState.money += maps[selectedMap].moneyReward;
+    updateUserMoney();
+  }
+}
+
+let lastMousePos = null;
+canvas.addEventListener("mousemove", (e) => {
+  const rect = canvas.getBoundingClientRect();
+  lastMousePos = {
+    x: (e.clientX - rect.left) * (canvas.width / rect.width),
+    y: (e.clientY - rect.top) * (canvas.height / rect.height),
+  };
+});
+
+canvas.addEventListener("click", (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+  const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+  console.log("Canvas clicked at:", { x, y });
+
+  console.log("Current selectedTowerType:", gameState.selectedTowerType);
+
+  if (gameState.selectedTowerType) {
+    console.log("Attempting to place tower:", gameState.selectedTowerType);
+    const cost = towerStats[gameState.selectedTowerType].unlockCost || 50;
+    const tooCloseToPath = isNearPath(x, y);
+    const tooCloseToTower = gameState.towers.some(t => Math.hypot(t.x - x, t.y - y) < 50 * scaleX);
+
+    console.log("Placement conditions:", {
+      money: gameState.money,
+      cost,
+      tooCloseToPath,
+      tooCloseToTower,
+      unlocked: towerStats[gameState.selectedTowerType].unlocked
     });
 
-    async function showMainMenu() {
-      authScreen.style.display = "none";
-      mainMenu.style.display = "flex";
-      await loadUnlockedTowers();
-      await fetchUserData();
-      resizeElements();
+    if (gameState.money >= cost && !tooCloseToPath && !tooCloseToTower) {
+      try {
+        const newTower = new Tower(x, y, gameState.selectedTowerType);
+        gameState.towers.push(newTower);
+        gameState.money -= cost;
+        console.log("Tower placed:", gameState.selectedTowerType, "at", { x, y });
+        gameState.selectedTowerType = null;
+        document.querySelectorAll(".tower-option").forEach(o => o.classList.remove("selected"));
+      } catch (error) {
+        console.error("Error placing tower:", error);
+        showNotification("Error placing tower!");
+      }
+    } else {
+      let message = "";
+      if (gameState.money < cost) message = "Not enough money!";
+      else if (tooCloseToPath) message = "Too close to path!";
+      else if (tooCloseToTower) message = "Too close to another tower!";
+      showNotification(message);
+      console.log("Placement failed:", message);
     }
+  } else {
+    const tower = gameState.towers.find(t => Math.hypot(t.x - x, t.y - y) < t.radius);
+    if (tower) {
+      console.log("Tower selected:", tower.type);
+      gameState.selectedTower = tower;
+      gameState.selectedTowerType = null;
+      document.querySelectorAll(".tower-option").forEach(o => o.classList.remove("selected"));
+    }
+  }
+});
 
-    if (localStorage.getItem("token")) {
-      showMainMenu();
-    }
-  </script>
-</body>
-</html>
+document.getElementById("upgrade-tower-button").addEventListener("click", () => {
+  if (gameState.selectedTower) {
+    gameState.selectedTower.upgrade();
+  }
+});
+
+document.getElementById("restart-button").addEventListener("click", () => {
+  gameState = {
+    enemies: [],
+    towers: [],
+    projectiles: [],
+    wave: 1,
+    score: 0,
+    money: 200,
+    selectedTowerType: null,
+    gameOver: false,
+    playerHealth: 20,
+    isPaused: false,
+    gameSpeed: 1,
+    selectedTower: null,
+    isSpawning: false,
+    gameWon: false,
+  };
+  document.getElementById("end-screen").style.display = "none";
+  initSidebar();
+  spawnWave();
+});
+
+document.getElementById("main-menu-button").addEventListener("click", async () => {
+  const success = await updateUserMoney();
+  if (success) {
+    window.location.href = "/";
+  }
+});
+
+function isNearPath(x, y) {
+  for (let i = 0; i < scaledPath.length - 1; i++) {
+    const p1 = scaledPath[i];
+    const p2 = scaledPath[i + 1];
+    const dist = pointToLineDistance(x, y, p1.x, p1.y, p2.x, p2.y);
+    if (dist < 30 * textScale) return true;
+  }
+  return false;
+}
+
+function pointToLineDistance(px, py, x1, y1, x2, y2) {
+  const A = px - x1;
+  const B = py - y1;
+  const C = x2 - x1;
+  const D = y2 - y1;
+  const dot = A * C + B * D;
+  const len_sq = C * C + D * D;
+  const param = len_sq !== 0 ? dot / len_sq : -1;
+  let xx, yy;
+  if (param < 0) {
+    xx = x1;
+    yy = y1;
+  } else if (param > 1) {
+    xx = x2;
+    yy = y2;
+  } else {
+    xx = x1 + param * C;
+    yy = y1 + param * D;
+  }
+  const dx = px - xx;
+  const dy = py - yy;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+async function init() {
+  console.log("Initializing game...");
+  await loadUnlockedTowers();
+  await fetchUserMoney();
+  initSidebar();
+  spawnWave();
+  console.log("Game initialized with money:", gameState.money);
+  gameLoop();
+}
+
+function gameLoop() {
+  if (!gameState.gameOver && !gameState.gameWon) {
+    update();
+    draw();
+  }
+  requestAnimationFrame(gameLoop);
+}
+
+init();

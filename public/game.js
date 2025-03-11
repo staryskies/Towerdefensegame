@@ -32,6 +32,17 @@ let gameState = {
   gameWon: false,
 };
 
+// Proxy to log changes to selectedTowerType
+gameState = new Proxy(gameState, {
+  set(target, prop, value) {
+    if (prop === "selectedTowerType") {
+      console.log(`selectedTowerType changed from ${target[prop]} to ${value}`);
+    }
+    target[prop] = value;
+    return true;
+  }
+});
+
 async function loadUnlockedTowers() {
   const token = localStorage.getItem("token");
   if (!token) {
@@ -45,8 +56,8 @@ async function loadUnlockedTowers() {
     });
     if (!response.ok) throw new Error((await response.json()).message);
     const data = await response.json();
-    console.log("Unlocked towers from server:", data.towers); // Debug log
-    towerStats.basic.unlocked = true; // Ensure basic tower is always unlocked
+    console.log("Unlocked towers from server:", data.towers);
+    towerStats.basic.unlocked = true;
     data.towers.forEach(type => {
       if (towerStats[type]) {
         towerStats[type].unlocked = true;
@@ -69,7 +80,7 @@ async function fetchUserMoney() {
     if (!response.ok) throw new Error((await response.json()).message);
     const data = await response.json();
     gameState.money = data.money;
-    console.log("User money fetched:", gameState.money); // Debug log
+    console.log("User money fetched:", gameState.money);
   } catch (err) {
     console.error("Error fetching money:", err);
     showNotification("Error fetching money: " + err.message);
@@ -93,7 +104,7 @@ async function updateUserMoney() {
       body: JSON.stringify({ money: gameState.money })
     });
     if (!response.ok) throw new Error((await response.json()).message);
-    console.log("Money updated on server:", gameState.money); // Debug log
+    console.log("Money updated on server:", gameState.money);
     return true;
   } catch (err) {
     console.error("Error updating money:", err);
@@ -198,7 +209,7 @@ class Enemy {
   constructor(type, wave) {
     this.x = scaledSpawnPoint.x;
     this.y = scaledSpawnPoint.y;
-    const healthMultiplier = 1 + ((wave - 1) * 14) / 59; // Scales to 15x at wave 60
+    const healthMultiplier = 1 + ((wave - 1) * 14) / 59;
     this.health = Math.floor(type.health * healthMultiplier);
     this.maxHealth = this.health;
     this.speed = type.speed * scaleX;
@@ -595,8 +606,9 @@ function initSidebar() {
       const option = document.createElement("div");
       option.className = "tower-option";
       option.textContent = `${type.charAt(0).toUpperCase() + type.slice(1)} ($${stats.unlockCost || 50})`;
-      option.addEventListener("click", () => {
-        console.log("Selected tower type:", type); // Debug log
+      option.addEventListener("click", (e) => {
+        e.stopPropagation(); // Prevent bubbling to sidebar
+        console.log("Selected tower type:", type);
         gameState.selectedTowerType = type;
         document.querySelectorAll(".tower-option").forEach(o => o.classList.remove("selected"));
         option.classList.add("selected");
@@ -605,7 +617,7 @@ function initSidebar() {
       });
       sidebar.appendChild(option);
     } else {
-      console.log(`Tower ${type} not unlocked`); // Debug log
+      console.log(`Tower ${type} not unlocked`);
     }
   }
   const pauseButton = document.createElement("div");
@@ -641,8 +653,14 @@ function initSidebar() {
   sidebar.appendChild(homeButton);
 
   sidebar.addEventListener("click", (e) => {
-    if (e.target.className === "tower-option" || e.target.id === "pause-button" || 
-        e.target.id === "fast-forward-button" || e.target.id === "home-button") return;
+    if (e.target.className === "tower-option" || 
+        e.target.id === "pause-button" || 
+        e.target.id === "fast-forward-button" || 
+        e.target.id === "home-button") {
+      console.log("Click on interactive element, preserving selection:", e.target.className || e.target.id);
+      return;
+    }
+    console.log("Deselecting tower type due to sidebar background click");
     gameState.selectedTowerType = null;
     gameState.selectedTower = null;
     document.querySelectorAll(".tower-option").forEach(o => o.classList.remove("selected"));
@@ -713,7 +731,7 @@ function draw() {
     ctx.lineTo(scaledPath[i].x, scaledPath[i].y);
   }
   ctx.strokeStyle = "brown";
-  ctx.lineWidth = 10 * textScale; // Thinner path
+  ctx.lineWidth = 10 * textScale;
   ctx.stroke();
 
   gameState.enemies.forEach(enemy => enemy.draw());
@@ -781,7 +799,7 @@ function endGame(won) {
   endScreen.style.display = "block";
   if (won) {
     gameState.money += maps[selectedMap].moneyReward;
-    updateUserMoney(); // Save money on win
+    updateUserMoney();
   }
 }
 
@@ -798,39 +816,48 @@ canvas.addEventListener("click", (e) => {
   const rect = canvas.getBoundingClientRect();
   const x = (e.clientX - rect.left) * (canvas.width / rect.width);
   const y = (e.clientY - rect.top) * (canvas.height / rect.height);
-  console.log("Canvas clicked at:", { x, y }); // Debug log
+  console.log("Canvas clicked at:", { x, y });
+
+  console.log("Current selectedTowerType:", gameState.selectedTowerType);
 
   if (gameState.selectedTowerType) {
+    console.log("Attempting to place tower:", gameState.selectedTowerType);
     const cost = towerStats[gameState.selectedTowerType].unlockCost || 50;
     const tooCloseToPath = isNearPath(x, y);
     const tooCloseToTower = gameState.towers.some(t => Math.hypot(t.x - x, t.y - y) < 50 * scaleX);
 
-    console.log("Placement attempt:", { // Debug log
-      selectedTowerType: gameState.selectedTowerType,
+    console.log("Placement conditions:", {
       money: gameState.money,
       cost,
       tooCloseToPath,
-      tooCloseToTower
+      tooCloseToTower,
+      unlocked: towerStats[gameState.selectedTowerType].unlocked
     });
 
     if (gameState.money >= cost && !tooCloseToPath && !tooCloseToTower) {
-      gameState.towers.push(new Tower(x, y, gameState.selectedTowerType));
-      gameState.money -= cost;
-      console.log("Tower placed:", gameState.selectedTowerType, "at", { x, y }); // Debug log
-      gameState.selectedTowerType = null;
-      document.querySelectorAll(".tower-option").forEach(o => o.classList.remove("selected"));
+      try {
+        const newTower = new Tower(x, y, gameState.selectedTowerType);
+        gameState.towers.push(newTower);
+        gameState.money -= cost;
+        console.log("Tower placed:", gameState.selectedTowerType, "at", { x, y });
+        gameState.selectedTowerType = null;
+        document.querySelectorAll(".tower-option").forEach(o => o.classList.remove("selected"));
+      } catch (error) {
+        console.error("Error placing tower:", error);
+        showNotification("Error placing tower!");
+      }
     } else {
       let message = "";
       if (gameState.money < cost) message = "Not enough money!";
       else if (tooCloseToPath) message = "Too close to path!";
       else if (tooCloseToTower) message = "Too close to another tower!";
       showNotification(message);
-      console.log("Placement failed:", message); // Debug log
+      console.log("Placement failed:", message);
     }
   } else {
     const tower = gameState.towers.find(t => Math.hypot(t.x - x, t.y - y) < t.radius);
     if (tower) {
-      console.log("Tower selected:", tower.type); // Debug log
+      console.log("Tower selected:", tower.type);
       gameState.selectedTower = tower;
       gameState.selectedTowerType = null;
       document.querySelectorAll(".tower-option").forEach(o => o.classList.remove("selected"));
@@ -908,12 +935,12 @@ function pointToLineDistance(px, py, x1, y1, x2, y2) {
 }
 
 async function init() {
-  console.log("Initializing game..."); // Debug log
+  console.log("Initializing game...");
   await loadUnlockedTowers();
   await fetchUserMoney();
   initSidebar();
   spawnWave();
-  console.log("Game initialized with money:", gameState.money); // Debug log
+  console.log("Game initialized with money:", gameState.money);
   gameLoop();
 }
 
