@@ -45,9 +45,13 @@ async function loadUnlockedTowers() {
     });
     if (!response.ok) throw new Error((await response.json()).message);
     const data = await response.json();
-    towerStats.basic.unlocked = true;
+    console.log("Unlocked towers from server:", data.towers); // Debug log
+    towerStats.basic.unlocked = true; // Ensure basic tower is always unlocked
     data.towers.forEach(type => {
-      if (towerStats[type]) towerStats[type].unlocked = true;
+      if (towerStats[type]) {
+        towerStats[type].unlocked = true;
+        console.log(`Tower ${type} marked as unlocked`);
+      }
     });
   } catch (err) {
     console.error("Error loading towers:", err);
@@ -65,6 +69,7 @@ async function fetchUserMoney() {
     if (!response.ok) throw new Error((await response.json()).message);
     const data = await response.json();
     gameState.money = data.money;
+    console.log("User money fetched:", gameState.money); // Debug log
   } catch (err) {
     console.error("Error fetching money:", err);
     showNotification("Error fetching money: " + err.message);
@@ -88,6 +93,7 @@ async function updateUserMoney() {
       body: JSON.stringify({ money: gameState.money })
     });
     if (!response.ok) throw new Error((await response.json()).message);
+    console.log("Money updated on server:", gameState.money); // Debug log
     return true;
   } catch (err) {
     console.error("Error updating money:", err);
@@ -590,6 +596,7 @@ function initSidebar() {
       option.className = "tower-option";
       option.textContent = `${type.charAt(0).toUpperCase() + type.slice(1)} ($${stats.unlockCost || 50})`;
       option.addEventListener("click", () => {
+        console.log("Selected tower type:", type); // Debug log
         gameState.selectedTowerType = type;
         document.querySelectorAll(".tower-option").forEach(o => o.classList.remove("selected"));
         option.classList.add("selected");
@@ -597,6 +604,8 @@ function initSidebar() {
         document.getElementById("tower-info-panel").style.display = "none";
       });
       sidebar.appendChild(option);
+    } else {
+      console.log(`Tower ${type} not unlocked`); // Debug log
     }
   }
   const pauseButton = document.createElement("div");
@@ -789,22 +798,39 @@ canvas.addEventListener("click", (e) => {
   const rect = canvas.getBoundingClientRect();
   const x = (e.clientX - rect.left) * (canvas.width / rect.width);
   const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+  console.log("Canvas clicked at:", { x, y }); // Debug log
 
   if (gameState.selectedTowerType) {
     const cost = towerStats[gameState.selectedTowerType].unlockCost || 50;
     const tooCloseToPath = isNearPath(x, y);
     const tooCloseToTower = gameState.towers.some(t => Math.hypot(t.x - x, t.y - y) < 50 * scaleX);
+
+    console.log("Placement attempt:", { // Debug log
+      selectedTowerType: gameState.selectedTowerType,
+      money: gameState.money,
+      cost,
+      tooCloseToPath,
+      tooCloseToTower
+    });
+
     if (gameState.money >= cost && !tooCloseToPath && !tooCloseToTower) {
       gameState.towers.push(new Tower(x, y, gameState.selectedTowerType));
       gameState.money -= cost;
+      console.log("Tower placed:", gameState.selectedTowerType, "at", { x, y }); // Debug log
       gameState.selectedTowerType = null;
       document.querySelectorAll(".tower-option").forEach(o => o.classList.remove("selected"));
     } else {
-      showNotification(tooCloseToTower ? "Too close to another tower!" : "Not enough money or too close to path!");
+      let message = "";
+      if (gameState.money < cost) message = "Not enough money!";
+      else if (tooCloseToPath) message = "Too close to path!";
+      else if (tooCloseToTower) message = "Too close to another tower!";
+      showNotification(message);
+      console.log("Placement failed:", message); // Debug log
     }
   } else {
     const tower = gameState.towers.find(t => Math.hypot(t.x - x, t.y - y) < t.radius);
     if (tower) {
+      console.log("Tower selected:", tower.type); // Debug log
       gameState.selectedTower = tower;
       gameState.selectedTowerType = null;
       document.querySelectorAll(".tower-option").forEach(o => o.classList.remove("selected"));
@@ -882,14 +908,15 @@ function pointToLineDistance(px, py, x1, y1, x2, y2) {
 }
 
 async function init() {
+  console.log("Initializing game..."); // Debug log
   await loadUnlockedTowers();
   await fetchUserMoney();
   initSidebar();
   spawnWave();
+  console.log("Game initialized with money:", gameState.money); // Debug log
   gameLoop();
 }
 
-// Keep the gameLoop as is:
 function gameLoop() {
   if (!gameState.gameOver && !gameState.gameWon) {
     update();
