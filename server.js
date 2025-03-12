@@ -3,36 +3,33 @@ const { Client } = require("pg");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const path = require("path");
-const HttpsProxyAgent = require("https-proxy-agent");
 
 const app = express();
 
 app.use(express.json());
 
-// ProxyScrape proxy configuration
-const proxyUrl = "http://142.93.202.130:3128"; // ProxyScrape HTTP proxy
-const proxyAgent = new HttpsProxyAgent(proxyUrl);
-
-// PostgreSQL Client with Proxy
+// PostgreSQL Client Configuration for Render
 const client = new Client({
-  connectionString: process.env.DATABASE_URL, // Render DB URL
-  ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
-  agent: proxyAgent, // Route DB traffic through proxy
+  connectionString: process.env.DATABASE_URL, // Render provides this
+  ssl: {
+    rejectUnauthorized: false, // Required for Render's SSL
+  },
 });
 
 async function startServer() {
   try {
     await client.connect();
-    console.log("Connected to PostgreSQL via ProxyScrape proxy");
+    console.log("Connected to PostgreSQL on Render");
     await initializeDatabase();
   } catch (err) {
     console.error("Error connecting to PostgreSQL:", err);
     process.exit(1);
   }
 
+  // Ensure JWT_SECRET is set
   if (!process.env.JWT_SECRET) {
-    console.warn("JWT_SECRET not set. Using default.");
-    process.env.JWT_SECRET = "your-secret-key-here"; // Set in Render dashboard
+    console.warn("JWT_SECRET not set. Using default for development.");
+    process.env.JWT_SECRET = "your-secret-key-here"; // Replace with a secure key in Render environment variables
   }
 
   async function initializeDatabase() {
@@ -54,6 +51,7 @@ async function startServer() {
       console.log("Database tables initialized");
     } catch (err) {
       console.error("Error creating tables:", err);
+      throw err; // Rethrow to handle in startServer
     }
   }
 
@@ -68,7 +66,7 @@ async function startServer() {
     });
   }
 
-  // API Routes (unchanged, using proxied DB)
+  // API Routes
   app.get("/user", authenticateToken, async (req, res) => {
     try {
       const result = await client.query("SELECT money FROM users WHERE id = $1", [req.user.id]);
@@ -84,7 +82,7 @@ async function startServer() {
   app.get("/towers", authenticateToken, async (req, res) => {
     try {
       const result = await client.query("SELECT tower_type FROM user_towers WHERE user_id = $1", [req.user.id]);
-      res.json({ towers: result.rows.map(row => row.tower_type) });
+      res.json({ towers: result.rows.map(row => row.tower.type) });
     } catch (err) {
       console.error("Error fetching towers:", err);
       res.status(500).json({ message: "Server error" });
@@ -97,7 +95,7 @@ async function startServer() {
     try {
       const result = await client.query("SELECT * FROM users WHERE username = $1", [username]);
       const user = result.rows[0];
-      if (!user || !await bcrypt.compare(password, user.password)) {
+      if (!user || !(await bcrypt.compare(password, user.password))) {
         return res.status(400).json({ message: "Invalid credentials" });
       }
       const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET, { expiresIn: "1h" });
@@ -142,7 +140,20 @@ async function startServer() {
 
   app.post("/unlock-tower", authenticateToken, async (req, res) => {
     const { tower } = req.body;
-    const towerStats = { basic: { persistentCost: 150 }, archer: { persistentCost: 225 } };
+    const towerStats = {
+      basic: { persistentCost: 0 }, // Basic tower is free (already unlocked by default)
+      archer: { persistentCost: 225 },
+      cannon: { persistentCost: 300 },
+      sniper: { persistentCost: 350 },
+      freeze: { persistentCost: 400 },
+      mortar: { persistentCost: 450 },
+      laser: { persistentCost: 500 },
+      tesla: { persistentCost: 550 },
+      flamethrower: { persistentCost: 600 },
+      missile: { persistentCost: 650 },
+      poison: { persistentCost: 700 },
+      vortex: { persistentCost: 750 },
+    };
     if (!tower || !towerStats[tower]) return res.status(400).json({ message: "Invalid tower type" });
     try {
       const userResult = await client.query("SELECT money FROM users WHERE id = $1", [req.user.id]);
