@@ -50,7 +50,7 @@ let gameState = {
   projectiles: [],
   wave: 1,
   score: 0,
-  gameMoney: selectedDifficulty === "easy" ? 200 : selectedDifficulty === "medium" ? 300 : 400,
+  gameMoney: selectedDifficulty === "easy" ? 300 : selectedDifficulty === "medium" ? 300 : 400, // Easy mode now starts with 300
   persistentMoney: 0,
   selectedTowerType: null,
   gameOver: false,
@@ -154,7 +154,11 @@ async function loadUnlockedTowers() {
     console.log("Unlocked towers from server:", data.towers);
     towerStats.basic.unlocked = true; // Basic tower is always unlocked
     data.towers.forEach(type => {
-      if (towerStats[type]) towerStats[type].unlocked = true;
+      if (towerStats[type]) {
+        towerStats[type].unlocked = true;
+      } else {
+        console.warn(`Unknown tower type from server: ${type}`);
+      }
     });
   } catch (err) {
     console.error("Error loading towers:", err);
@@ -176,12 +180,11 @@ async function fetchUserMoney() {
     if (!response.ok) throw new Error((await response.json()).message || "Server error");
     const data = await response.json();
     gameState.persistentMoney = data.money || 0;
-    gameState.gameMoney = selectedDifficulty === "easy" ? 200 : selectedDifficulty === "medium" ? 300 : 400;
+    gameState.gameMoney = selectedDifficulty === "easy" ? 300 : selectedDifficulty === "medium" ? 300 : 400; // Easy mode now starts with 300
     console.log("Fetched persistent money:", gameState.persistentMoney);
   } catch (err) {
     console.error("Error fetching money:", err);
     showNotification("Error fetching money: " + err.message);
-    // Fallback: Redirect to login if token is invalid
     if (err.message === "Invalid token") window.location.href = "/";
   }
 }
@@ -250,7 +253,7 @@ class Enemy {
   constructor(type, wave) {
     this.x = scaledSpawnPoint.x;
     this.y = scaledSpawnPoint.y;
-    const healthMultiplier = selectedDifficulty === "easy" ? 0.75 : selectedDifficulty === "medium" ? 1 : 1.25;
+    const healthMultiplier = selectedDifficulty === "easy" ? 0.5 : selectedDifficulty === "medium" ? 1 : 1.25; // Easy mode health reduced to 50%
     this.health = Math.floor(type.health * healthMultiplier * (1 + ((wave - 1) * 14) / 59));
     this.maxHealth = this.health;
     this.speed = type.speed * scaleX;
@@ -658,9 +661,9 @@ function initSidebar() {
   const sidebar = document.getElementById("sidebar");
   sidebar.innerHTML = "";
   for (const [type, stats] of Object.entries(towerStats)) {
-    const option = document.createElement("div");
-    option.className = "tower-option";
-    if (stats.unlocked) {
+    if (stats.unlocked) { // Only show unlocked towers
+      const option = document.createElement("div");
+      option.className = "tower-option";
       option.textContent = `${type.charAt(0).toUpperCase() + type.slice(1)} ($${stats.unlockCost || 50})`;
       option.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -670,15 +673,8 @@ function initSidebar() {
         gameState.selectedTower = null;
         document.getElementById("tower-info-panel").style.display = "none";
       });
-    } else {
-      option.textContent = `${type.charAt(0).toUpperCase() + type.slice(1)} (Unlock: $${stats.persistentCost})`;
-      option.classList.add("locked");
-      option.addEventListener("click", (e) => {
-        e.stopPropagation();
-        unlockTower(type);
-      });
+      sidebar.appendChild(option);
     }
-    sidebar.appendChild(option);
   }
 
   const pauseButton = document.createElement("div");
@@ -758,10 +754,13 @@ function spawnWave() {
 
 function updateStats() {
   document.getElementById("score").textContent = `Score: ${gameState.score}`;
-  document.getElementById("money").textContent = `In-Game: $${gameState.gameMoney} | Persistent: $${gameState.persistentMoney}`;
   document.getElementById("health").textContent = `Health: ${gameState.playerHealth}`;
   document.getElementById("wave").textContent = `Wave: ${gameState.wave}`;
   document.getElementById("speed").textContent = `Speed: ${gameState.gameSpeed}x`;
+}
+
+function updateMoney() {
+  document.getElementById("money").textContent = `In-Game: $${gameState.gameMoney} | Persistent: $${gameState.persistentMoney}`;
 }
 
 function updateTowerInfo() {
@@ -858,177 +857,159 @@ function endGame(won) {
   const moneyTotalDisplay = document.getElementById("persistent-money-total");
 
   endMessage.textContent = won ? "You Win!" : "Game Over!";
-  
-  // Display waves survived
   wavesSurvived.textContent = `Waves Survived: ${gameState.wave - 1}`;
 
-  // Calculate persistent money earned
-  let persistentReward = 0;
-  if (won) {
-    // Win reward based on difficulty
-        // Win reward based on difficulty
-        persistentReward = selectedDifficulty === "hard" ? 1000 : selectedDifficulty === "medium" ? 600 : 300;
-        gameState.persistentMoney += persistentReward;
-        showNotification(`Victory! Earned $${persistentReward} persistent money.`);
-      } else {
-        // Loss reward: 10 persistent money per wave survived
-        persistentReward = (gameState.wave - 1) * 10;
-        gameState.persistentMoney += persistentReward;
-        showNotification(`Game Over! Earned $${persistentReward} persistent money for surviving ${gameState.wave - 1} waves.`);
-      }
-    
-      // Update end screen with money earned and total
-      moneyEarnedDisplay.textContent = `Persistent Money Earned: $${persistentReward}`;
-      moneyTotalDisplay.textContent = `Total Persistent Money: $${gameState.persistentMoney}`;
-    
-      // Save the updated persistent money to the server
-      updateUserMoney().then(success => {
-        if (!success) {
-          showNotification("Failed to save progress. Your persistent money may not be updated.");
-        }
-        // Show the end screen after attempting to save
-        endScreen.style.display = "block";
-      }).catch(err => {
-        console.error("Error in endGame while saving money:", err);
-        showNotification("Error saving progress: " + err.message);
-        // Still show the end screen even if saving fails
-        endScreen.style.display = "block";
-      });
+  let persistentReward = won
+    ? (selectedDifficulty === "hard" ? 1000 : selectedDifficulty === "medium" ? 600 : 300)
+    : (gameState.wave - 1) * 10;
+  gameState.persistentMoney += persistentReward;
+
+  moneyEarnedDisplay.textContent = `Persistent Money Earned: $${persistentReward}`;
+  moneyTotalDisplay.textContent = `Total Persistent Money: $${gameState.persistentMoney}`;
+
+  updateMoney();
+  updateUserMoney().then(success => {
+    endScreen.style.display = "block";
+    if (!success) showNotification("Failed to save progress.");
+  }).catch(err => {
+    console.error("Error saving money:", err);
+    showNotification("Error saving progress: " + err.message);
+    endScreen.style.display = "block";
+  });
+}
+
+let lastMousePos = null;
+canvas.addEventListener("mousemove", (e) => {
+  const rect = canvas.getBoundingClientRect();
+  lastMousePos = {
+    x: (e.clientX - rect.left) * (canvas.width / rect.width),
+    y: (e.clientY - rect.top) * (canvas.height / rect.height),
+  };
+});
+
+canvas.addEventListener("click", (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+  const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+  if (gameState.selectedTowerType) {
+    const cost = towerStats[gameState.selectedTowerType].unlockCost || 50;
+    const tooCloseToPath = isNearPath(x, y);
+    const tooCloseToTower = gameState.towers.some(t => Math.hypot(t.x - x, t.y - y) < 50 * scaleX);
+
+    if (gameState.gameMoney >= cost && !tooCloseToPath && !tooCloseToTower) {
+      const newTower = new Tower(x, y, gameState.selectedTowerType);
+      gameState.towers.push(newTower);
+      gameState.gameMoney -= cost;
+      gameState.selectedTowerType = null;
+      document.querySelectorAll(".tower-option").forEach(o => o.classList.remove("selected"));
+    } else {
+      showNotification(
+        gameState.gameMoney < cost ? "Not enough in-game money!" :
+        tooCloseToPath ? "Too close to path!" : "Too close to another tower!"
+      );
     }
-    
-    let lastMousePos = null;
-    canvas.addEventListener("mousemove", (e) => {
-      const rect = canvas.getBoundingClientRect();
-      lastMousePos = {
-        x: (e.clientX - rect.left) * (canvas.width / rect.width),
-        y: (e.clientY - rect.top) * (canvas.height / rect.height),
-      };
-    });
-    
-    canvas.addEventListener("click", (e) => {
-      const rect = canvas.getBoundingClientRect();
-      const x = (e.clientX - rect.left) * (canvas.width / rect.width);
-      const y = (e.clientY - rect.top) * (canvas.height / rect.height);
-    
-      if (gameState.selectedTowerType) {
-        const cost = towerStats[gameState.selectedTowerType].unlockCost || 50;
-        const tooCloseToPath = isNearPath(x, y);
-        const tooCloseToTower = gameState.towers.some(t => Math.hypot(t.x - x, t.y - y) < 50 * scaleX);
-    
-        if (gameState.gameMoney >= cost && !tooCloseToPath && !tooCloseToTower) {
-          const newTower = new Tower(x, y, gameState.selectedTowerType);
-          gameState.towers.push(newTower);
-          gameState.gameMoney -= cost;
-          gameState.selectedTowerType = null;
-          document.querySelectorAll(".tower-option").forEach(o => o.classList.remove("selected"));
-        } else {
-          showNotification(
-            gameState.gameMoney < cost ? "Not enough in-game money!" :
-            tooCloseToPath ? "Too close to path!" : "Too close to another tower!"
-          );
-        }
-      } else {
-        const tower = gameState.towers.find(t => Math.hypot(t.x - x, t.y - y) < t.radius);
-        if (tower) {
-          gameState.selectedTower = tower;
-          gameState.selectedTowerType = null;
-          document.querySelectorAll(".tower-option").forEach(o => o.classList.remove("selected"));
-        }
-      }
-    });
-    
-    document.getElementById("upgrade-tower-button").addEventListener("click", () => {
-      if (gameState.selectedTower) gameState.selectedTower.upgrade();
-    });
-    
-    document.getElementById("restart-button").addEventListener("click", async () => {
-      // Save persistent money before restarting
-      const success = await updateUserMoney();
-      if (!success) {
-        showNotification("Failed to save progress before restarting. Your persistent money may not be updated.");
-      }
-      gameState = {
-        enemies: [],
-        towers: [],
-        projectiles: [],
-        wave: 1,
-        score: 0,
-        gameMoney: selectedDifficulty === "easy" ? 200 : selectedDifficulty === "medium" ? 300 : 400,
-        persistentMoney: gameState.persistentMoney,
-        selectedTowerType: null,
-        gameOver: false,
-        playerHealth: 20,
-        isPaused: false,
-        gameSpeed: 1,
-        selectedTower: null,
-        isSpawning: false,
-        gameWon: false,
-      };
-      // Reapply the proxy to the new gameState
-      gameState = new Proxy(gameState, {
-        set(target, prop, value) {
-          if (prop === "selectedTowerType") {
-            console.log(`selectedTowerType changed from ${target[prop]} to ${value}`);
-          }
-          target[prop] = value;
-          return true;
-        }
-      });
-      document.getElementById("end-screen").style.display = "none";
-      initSidebar();
-      spawnWave();
-    });
-    
-    document.getElementById("main-menu-button").addEventListener("click", async () => {
-      const success = await updateUserMoney();
-      if (success) {
-        window.location.href = "/";
-      } else {
-        showNotification("Failed to save progress. Returning to main menu anyway.");
-        window.location.href = "/";
-      }
-    });
-    
-    function isNearPath(x, y) {
-      for (let i = 0; i < scaledPath.length - 1; i++) {
-        const p1 = scaledPath[i];
-        const p2 = scaledPath[i + 1];
-        const dist = pointToLineDistance(x, y, p1.x, p1.y, p2.x, p2.y);
-        if (dist < 30 * textScale) return true;
-      }
-      return false;
+  } else {
+    const tower = gameState.towers.find(t => Math.hypot(t.x - x, t.y - y) < t.radius);
+    if (tower) {
+      gameState.selectedTower = tower;
+      gameState.selectedTowerType = null;
+      document.querySelectorAll(".tower-option").forEach(o => o.classList.remove("selected"));
     }
-    
-    function pointToLineDistance(px, py, x1, y1, x2, y2) {
-      const A = px - x1;
-      const B = py - y1;
-      const C = x2 - x1;
-      const D = y2 - y1;
-      const dot = A * C + B * D;
-      const len_sq = C * C + D * D;
-      const param = len_sq !== 0 ? dot / len_sq : -1;
-      let xx = param < 0 ? x1 : param > 1 ? x2 : x1 + param * C;
-      let yy = param < 0 ? y1 : param > 1 ? y2 : y1 + param * D;
-      return Math.sqrt((px - xx) ** 2 + (py - yy) ** 2);
-    }
-    
-    async function init() {
-      console.log("Initializing game...");
-      await loadUnlockedTowers();
-      await fetchUserMoney();
-      initSidebar();
-      spawnWave();
-      console.log("Game initialized with persistent money:", gameState.persistentMoney, "and game money:", gameState.gameMoney);
-      gameLoop();
-    }
-    
-    function gameLoop() {
-      if (!gameState.gameOver && !gameState.gameWon) {
-        update();
-        draw();
+  }
+});
+
+document.getElementById("upgrade-tower-button").addEventListener("click", () => {
+  if (gameState.selectedTower) gameState.selectedTower.upgrade();
+});
+
+document.getElementById("restart-button").addEventListener("click", async () => {
+  const success = await updateUserMoney();
+  if (!success) {
+    showNotification("Failed to save progress before restarting.");
+  }
+  gameState = {
+    enemies: [],
+    towers: [],
+    projectiles: [],
+    wave: 1,
+    score: 0,
+    gameMoney: selectedDifficulty === "easy" ? 300 : selectedDifficulty === "medium" ? 300 : 400, // Easy mode now starts with 300
+    persistentMoney: gameState.persistentMoney,
+    selectedTowerType: null,
+    gameOver: false,
+    playerHealth: 20,
+    isPaused: false,
+    gameSpeed: 1,
+    selectedTower: null,
+    isSpawning: false,
+    gameWon: false,
+  };
+  gameState = new Proxy(gameState, {
+    set(target, prop, value) {
+      if (prop === "selectedTowerType") {
+        console.log(`selectedTowerType changed from ${target[prop]} to ${value}`);
       }
-      requestAnimationFrame(gameLoop);
+      target[prop] = value;
+      return true;
     }
-    
-    // Start the game
-    init();
+  });
+  document.getElementById("end-screen").style.display = "none";
+  initSidebar();
+  spawnWave();
+});
+
+document.getElementById("main-menu-button").addEventListener("click", async () => {
+  const success = await updateUserMoney();
+  if (success) {
+    window.location.href = "/";
+  } else {
+    showNotification("Failed to save progress. Returning to main menu anyway.");
+    window.location.href = "/";
+  }
+});
+
+function isNearPath(x, y) {
+  for (let i = 0; i < scaledPath.length - 1; i++) {
+    const p1 = scaledPath[i];
+    const p2 = scaledPath[i + 1];
+    const dist = pointToLineDistance(x, y, p1.x, p1.y, p2.x, p2.y);
+    if (dist < 30 * textScale) return true;
+  }
+  return false;
+}
+
+function pointToLineDistance(px, py, x1, y1, x2, y2) {
+  const A = px - x1;
+  const B = py - y1;
+  const C = x2 - x1;
+  const D = y2 - y1;
+  const dot = A * C + B * D;
+  const len_sq = C * C + D * D;
+  const param = len_sq !== 0 ? dot / len_sq : -1;
+  let xx = param < 0 ? x1 : param > 1 ? x2 : x1 + param * C;
+  let yy = param < 0 ? y1 : param > 1 ? y2 : y1 + param * D;
+  return Math.sqrt((px - xx) ** 2 + (py - yy) ** 2);
+}
+
+async function init() {
+  console.log("Initializing game...");
+  await loadUnlockedTowers();
+  await fetchUserMoney();
+  initSidebar();
+  spawnWave();
+  console.log("Game initialized with persistent money:", gameState.persistentMoney, "and game money:", gameState.gameMoney);
+  gameLoop();
+}
+
+function gameLoop() {
+  updateMoney(); // Always update money display
+  if (!gameState.gameOver && !gameState.gameWon && !gameState.isPaused) {
+    update(); // Only update game logic if not paused
+  }
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+
+// Start the game
+init();

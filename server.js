@@ -82,7 +82,7 @@ async function startServer() {
   app.get("/towers", authenticateToken, async (req, res) => {
     try {
       const result = await client.query("SELECT tower_type FROM user_towers WHERE user_id = $1", [req.user.id]);
-      res.json({ towers: result.rows.map(row => row.tower.type) });
+      res.json({ towers: result.rows.map(row => row.tower_type) }); // Fixed typo: row.tower_type instead of row.tower.type
     } catch (err) {
       console.error("Error fetching towers:", err);
       res.status(500).json({ message: "Server error" });
