@@ -21,10 +21,11 @@
     #tower-info-panel { position: fixed; bottom: 20px; left: 240px; width: 200px; background: rgba(44, 62, 80, 0.95); color: #ecf0f1; padding: 15px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); display: none; z-index: 10; }
     #upgrade-tower-button { width: 100%; padding: 10px; margin-top: 10px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.3s ease; }
     #upgrade-tower-button:hover { background: #2980b9; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4); }
-    #notification-box { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(44, 62, 80, 0.9); color: #ecf0f1; padding: 10px 20px; border-radius: 8px; z-index: 1000; display: none; font-weight: 500; }
-    #notification-box.show { display: block; }
-    #end-screen { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(44, 62, 80, 0.95); color: #ecf0f1; padding: 30px; border-radius: 15px; text-align: center; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4); display: none; z-index: 1001; max-width: 400px; }
-    #end-screen h2 { font-size: 2em; margin-bottom: 20px; }
+    #notification-box { position: fixed; bottom: 30px; right: 30px; background: rgba(39, 174, 96, 0.95); color: #fff; padding: 15px 25px; border-radius: 10px; box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3); z-index: 1000; display: none; font-weight: 500; max-width: 350px; transition: opacity 0.3s ease; }
+    #notification-box.show { display: block; opacity: 1; }
+    #end-screen { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(44, 62, 80, 0.98); padding: 35px; border-radius: 20px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5); width: 90%; max-width: 450px; text-align: center; color: #ecf0f1; z-index: 1001; display: none; }
+    #end-screen h2 { font-size: 2em; margin-bottom: 20px; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
+    #end-screen p { margin: 8px 0; font-size: 1.1em; }
     #restart-button, #main-menu-button { padding: 12px 25px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.3s ease; margin: 10px; }
     #restart-button:hover, #main-menu-button:hover { background: #2980b9; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4); }
     #map-selection { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(44, 62, 80, 0.95); color: #ecf0f1; padding: 30px; border-radius: 15px; text-align: center; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4); z-index: 1002; display: block; }
@@ -35,6 +36,16 @@
     #start-game-button:hover { background: #2980b9; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4); }
     #boss-indicator { position: fixed; top: 70px; left: 50%; transform: translateX(-50%); background: rgba(255, 0, 0, 0.8); color: white; padding: 5px 15px; border-radius: 5px; z-index: 1000; display: none; font-weight: 600; }
     #boss-indicator.show { display: block; }
+    @media (max-width: 768px) {
+      #sidebar, #stats-panel { width: 180px; }
+      #tower-info-panel { left: 200px; width: 160px; }
+      #notification-box { bottom: 20px; right: 20px; max-width: 60vw; }
+    }
+    @media (max-width: 480px) {
+      #sidebar, #stats-panel { width: 150px; }
+      #tower-info-panel { left: 170px; width: 130px; bottom: 10px; }
+      #notification-box { bottom: 15px; right: 15px; max-width: 80vw; font-size: 0.9rem; }
+    }
   </style>
 </head>
 <body>
@@ -74,6 +85,9 @@
   <div id="boss-indicator"></div>
   <div id="end-screen">
     <h2 id="end-message"></h2>
+    <p id="waves-survived"></p>
+    <p id="persistent-money-earned"></p>
+    <p id="persistent-money-total"></p>
     <button id="restart-button">Restart</button>
     <button id="main-menu-button">Main Menu</button>
   </div>
@@ -83,6 +97,7 @@
       let selectedMap = localStorage.getItem("selectedMap") || "map1";
       let selectedDifficulty = localStorage.getItem("selectedDifficulty") || "easy";
 
+      // Highlight the selected map
       mapOptions.forEach(option => {
         if (option.getAttribute("data-map") === selectedMap) {
           option.classList.add("selected");
@@ -97,20 +112,20 @@
         });
       });
 
+      // If map and difficulty are already selected, start the game immediately
+      if (localStorage.getItem("selectedMap") && localStorage.getItem("selectedDifficulty")) {
+        document.getElementById("map-selection").style.display = "none";
+        initGame();
+      }
+
       document.getElementById("start-game-button").addEventListener("click", () => {
         if (selectedMap && selectedDifficulty) {
           document.getElementById("map-selection").style.display = "none";
-          // Trigger game initialization after map selection
           initGame();
         } else {
           alert("Please select a map and difficulty!");
         }
       });
-
-      // Only hide map selection if map and difficulty are already selected
-      if (localStorage.getItem("selectedMap") && localStorage.getItem("selectedDifficulty")) {
-        document.getElementById("map-selection").style.display = "none";
-      }
     });
 
     window.addEventListener("bossActive", (e) => {
@@ -120,7 +135,6 @@
       setTimeout(() => bossIndicator.classList.remove("show"), 5000);
     });
 
-    // Placeholder to ensure init() is called only after map selection
     function initGame() {
       if (typeof init === "function") {
         init(); // Call game.js's init() function

@@ -21,8 +21,8 @@ let gameState = {
   projectiles: [],
   wave: 1,
   score: 0,
-  gameMoney: 200, // In-game currency, resets per game
-  persistentMoney: 0, // Out-of-game currency, persists across games
+  gameMoney: selectedDifficulty === "easy" ? 200 : selectedDifficulty === "medium" ? 300 : 400,
+  persistentMoney: 0,
   selectedTowerType: null,
   gameOver: false,
   playerHealth: 20,
@@ -58,7 +58,7 @@ async function loadUnlockedTowers() {
     if (!response.ok) throw new Error((await response.json()).message);
     const data = await response.json();
     console.log("Unlocked towers from server:", data.towers);
-    towerStats.basic.unlocked = true; // Basic always unlocked
+    towerStats.basic.unlocked = true;
     data.towers.forEach(type => {
       if (towerStats[type]) towerStats[type].unlocked = true;
     });
@@ -78,7 +78,7 @@ async function fetchUserMoney() {
     if (!response.ok) throw new Error((await response.json()).message);
     const data = await response.json();
     gameState.persistentMoney = data.money || 0;
-    gameState.gameMoney = 200; // Reset in-game money
+    gameState.gameMoney = selectedDifficulty === "easy" ? 200 : selectedDifficulty === "medium" ? 300 : 400;
     console.log("Fetched persistent money:", gameState.persistentMoney);
   } catch (err) {
     console.error("Error fetching money:", err);
@@ -89,7 +89,7 @@ async function fetchUserMoney() {
 async function updateUserMoney() {
   const token = localStorage.getItem("token");
   if (!token) {
-    showNotification("Not authenticated. Progress not saved.");
+    showNotification("Not authenticated. Progress not saved.", 5000);
     return false;
   }
   try {
@@ -101,12 +101,15 @@ async function updateUserMoney() {
       },
       body: JSON.stringify({ money: gameState.persistentMoney })
     });
-    if (!response.ok) throw new Error((await response.json()).message);
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to update money");
+    }
     console.log("Persistent money updated:", gameState.persistentMoney);
     return true;
   } catch (err) {
     console.error("Error updating money:", err);
-    showNotification("Error saving progress: " + err.message);
+    showNotification("Error saving progress: " + err.message, 5000);
     return false;
   }
 }
@@ -239,8 +242,8 @@ class Enemy {
   constructor(type, wave) {
     this.x = scaledSpawnPoint.x;
     this.y = scaledSpawnPoint.y;
-    const healthMultiplier = 1 + ((wave - 1) * 14) / 59;
-    this.health = Math.floor(type.health * healthMultiplier);
+    const healthMultiplier = selectedDifficulty === "easy" ? 0.75 : selectedDifficulty === "medium" ? 1 : 1.25;
+    this.health = Math.floor(type.health * healthMultiplier * (1 + ((wave - 1) * 14) / 59));
     this.maxHealth = this.health;
     this.speed = type.speed * scaleX;
     this.radius = type.radius * textScale;
@@ -251,7 +254,9 @@ class Enemy {
 
   move() {
     if (this.pathIndex >= scaledPath.length) {
-      gameState.playerHealth -= this.isBoss ? 5 : 1;
+      gameState.playerHealth -= this.isBoss 
+        ? (selectedDifficulty === "easy" ? 2.5 : selectedDifficulty === "medium" ? 5 : 7.5) 
+        : (selectedDifficulty === "easy" ? 0.5 : selectedDifficulty === "medium" ? 1 : 1.5);
       gameState.enemies = gameState.enemies.filter(e => e !== this);
       return;
     }
@@ -714,7 +719,8 @@ function spawnWave() {
   if (gameState.isSpawning || gameState.gameOver || gameState.gameWon) return;
   gameState.isSpawning = true;
   const isBossWave = gameState.wave % 5 === 0;
-  const enemyCount = isBossWave ? 1 : Math.min(gameState.wave * 2 + 5, 20);
+  const difficultyFactor = selectedDifficulty === "easy" ? 0.75 : selectedDifficulty === "medium" ? 1 : 1.25;
+  const enemyCount = isBossWave ? 1 : Math.min(Math.floor((gameState.wave * 2 + 5) * difficultyFactor), 20);
   let spawned = 0;
 
   const spawnInterval = setInterval(() => {
@@ -838,14 +844,47 @@ function update() {
 
 function endGame(won) {
   const endScreen = document.getElementById("end-screen");
-  document.getElementById("end-message").textContent = won ? "You Win!" : "Game Over!";
-  endScreen.style.display = "block";
+  const endMessage = document.getElementById("end-message");
+  const wavesSurvived = document.getElementById("waves-survived");
+  const moneyEarnedDisplay = document.getElementById("persistent-money-earned");
+  const moneyTotalDisplay = document.getElementById("persistent-money-total");
+
+  endMessage.textContent = won ? "You Win!" : "Game Over!";
+  
+  // Display waves survived
+  wavesSurvived.textContent = `Waves Survived: ${gameState.wave - 1}`;
+
+  // Calculate persistent money earned
+  let persistentReward = 0;
   if (won) {
-    const persistentReward = selectedDifficulty === "hard" ? 1000 : selectedDifficulty === "medium" ? 600 : 300;
+    // Win reward based on difficulty
+    persistentReward = selectedDifficulty === "hard" ? 1000 : selectedDifficulty === "medium" ? 600 : 300;
     gameState.persistentMoney += persistentReward;
     showNotification(`Victory! Earned $${persistentReward} persistent money.`);
-    updateUserMoney();
+  } else {
+    // Loss reward: 10 persistent money per wave survived
+    persistentReward = (gameState.wave - 1) * 10;
+    gameState.persistentMoney += persistentReward;
+    showNotification(`Game Over! Earned $${persistentReward} persistent money for surviving ${gameState.wave - 1} waves.`);
   }
+
+  // Update end screen with money earned and total
+  moneyEarnedDisplay.textContent = `Persistent Money Earned: $${persistentReward}`;
+  moneyTotalDisplay.textContent = `Total Persistent Money: $${gameState.persistentMoney}`;
+
+  // Save the updated persistent money to the server
+  updateUserMoney().then(success => {
+    if (!success) {
+      showNotification("Failed to save progress. Your persistent money may not be updated.");
+    }
+    // Show the end screen after attempting to save
+    endScreen.style.display = "block";
+  }).catch(err => {
+    console.error("Error in endGame while saving money:", err);
+    showNotification("Error saving progress: " + err.message);
+    // Still show the end screen even if saving fails
+    endScreen.style.display = "block";
+  });
 }
 
 let lastMousePos = null;
@@ -893,14 +932,19 @@ document.getElementById("upgrade-tower-button").addEventListener("click", () => 
   if (gameState.selectedTower) gameState.selectedTower.upgrade();
 });
 
-document.getElementById("restart-button").addEventListener("click", () => {
+document.getElementById("restart-button").addEventListener("click", async () => {
+  // Save persistent money before restarting
+  const success = await updateUserMoney();
+  if (!success) {
+    showNotification("Failed to save progress before restarting. Your persistent money may not be updated.");
+  }
   gameState = {
     enemies: [],
     towers: [],
     projectiles: [],
     wave: 1,
     score: 0,
-    gameMoney: 200,
+    gameMoney: selectedDifficulty === "easy" ? 200 : selectedDifficulty === "medium" ? 300 : 400,
     persistentMoney: gameState.persistentMoney,
     selectedTowerType: null,
     gameOver: false,
@@ -918,7 +962,12 @@ document.getElementById("restart-button").addEventListener("click", () => {
 
 document.getElementById("main-menu-button").addEventListener("click", async () => {
   const success = await updateUserMoney();
-  if (success) window.location.href = "/";
+  if (success) {
+    window.location.href = "/";
+  } else {
+    showNotification("Failed to save progress. Returning to main menu anyway.");
+    window.location.href = "/";
+  }
 });
 
 function isNearPath(x, y) {

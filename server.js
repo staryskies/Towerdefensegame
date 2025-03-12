@@ -3,34 +3,38 @@ const { Client } = require("pg");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const path = require("path");
+const HttpsProxyAgent = require("https-proxy-agent");
 
 const app = express();
 
 app.use(express.json());
 
-// PostgreSQL Client Configuration for Render
+// ProxyScrape proxy configuration
+const proxyUrl = "http://142.93.202.130:3128"; // ProxyScrape HTTP proxy
+const proxyAgent = new HttpsProxyAgent(proxyUrl);
+
+// PostgreSQL Client with Proxy
 const client = new Client({
-  connectionString: process.env.DATABASE_URL, // Set in Render dashboard
-  ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false, // SSL for Render's DB
+  connectionString: process.env.DATABASE_URL, // Render DB URL
+  ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
+  agent: proxyAgent, // Route DB traffic through proxy
 });
 
 async function startServer() {
   try {
     await client.connect();
-    console.log("Connected to PostgreSQL database");
+    console.log("Connected to PostgreSQL via ProxyScrape proxy");
     await initializeDatabase();
   } catch (err) {
     console.error("Error connecting to PostgreSQL:", err);
-    process.exit(1); // Exit if connection fails
+    process.exit(1);
   }
 
-  // Ensure JWT_SECRET is set
   if (!process.env.JWT_SECRET) {
-    console.warn("JWT_SECRET not set. Using default value for development.");
-    process.env.JWT_SECRET = "your-secret-key-here"; // Replace with a secure key in Render dashboard
+    console.warn("JWT_SECRET not set. Using default.");
+    process.env.JWT_SECRET = "your-secret-key-here"; // Set in Render dashboard
   }
 
-  // Initialize Database Tables
   async function initializeDatabase() {
     try {
       await client.query(`
@@ -47,34 +51,33 @@ async function startServer() {
           UNIQUE(user_id, tower_type)
         );
       `);
-      console.log("Users and towers tables ready");
+      console.log("Database tables initialized");
     } catch (err) {
       console.error("Error creating tables:", err);
     }
   }
 
-  // Middleware to Authenticate Token
+  // Authentication middleware
   function authenticateToken(req, res, next) {
     const token = req.headers["authorization"];
-    if (!token) return res.status(401).json({ message: "Access denied. No token provided." });
-
+    if (!token) return res.status(401).json({ message: "No token provided" });
     jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-      if (err) return res.status(403).json({ message: "Invalid token." });
+      if (err) return res.status(403).json({ message: "Invalid token" });
       req.user = user;
       next();
     });
   }
 
-  // API Routes
+  // API Routes (unchanged, using proxied DB)
   app.get("/user", authenticateToken, async (req, res) => {
     try {
       const result = await client.query("SELECT money FROM users WHERE id = $1", [req.user.id]);
       const user = result.rows[0];
-      if (!user) return res.status(404).json({ message: "User not found." });
+      if (!user) return res.status(404).json({ message: "User not found" });
       res.json({ money: user.money });
     } catch (err) {
-      console.error("Error fetching user data:", err);
-      res.status(500).json({ message: "Error fetching user data." });
+      console.error("Error fetching user:", err);
+      res.status(500).json({ message: "Server error" });
     }
   });
 
@@ -84,38 +87,33 @@ async function startServer() {
       res.json({ towers: result.rows.map(row => row.tower_type) });
     } catch (err) {
       console.error("Error fetching towers:", err);
-      res.status(500).json({ message: "Error fetching towers." });
+      res.status(500).json({ message: "Server error" });
     }
   });
 
   app.post("/login", async (req, res) => {
     const { username, password } = req.body;
-    if (!username || !password) return res.status(400).json({ message: "Username and password required." });
-
+    if (!username || !password) return res.status(400).json({ message: "Missing credentials" });
     try {
       const result = await client.query("SELECT * FROM users WHERE username = $1", [username]);
       const user = result.rows[0];
-      if (!user) return res.status(400).json({ message: "User not found." });
-
-      const valid = await bcrypt.compare(password, user.password);
-      if (!valid) return res.status(400).json({ message: "Invalid password." });
-
+      if (!user || !await bcrypt.compare(password, user.password)) {
+        return res.status(400).json({ message: "Invalid credentials" });
+      }
       const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET, { expiresIn: "1h" });
       res.json({ token, money: user.money });
     } catch (err) {
-      console.error("Error during login:", err);
-      res.status(500).json({ message: "Error logging in." });
+      console.error("Login error:", err);
+      res.status(500).json({ message: "Server error" });
     }
   });
 
   app.post("/signup", async (req, res) => {
     const { username, password } = req.body;
-    if (!username || !password) return res.status(400).json({ message: "Username and password required." });
-
+    if (!username || !password) return res.status(400).json({ message: "Missing credentials" });
     try {
       const result = await client.query("SELECT * FROM users WHERE username = $1", [username]);
-      if (result.rows[0]) return res.status(400).json({ message: "Username already exists." });
-
+      if (result.rows.length > 0) return res.status(400).json({ message: "Username taken" });
       const hashedPassword = await bcrypt.hash(password, 10);
       const insertResult = await client.query(
         "INSERT INTO users (username, password) VALUES ($1, $2) RETURNING *",
@@ -125,46 +123,53 @@ async function startServer() {
       const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET, { expiresIn: "1h" });
       res.status(201).json({ token, money: user.money });
     } catch (err) {
-      console.error("Error during signup:", err);
-      res.status(500).json({ message: "Error creating user." });
+      console.error("Signup error:", err);
+      res.status(500).json({ message: "Server error" });
     }
   });
 
   app.post("/update-money", authenticateToken, async (req, res) => {
     const { money } = req.body;
-    if (typeof money !== "number" || money < 0) return res.status(400).json({ message: "Invalid money value." });
-
+    if (typeof money !== "number" || money < 0) return res.status(400).json({ message: "Invalid money value" });
     try {
       await client.query("UPDATE users SET money = $1 WHERE id = $2", [money, req.user.id]);
-      res.json({ message: "Money updated successfully." });
+      res.json({ message: "Money updated" });
     } catch (err) {
-      console.error("Error updating money:", err);
-      res.status(500).json({ message: "Error updating money." });
+      console.error("Update money error:", err);
+      res.status(500).json({ message: "Server error" });
     }
   });
 
-  app.post('/unlock-tower', authenticateToken, async (req, res) => {
+  app.post("/unlock-tower", authenticateToken, async (req, res) => {
     const { tower } = req.body;
+    const towerStats = { basic: { persistentCost: 150 }, archer: { persistentCost: 225 } };
     if (!tower || !towerStats[tower]) return res.status(400).json({ message: "Invalid tower type" });
-    const user = await User.findById(req.user.userId);
-    const cost = towerStats[tower].persistentCost;
-    if (user.money < cost) return res.status(400).json({ message: "Insufficient persistent money" });
-    if (!user.towers.includes(tower)) {
-      user.towers.push(tower);
-      user.money -= cost;
-      await user.save();
-      res.json({ message: `${tower} unlocked`, towers: user.towers });
-    } else {
-      res.status(400).json({ message: "Tower already unlocked" });
+    try {
+      const userResult = await client.query("SELECT money FROM users WHERE id = $1", [req.user.id]);
+      const user = userResult.rows[0];
+      if (!user) return res.status(404).json({ message: "User not found" });
+      const cost = towerStats[tower].persistentCost;
+      if (user.money < cost) return res.status(400).json({ message: "Insufficient money" });
+      const towerCheck = await client.query(
+        "SELECT * FROM user_towers WHERE user_id = $1 AND tower_type = $2",
+        [req.user.id, tower]
+      );
+      if (towerCheck.rows.length > 0) return res.status(400).json({ message: "Tower already unlocked" });
+      await client.query("INSERT INTO user_towers (user_id, tower_type) VALUES ($1, $2)", [req.user.id, tower]);
+      await client.query("UPDATE users SET money = money - $1 WHERE id = $2", [cost, req.user.id]);
+      const towersResult = await client.query("SELECT tower_type FROM user_towers WHERE user_id = $1", [req.user.id]);
+      res.json({ message: `${tower} unlocked`, towers: towersResult.rows.map(row => row.tower_type) });
+    } catch (err) {
+      console.error("Unlock tower error:", err);
+      res.status(500).json({ message: "Server error" });
     }
   });
 
-  // Static File Serving
+  // Serve static files
   app.use(express.static(path.join(__dirname, "public")));
   app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
   app.get("/game", (req, res) => res.sendFile(path.join(__dirname, "public", "game.html")));
 
-  // Health Check for Render
   app.get("/health", (req, res) => res.status(200).json({ status: "OK" }));
 
   const PORT = process.env.PORT || 3000;
