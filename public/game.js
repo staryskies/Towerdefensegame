@@ -42,6 +42,7 @@ const gameState = {
   unlockedTowers: ["basic"],
   spawnTimer: 0,
   enemiesToSpawn: 0,
+  waveDelay: 0, // New property to track delay between waves
 };
 
 const towerStats = {
@@ -428,7 +429,7 @@ class Enemy {
   constructor(type, wave) {
     this.x = scaledSpawnPoint.x;
     this.y = scaledSpawnPoint.y;
-    const healthMultiplier = selectedDifficulty === "easy" ? 0.5 : selectedDifficulty === "medium" ? 1 : 1.25;
+    const healthMultiplier = selectedDifficulty === "easy" ? 0.25 : selectedDifficulty === "medium" ? 0.50 : 1;
     this.health = Math.floor(type.health * healthMultiplier * (1 + ((wave - 1) * 14) / 59));
     this.maxHealth = this.health;
     this.speed = type.speed * scaleX * 70; // Doubled speed for faster gameplay
@@ -1018,16 +1019,24 @@ function spawnWave() {
   const enemiesPerWave = Math.min(5 + gameState.wave * 2, 50);
   gameState.enemiesToSpawn = enemiesPerWave;
   gameState.spawnTimer = 0;
+  gameState.waveDelay = 0; // Reset delay for the new wave
   console.log(`Starting wave ${gameState.wave} with ${enemiesPerWave} enemies`);
 }
-
 function updateSpawning(dt) {
+  // Handle wave delay
+  if (gameState.waveDelay > 0) {
+    gameState.waveDelay -= dt * gameState.gameSpeed;
+    return; // Wait until delay is over
+  }
+
   if (!gameState.isSpawning || gameState.enemiesToSpawn <= 0) {
-    if (gameState.enemies.length === 0 && gameState.playerHealth > 0) {
+    if (gameState.enemies.length === 0 && gameState.playerHealth > 0 && !gameState.isSpawning) {
+      // Only proceed to next wave after a delay
+      gameState.waveDelay = 2; // 2-second delay between waves (adjustable)
+      gameState.isSpawning = false;
       gameState.wave++;
       spawnWave();
     }
-    gameState.isSpawning = false;
     return;
   }
 
@@ -1043,7 +1052,7 @@ function updateSpawning(dt) {
     } catch (error) {
       console.error("Error spawning enemy:", error);
       showNotification("Error spawning enemies!");
-      gameState.isSpawning = false; // Stop spawning to prevent infinite loop
+      gameState.isSpawning = false;
     }
   }
 }
