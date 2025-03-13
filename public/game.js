@@ -29,7 +29,7 @@ const gameState = {
   projectiles: [],
   playerHealth: 20,
   persistentMoney: 0,
-  gameMoney: 200,
+  gameMoney: selectedDifficulty === "easy" ? 200 : selectedDifficulty === "medium" ? 400 : 600,
   score: 0,
   wave: 1,
   isPaused: false,
@@ -43,6 +43,8 @@ const gameState = {
   spawnTimer: 0,
   enemiesToSpawn: 0,
   waveDelay: 0, // New property to track delay between waves
+  isBossWave: false,
+  bossSpawned: false,
 };
 
 const towerStats = {
@@ -410,15 +412,17 @@ class Enemy {
     const healthMultiplier = selectedDifficulty === "easy" ? 0.25 : selectedDifficulty === "medium" ? 0.50 : 1;
     this.health = Math.floor(type.health * healthMultiplier * (1 + ((wave - 1) * 14) / 59));
     this.maxHealth = this.health;
-    this.speed = type.speed * scaleX * 70; // Doubled speed for faster gameplay
+    this.speed = type.speed * scaleX * 70;
     this.radius = type.radius * textScale;
     this.color = type.color;
     this.pathIndex = 1;
-    this.isBoss = wave % 5 === 0 && wave > 0;
+    // Boss logic: Only spawn one boss per boss wave
+    this.isBoss = gameState.isBossWave && !gameState.bossSpawned;
     if (this.isBoss) {
       this.health *= 5;
       this.maxHealth *= 5;
       this.radius *= 2;
+      gameState.bossSpawned = true; // Mark boss as spawned
       window.dispatchEvent(new CustomEvent("bossActive", { detail: { wave: gameState.wave } }));
     }
   }
@@ -796,7 +800,6 @@ class Tower {
     ctx.textAlign = "center";
     ctx.fillText(this.type.charAt(0).toUpperCase() + this.type.slice(1), this.x, this.y + 25 * textScale);
   }
-
   upgrade(path) {
     const upgrades = towerUpgradePaths[this.type][path];
     const level = path === "power" ? this.powerLevel : this.utilityLevel;
@@ -828,7 +831,7 @@ class Tower {
     if (path === "power") this.powerLevel++;
     else this.utilityLevel++;
     showNotification(`${this.type} upgraded: ${upgrade.desc}`);
-    updateTowerInfo();
+    updateTowerInfo(); // Ensure UI updates immediately after upgrade
   }
 }
 
@@ -997,8 +1000,11 @@ function spawnWave() {
   const enemiesPerWave = Math.min(5 + gameState.wave * 2, 50);
   gameState.enemiesToSpawn = enemiesPerWave;
   gameState.spawnTimer = 0;
-  gameState.waveDelay = 0; // Reset delay for the new wave
-  console.log(`Starting wave ${gameState.wave} with ${enemiesPerWave} enemies`);
+  gameState.waveDelay = 0;
+  // Flag for boss wave (only one boss per wave)
+  gameState.isBossWave = gameState.wave % 5 === 0 && gameState.wave > 0;
+  gameState.bossSpawned = false; // Track if boss has been spawned
+  console.log(`Starting wave ${gameState.wave} with ${enemiesPerWave} enemies${gameState.isBossWave ? " (Boss Wave)" : ""}`);
 }
 function updateSpawning(dt) {
   // Handle wave delay
@@ -1055,7 +1061,6 @@ function updateStats() {
   document.getElementById("wave").textContent = `Wave: ${gameState.wave}`;
   document.getElementById("speed").textContent = `Speed: ${gameState.gameSpeed}x`;
 }
-
 function updateTowerInfo() {
   const panel = document.getElementById("tower-info-panel");
   const powerButton = document.getElementById("upgrade-power-button");
@@ -1070,13 +1075,15 @@ function updateTowerInfo() {
 
     const powerUpgrades = towerUpgradePaths[gameState.selectedTower.type].power;
     const utilityUpgrades = towerUpgradePaths[gameState.selectedTower.type].utility;
-    const powerCost = gameState.selectedTower.powerLevel < 4 ? powerUpgrades[gameState.selectedTower.powerLevel].cost : "Max";
-    const utilityCost = gameState.selectedTower.utilityLevel < 4 ? utilityUpgrades[gameState.selectedTower.utilityLevel].cost : "Max";
+    const nextPowerLevel = gameState.selectedTower.powerLevel;
+    const nextUtilityLevel = gameState.selectedTower.utilityLevel;
+    const powerCost = nextPowerLevel < 4 ? powerUpgrades[nextPowerLevel].cost : "Max";
+    const utilityCost = nextUtilityLevel < 4 ? utilityUpgrades[nextUtilityLevel].cost : "Max";
 
     powerButton.textContent = `Upgrade Power ($${powerCost})`;
     utilityButton.textContent = `Upgrade Utility ($${utilityCost})`;
-    powerButton.disabled = gameState.selectedTower.powerLevel >= 4 || gameState.gameMoney < powerCost;
-    utilityButton.disabled = gameState.selectedTower.utilityLevel >= 4 || gameState.gameMoney < utilityCost;
+    powerButton.disabled = nextPowerLevel >= 4 || (typeof powerCost === "number" && gameState.gameMoney < powerCost);
+    utilityButton.disabled = nextUtilityLevel >= 4 || (typeof utilityCost === "number" && gameState.gameMoney < utilityCost);
   } else {
     panel.style.display = "none";
   }
@@ -1117,7 +1124,7 @@ function resetGame() {
   gameState.towers = [];
   gameState.projectiles = [];
   gameState.playerHealth = 20;
-  gameState.gameMoney = 200;
+  gameState.gameMoney = selectedDifficulty === "easy" ? 200 : selectedDifficulty === "medium" ? 400 : 600;
   gameState.score = 0;
   gameState.wave = 1;
   gameState.isPaused = false;
@@ -1127,6 +1134,8 @@ function resetGame() {
   gameState.selectedTowerType = null;
   gameState.isSpawning = false;
   gameState.gameSpeed = 1;
+  gameState.isBossWave = false; // Reset boss wave flag
+  gameState.bossSpawned = false; // Reset boss spawned flag
 }
 
 function initSidebar() {
