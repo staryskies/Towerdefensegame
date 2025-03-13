@@ -5,11 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tower Defense</title>
   <style>
-    /* Same styles as your original index.html */
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: linear-gradient(135deg, #1a2634, #2c3e50); }
-    body { display: flex; justify-content: center; align-items: center; }
-    .container { background: rgba(44, 62, 80, 0.98); padding: 35px; border-radius: 20px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5); width: 90%; max-width: 450px; text-align: center; color: #ecf0f1; position: relative; transition: transform 0.3s ease; }
+    body { display: flex; justify-content: center; align-items: center; position: relative; }
+    .container { background: rgba(44, 62, 80, 0.98); padding: 35px; border-radius: 20px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5); width: 90%; max-width: 450px; text-align: center; color: #ecf0f1; transition: transform 0.3s ease; }
     .container:hover { transform: translateY(-5px); }
     h1 { font-size: 2.2em; margin-bottom: 25px; color: #ecf0f1; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
     .form-group { margin-bottom: 20px; text-align: left; }
@@ -25,9 +24,9 @@
     a:hover { color: #2980b9; text-decoration: underline; }
     #main-menu { display: none; flex-direction: column; align-items: center; }
     #user-money { margin: 20px 0; font-size: 1.3rem; color: #ecf0f1; background: rgba(52, 73, 94, 0.8); padding: 8px 15px; border-radius: 8px; }
-    #map-menu, #tower-shop { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(44, 62, 80, 0.98); padding: 35px; border-radius: 20px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5); width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; color: #ecf0f1; z-index: 1000; transition: transform 0.3s ease; }
-    #map-menu.show, #tower-shop.show { transform: translate(-50%, -50%) scale(1.02); }
-    #map-menu h2, #tower-shop h2 { font-size: 1.8rem; margin-bottom: 20px; position: relative; padding-right: 40px; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
+    #map-selection, #tower-shop { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(44, 62, 80, 0.98); padding: 35px; border-radius: 20px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5); width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; color: #ecf0f1; z-index: 1000; transition: transform 0.3s ease; }
+    #map-selection.show, #tower-shop.show { transform: translate(-50%, -50%) scale(1.02); }
+    #map-selection h2, #tower-shop h2 { font-size: 1.8rem; margin-bottom: 20px; position: relative; padding-right: 40px; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
     .close-btn { position: absolute; top: 15px; right: 15px; background: #e74c3c; border: none; border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease; }
     .close-btn::before, .close-btn::after { content: ''; position: absolute; width: 20px; height: 3px; background: #fff; }
     .close-btn::before { transform: rotate(45deg); }
@@ -46,14 +45,15 @@
     #notification-box { position: fixed; bottom: 30px; right: 30px; background: rgba(39, 174, 96, 0.95); color: #fff; padding: 15px 25px; border-radius: 10px; box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3); z-index: 1000; display: none; font-weight: 500; max-width: 350px; transition: opacity 0.3s ease; }
     #notification-box.show { display: block; opacity: 1; }
     body.shop-open::before { content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); z-index: 999; }
+    select { width: 100%; padding: 10px; margin: 10px 0; border-radius: 8px; background: #3e5c76; color: #ecf0f1; font-size: 1rem; border: 2px solid #34495e; }
     @media (max-width: 768px) {
-      .container, #map-menu, #tower-shop { padding: 25px; max-width: 90%; }
+      .container, #map-selection, #tower-shop { padding: 25px; max-width: 90%; }
       h1 { font-size: 2rem; }
       button { padding: 12px 25px; font-size: 0.95rem; }
       #notification-box { bottom: 20px; right: 20px; max-width: 60vw; }
     }
     @media (max-width: 480px) {
-      .container, #map-menu, #tower-shop { padding: 20px; }
+      .container, #map-selection, #tower-shop { padding: 20px; }
       h1 { font-size: 1.8rem; }
       button { padding: 10px 20px; font-size: 0.9rem; }
       .map-option, .shop-item { padding: 12px; }
@@ -63,6 +63,8 @@
 </head>
 <body>
   <div id="notification-box"></div>
+
+  <!-- Authentication Screen -->
   <div class="container" id="auth-screen">
     <h1>Tower Defense</h1>
     <div id="login-form">
@@ -90,7 +92,9 @@
       <p><a href="#" id="show-login">Already have an account? Log in</a></p>
     </div>
   </div>
-  <div class="container" id="main-menu">
+
+  <!-- Main Menu -->
+  <div class="container" id="main-menu" style="display: none;">
     <h1>Tower Defense</h1>
     <div id="user-money">Persistent Money: $0</div>
     <button id="start-game" aria-label="Start Game">Start Game</button>
@@ -98,8 +102,10 @@
     <button id="open-tower-shop" aria-label="Open Tower Shop">Tower Shop</button>
     <button id="logout-button" aria-label="Logout">Logout</button>
   </div>
-  <div id="map-menu">
-    <h2>Select Map <button class="close-btn" id="close-map-menu" aria-label="Close Map Menu"></button></h2>
+
+  <!-- Map Selection -->
+  <div id="map-selection" style="display: none;">
+    <h2>Select Map <button class="close-btn" id="close-map-selection" aria-label="Close Map Selection"></button></h2>
     <select id="difficulty-select" aria-label="Select Difficulty">
       <option value="easy">Easy</option>
       <option value="medium">Medium</option>
@@ -107,293 +113,236 @@
     </select>
     <div id="map-list"></div>
   </div>
-  <div id="tower-shop">
-    <h2>Tower Shop <button class="close-btn" id="close-shop" aria-label="Close Tower Shop"></button></h2>
+
+  <!-- Tower Shop -->
+  <div id="tower-shop" style="display: none;">
+    <h2>Tower Shop <button class="close-btn" id="close-tower-shop" aria-label="Close Tower Shop"></button></h2>
     <div id="global-money">Persistent Money: $0</div>
-    <div id="shop-items"></div>
+    <div id="tower-list"></div>
   </div>
+
   <script>
-    const BASE_URL = ''; // Adjust if hosted (e.g., 'https://your-render-app.onrender.com')
-    let globalMoney = 0;
     const towerStats = {
-      basic: { damage: 10, range: 100, fireRate: 1000, cost: 50, persistentCost: 0, color: "gray", ability: "Basic shot", unlocked: true },
-      archer: { damage: 15, range: 120, fireRate: 2000, cost: 75, persistentCost: 225, color: "brown", ability: "Double shot", unlocked: false },
-      cannon: { damage: 30, range: 80, fireRate: 3000, cost: 100, persistentCost: 300, color: "black", ability: "Splash damage", unlocked: false },
-      sniper: { damage: 50, range: 150, fireRate: 4000, cost: 150, persistentCost: 350, color: "green", ability: "Critical hit", unlocked: false },
-      freeze: { damage: 5, range: 100, fireRate: 2000, cost: 120, persistentCost: 400, color: "lightblue", ability: "Slows enemies", unlocked: false },
-      mortar: { damage: 40, range: 120, fireRate: 5000, cost: 200, persistentCost: 450, color: "darkgray", ability: "Large splash", unlocked: false },
-      laser: { damage: 100, range: 150, fireRate: 10000, cost: 350, persistentCost: 500, color: "red", ability: "Continuous beam", unlocked: false },
-      tesla: { damage: 25, range: 120, fireRate: 3000, cost: 250, persistentCost: 550, color: "yellow", ability: "Chain lightning", unlocked: false },
-      flamethrower: { damage: 20, range: 80, fireRate: 2000, cost: 180, persistentCost: 600, color: "orange", ability: "Burning damage", unlocked: false },
-      missile: { damage: 60, range: 130, fireRate: 4000, cost: 200, persistentCost: 650, color: "silver", ability: "High damage", unlocked: false },
-      poison: { damage: 15, range: 110, fireRate: 3000, cost: 250, persistentCost: 700, color: "limegreen", ability: "Poison splash", unlocked: false },
-      vortex: { damage: 0, range: 150, fireRate: 5000, cost: 300, persistentCost: 750, color: "purple", ability: "Pulls enemies", unlocked: false },
-    };
-    const maps = {
-      map1: { name: "Beginner Path", difficulty: "easy", moneyReward: 50 },
-      map2: { name: "Zigzag Path", difficulty: "medium", moneyReward: 75 },
-      map3: { name: "Snake Path", difficulty: "hard", moneyReward: 150 },
-      map4: { name: "Forest Trail", difficulty: "easy", moneyReward: 60 },
-      map5: { name: "Mountain Pass", difficulty: "medium", moneyReward: 90 },
-      map6: { name: "Desert Maze", difficulty: "hard", moneyReward: 180 },
-      map7: { name: "River Bend", difficulty: "easy", moneyReward: 65 },
-      map8: { name: "Canyon Run", difficulty: "medium", moneyReward: 100 },
-      map9: { name: "Arctic Path", difficulty: "hard", moneyReward: 200 },
+      basic: { persistentCost: 0, ability: "Basic shot" },
+      archer: { persistentCost: 225, ability: "Double shot" },
+      cannon: { persistentCost: 300, ability: "Splash damage" },
+      sniper: { persistentCost: 350, ability: "Critical hit" },
+      freeze: { persistentCost: 400, ability: "Slows enemies" },
+      mortar: { persistentCost: 450, ability: "Large splash" },
+      laser: { persistentCost: 500, ability: "Continuous beam" },
+      tesla: { persistentCost: 550, ability: "Chain lightning" },
+      flamethrower: { persistentCost: 600, ability: "Burning damage" },
+      missile: { persistentCost: 650, ability: "High damage" },
+      poison: { persistentCost: 700, ability: "Poison splash" },
+      vortex: { persistentCost: 750, ability: "Pulls enemies" },
     };
 
-    const authScreen = document.getElementById("auth-screen");
-    const mainMenu = document.getElementById("main-menu");
-    const loginForm = document.getElementById("login-form");
-    const signupForm = document.getElementById("signup-form");
-    const mapMenu = document.getElementById("map-menu");
-    const shop = document.getElementById("tower-shop");
-    const shopItems = document.getElementById("shop-items");
-    const mapList = document.getElementById("map-list");
-    const difficultySelect = document.getElementById("difficulty-select");
-
-    function showNotification(message, duration = 3000) {
-      const box = document.getElementById("notification-box");
-      box.textContent = message;
-      box.classList.add("show");
-      setTimeout(() => box.classList.remove("show"), duration);
-    }
-
-    async function loadUnlockedTowers() {
-      const token = localStorage.getItem("token");
-      if (!token) return;
-      try {
-        const response = await fetch(`${BASE_URL}/towers`, { headers: { "Authorization": token } });
-        const data = await response.json();
-        if (response.ok) {
-          towerStats.basic.unlocked = true;
-          data.towers.forEach(type => { if (towerStats[type]) towerStats[type].unlocked = true; });
-        } else {
-          throw new Error(data.message);
-        }
-      } catch (err) {
-        console.error("Error loading towers:", err);
-        showNotification("Error loading towers.");
-      }
-    }
-
-    function initShop() {
-      shopItems.innerHTML = "";
-      document.getElementById("global-money").textContent = `Persistent Money: $${globalMoney}`;
-      for (const [type, stats] of Object.entries(towerStats)) {
-        if (type === "basic") continue; // Basic is free and always unlocked
-        const item = document.createElement("div");
-        item.className = "shop-item";
-        item.innerHTML = `
-          <h4>${type.charAt(0).toUpperCase() + type.slice(1)}</h4>
-          <p>Damage: ${stats.damage} | Range: ${stats.range}</p>
-          <p>Fire Rate: ${stats.fireRate / 1000}s | Ability: ${stats.ability}</p>
-          <p>${stats.unlocked ? "Unlocked" : `Cost: $${stats.persistentCost}`}</p>
-          <button class="unlock-btn" data-type="${type}" ${stats.unlocked ? "disabled" : ""}>
-            ${stats.unlocked ? "Unlocked" : "Unlock"}
-          </button>
-        `;
-        shopItems.appendChild(item);
-      }
-    }
-
-    function initMapMenu() {
-      mapList.innerHTML = "";
-      difficultySelect.value = localStorage.getItem("selectedDifficulty") || "easy";
-      for (const [mapId, map] of Object.entries(maps)) {
-        const mapOption = document.createElement("div");
-        mapOption.className = "map-option";
-        mapOption.setAttribute("data-map", mapId);
-        mapOption.innerHTML = `
-          <h4>${map.name}</h4>
-          <p>Base Difficulty: ${map.difficulty.charAt(0).toUpperCase() + map.difficulty.slice(1)}</p>
-          <p>Money Reward: $${map.moneyReward}</p>
-        `;
-        if (localStorage.getItem("selectedMap") === mapId) mapOption.classList.add("selected");
-        mapList.appendChild(mapOption);
-      }
+    function showNotification(message) {
+      const notification = document.getElementById("notification-box");
+      notification.textContent = message;
+      notification.classList.add("show");
+      setTimeout(() => notification.classList.remove("show"), 3000);
     }
 
     async function fetchUserData() {
       const token = localStorage.getItem("token");
-      if (!token) return;
+      if (!token) throw new Error("No token found");
+      const response = await fetch("/user", {
+        headers: { "Authorization": `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error(`Failed to fetch user data: ${response.statusText}`);
+      const data = await response.json();
+      return data;
+    }
+
+    async function updateUserMoneyDisplay() {
       try {
-        const response = await fetch(`${BASE_URL}/user`, { headers: { "Authorization": token } });
-        const data = await response.json();
-        if (response.ok) {
-          globalMoney = data.money || 0;
-          document.getElementById("user-money").textContent = `Persistent Money: $${globalMoney}`;
-          document.getElementById("global-money").textContent = `Persistent Money: $${globalMoney}`;
-        } else {
-          throw new Error(data.message);
-        }
+        const userData = await fetchUserData();
+        document.getElementById("user-money").textContent = `Persistent Money: $${userData.money}`;
+        document.getElementById("global-money").textContent = `Persistent Money: $${userData.money}`;
       } catch (err) {
-        console.error("Error fetching user data:", err);
-        showNotification("Error fetching user data.");
+        console.error(err);
+        showNotification("Failed to update money display.");
       }
     }
 
-    document.getElementById("show-signup").addEventListener("click", (e) => {
-      e.preventDefault();
-      loginForm.style.display = "none";
-      signupForm.style.display = "block";
-    });
-
-    document.getElementById("show-login").addEventListener("click", (e) => {
-      e.preventDefault();
-      signupForm.style.display = "none";
-      loginForm.style.display = "block";
-    });
-
+    // Authentication
     document.getElementById("login-button").addEventListener("click", async () => {
-      const username = document.getElementById("login-username").value.trim();
-      const password = document.getElementById("login-password").value.trim();
-      if (!username || !password) {
-        showNotification("Please enter username and password");
-        return;
-      }
+      const username = document.getElementById("login-username").value;
+      const password = document.getElementById("login-password").value;
       try {
-        const response = await fetch(`${BASE_URL}/login`, {
+        const response = await fetch("/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, password })
+          body: JSON.stringify({ username, password }),
         });
         const data = await response.json();
         if (response.ok) {
           localStorage.setItem("token", data.token);
-          globalMoney = data.money;
-          showMainMenu();
+          document.getElementById("auth-screen").style.display = "none";
+          document.getElementById("main-menu").style.display = "flex";
+          await updateUserMoneyDisplay();
         } else {
-          showNotification(data.message);
+          showNotification(data.message || "Login failed.");
         }
       } catch (err) {
-        console.error("Login error:", err);
-        showNotification("Error logging in.");
+        showNotification("Error during login.");
       }
     });
 
     document.getElementById("signup-button").addEventListener("click", async () => {
-      const username = document.getElementById("signup-username").value.trim();
-      const password = document.getElementById("signup-password").value.trim();
-      if (!username || !password) {
-        showNotification("Please enter username and password");
-        return;
-      }
+      const username = document.getElementById("signup-username").value;
+      const password = document.getElementById("signup-password").value;
       try {
-        const response = await fetch(`${BASE_URL}/signup`, {
+        const response = await fetch("/signup", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, password })
+          body: JSON.stringify({ username, password }),
         });
         const data = await response.json();
         if (response.ok) {
           localStorage.setItem("token", data.token);
-          globalMoney = data.money;
-          showMainMenu();
+          document.getElementById("auth-screen").style.display = "none";
+          document.getElementById("main-menu").style.display = "flex";
+          await updateUserMoneyDisplay();
         } else {
-          showNotification(data.message);
+          showNotification(data.message || "Signup failed.");
         }
       } catch (err) {
-        console.error("Signup error:", err);
-        showNotification("Error signing up.");
+        showNotification("Error during signup.");
       }
     });
 
-    document.getElementById("start-game").addEventListener("click", () => {
-      if (!localStorage.getItem("selectedMap")) {
-        showNotification("Please select a map first.");
-        return;
-      }
-      window.location.href = "/game";
+    document.getElementById("show-signup").addEventListener("click", (e) => {
+      e.preventDefault();
+      document.getElementById("login-form").style.display = "none";
+      document.getElementById("signup-form").style.display = "block";
     });
 
-    document.getElementById("select-map").addEventListener("click", () => {
-      initMapMenu();
-      mapMenu.style.display = "block";
-      mapMenu.classList.add("show");
-      document.body.classList.add("shop-open");
-    });
-
-    document.getElementById("close-map-menu").addEventListener("click", () => {
-      mapMenu.style.display = "none";
-      mapMenu.classList.remove("show");
-      document.body.classList.remove("shop-open");
-    });
-
-    mapList.addEventListener("click", e => {
-      const option = e.target.closest(".map-option");
-      if (option) {
-        localStorage.setItem("selectedMap", option.getAttribute("data-map"));
-        localStorage.setItem("selectedDifficulty", difficultySelect.value);
-        document.querySelectorAll(".map-option").forEach(btn => btn.classList.remove("selected"));
-        option.classList.add("selected");
-        mapMenu.style.display = "none";
-        mapMenu.classList.remove("show");
-        document.body.classList.remove("shop-open");
-      }
-    });
-
-    document.getElementById("open-tower-shop").addEventListener("click", () => {
-      initShop();
-      shop.style.display = "block";
-      shop.classList.add("show");
-      document.body.classList.add("shop-open");
-    });
-
-    document.getElementById("close-shop").addEventListener("click", () => {
-      shop.style.display = "none";
-      shop.classList.remove("show");
-      document.body.classList.remove("shop-open");
+    document.getElementById("show-login").addEventListener("click", (e) => {
+      e.preventDefault();
+      document.getElementById("signup-form").style.display = "none";
+      document.getElementById("login-form").style.display = "block";
     });
 
     document.getElementById("logout-button").addEventListener("click", () => {
       localStorage.removeItem("token");
-      localStorage.removeItem("selectedMap");
-      localStorage.removeItem("selectedDifficulty");
-      mainMenu.style.display = "none";
-      authScreen.style.display = "block";
+      document.getElementById("main-menu").style.display = "none";
+      document.getElementById("auth-screen").style.display = "block";
+      document.getElementById("login-form").style.display = "block";
+      document.getElementById("signup-form").style.display = "none";
     });
 
-    shopItems.addEventListener("click", async e => {
-      if (e.target.classList.contains("unlock-btn") && !e.target.disabled) {
-        const type = e.target.getAttribute("data-type");
-        const cost = towerStats[type].persistentCost;
-        const token = localStorage.getItem("token");
-        if (globalMoney < cost) {
-          showNotification("Not enough persistent money!");
-          return;
-        }
-        try {
-          const response = await fetch(`${BASE_URL}/unlock-tower`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": token },
-            body: JSON.stringify({ tower: type })
-          });
-          const data = await response.json();
-          if (response.ok) {
-            globalMoney -= cost;
-            towerStats[type].unlocked = true;
-            initShop();
-            document.getElementById("user-money").textContent = `Persistent Money: $${globalMoney}`;
-            showNotification(`${type.charAt(0).toUpperCase() + type.slice(1)} Tower unlocked!`);
-          } else {
-            showNotification(data.message);
-          }
-        } catch (err) {
-          console.error("Error unlocking tower:", err);
-          showNotification("Error unlocking tower.");
-        }
+    // Map Selection
+    document.getElementById("select-map").addEventListener("click", () => {
+      document.getElementById("map-selection").style.display = "block";
+      populateMapList();
+    });
+
+    document.getElementById("close-map-selection").addEventListener("click", () => {
+      document.getElementById("map-selection").style.display = "none";
+    });
+
+    function populateMapList() {
+      const mapList = document.getElementById("map-list");
+      mapList.innerHTML = "";
+      for (let i = 1; i <= 9; i++) {
+        const mapDiv = document.createElement("div");
+        mapDiv.className = "map-option";
+        mapDiv.textContent = `Map ${i}`;
+        mapDiv.addEventListener("click", () => {
+          localStorage.setItem("selectedMap", `map${i}`);
+          document.querySelectorAll(".map-option").forEach(el => el.classList.remove("selected"));
+          mapDiv.classList.add("selected");
+        });
+        if (localStorage.getItem("selectedMap") === `map${i}`) mapDiv.classList.add("selected");
+        mapList.appendChild(mapDiv);
       }
-    });
-
-    async function showMainMenu() {
-      authScreen.style.display = "none";
-      mainMenu.style.display = "flex";
-      await loadUnlockedTowers();
-      await fetchUserData();
     }
 
+    document.getElementById("difficulty-select").addEventListener("change", (e) => {
+      localStorage.setItem("selectedDifficulty", e.target.value);
+    });
+
+    document.getElementById("start-game").addEventListener("click", () => {
+      window.location.href = "/game.html";
+    });
+
+    // Tower Shop
+    document.getElementById("open-tower-shop").addEventListener("click", async () => {
+      document.getElementById("tower-shop").style.display = "block";
+      document.body.classList.add("shop-open");
+      await populateTowerShop();
+    });
+
+    document.getElementById("close-tower-shop").addEventListener("click", () => {
+      document.getElementById("tower-shop").style.display = "none";
+      document.body.classList.remove("shop-open");
+    });
+
+    async function populateTowerShop() {
+      const towerList = document.getElementById("tower-list");
+      towerList.innerHTML = "";
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch("/towers", {
+          headers: { "Authorization": `Bearer ${token}` },
+        });
+        const data = await response.json();
+        const unlockedTowers = data.towers.length > 0 ? data.towers : ["basic"];
+        const userData = await fetchUserData();
+
+        Object.keys(towerStats).forEach(type => {
+          const towerDiv = document.createElement("div");
+          towerDiv.className = "shop-item";
+          towerDiv.innerHTML = `
+            <h4>${type.charAt(0).toUpperCase() + type.slice(1)}</h4>
+            <p>Cost: $${towerStats[type].persistentCost}</p>
+            <p>Ability: ${towerStats[type].ability}</p>
+          `;
+          if (!unlockedTowers.includes(type)) {
+            const unlockButton = document.createElement("button");
+            unlockButton.className = "unlock-btn";
+            unlockButton.textContent = "Unlock";
+            unlockButton.disabled = userData.money < towerStats[type].persistentCost;
+            unlockButton.addEventListener("click", async () => {
+              try {
+                const response = await fetch("/unlock-tower", {
+                  method: "POST",
+                  headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({ tower: type }),
+                });
+                const result = await response.json();
+                if (response.ok) {
+                  showNotification(result.message);
+                  await updateUserMoneyDisplay();
+                  await populateTowerShop();
+                } else {
+                  showNotification(result.message);
+                }
+              } catch (err) {
+                showNotification("Error unlocking tower.");
+              }
+            });
+            towerDiv.appendChild(unlockButton);
+          } else {
+            towerDiv.innerHTML += `<p style="color: #27ae60;">Unlocked</p>`;
+          }
+          towerList.appendChild(towerDiv);
+        });
+      } catch (err) {
+        showNotification("Failed to load tower shop.");
+      }
+    }
+
+    // Initialize
     if (localStorage.getItem("token")) {
-      showMainMenu();
+      document.getElementById("auth-screen").style.display = "none";
+      document.getElementById("main-menu").style.display = "flex";
+      updateUserMoneyDisplay();
     }
   </script>
 </body>

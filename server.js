@@ -10,10 +10,8 @@ app.use(express.json());
 
 // PostgreSQL Client Configuration for Render
 const client = new Client({
-  connectionString: process.env.DATABASE_URL, // Render provides this
-  ssl: {
-    rejectUnauthorized: false, // Required for Render's SSL
-  },
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
 });
 
 async function startServer() {
@@ -26,10 +24,9 @@ async function startServer() {
     process.exit(1);
   }
 
-  // Ensure JWT_SECRET is set
   if (!process.env.JWT_SECRET) {
     console.warn("JWT_SECRET not set. Using default for development.");
-    process.env.JWT_SECRET = "your-secret-key-here"; // Replace with a secure key in Render environment variables
+    process.env.JWT_SECRET = "your-secret-key-here"; // Replace with a secure key in production
   }
 
   async function initializeDatabase() {
@@ -51,13 +48,14 @@ async function startServer() {
       console.log("Database tables initialized");
     } catch (err) {
       console.error("Error creating tables:", err);
-      throw err; // Rethrow to handle in startServer
+      throw err;
     }
   }
 
   // Authentication middleware
   function authenticateToken(req, res, next) {
-    const token = req.headers["authorization"];
+    const authHeader = req.headers["authorization"];
+    const token = authHeader && authHeader.split(" ")[1]; // Expect "Bearer TOKEN"
     if (!token) return res.status(401).json({ message: "No token provided" });
     jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
       if (err) return res.status(403).json({ message: "Invalid token" });
@@ -82,7 +80,7 @@ async function startServer() {
   app.get("/towers", authenticateToken, async (req, res) => {
     try {
       const result = await client.query("SELECT tower_type FROM user_towers WHERE user_id = $1", [req.user.id]);
-      res.json({ towers: result.rows.map(row => row.tower_type) }); // Fixed typo: row.tower_type instead of row.tower.type
+      res.json({ towers: result.rows.map(row => row.tower_type) });
     } catch (err) {
       console.error("Error fetching towers:", err);
       res.status(500).json({ message: "Server error" });
@@ -141,7 +139,7 @@ async function startServer() {
   app.post("/unlock-tower", authenticateToken, async (req, res) => {
     const { tower } = req.body;
     const towerStats = {
-      basic: { persistentCost: 0 }, // Basic tower is free (already unlocked by default)
+      basic: { persistentCost: 0 },
       archer: { persistentCost: 225 },
       cannon: { persistentCost: 300 },
       sniper: { persistentCost: 350 },

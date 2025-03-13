@@ -17,7 +17,7 @@ const gameState = {
   towers: [],
   projectiles: [],
   playerHealth: 20,
-  persistentMoney: parseInt(localStorage.getItem("persistentMoney")) || 0,
+  persistentMoney: 0, // Fetched from server
   gameMoney: 200,
   score: 0,
   wave: 1,
@@ -28,21 +28,22 @@ const gameState = {
   selectedTowerType: null,
   isSpawning: false,
   gameSpeed: 1,
+  unlockedTowers: ["basic"], // Default unlocked tower
 };
 
 const towerStats = {
-  basic: { damage: 10, range: 100, fireRate: 1000, cost: 50, color: "gray", ability: "Basic shot" },
-  archer: { damage: 15, range: 120, fireRate: 2000, cost: 75, color: "brown", ability: "Double shot" },
-  cannon: { damage: 30, range: 80, fireRate: 3000, cost: 100, color: "black", ability: "Splash damage" },
-  sniper: { damage: 50, range: 150, fireRate: 4000, cost: 150, color: "green", ability: "Critical hit" },
-  freeze: { damage: 5, range: 100, fireRate: 2000, cost: 120, color: "lightblue", ability: "Slows enemies" },
-  mortar: { damage: 40, range: 120, fireRate: 5000, cost: 200, color: "darkgray", ability: "Large splash" },
-  laser: { damage: 100, range: 150, fireRate: 10000, cost: 350, color: "red", ability: "Continuous beam" },
-  tesla: { damage: 25, range: 120, fireRate: 3000, cost: 250, color: "yellow", ability: "Chain lightning" },
-  flamethrower: { damage: 20, range: 80, fireRate: 2000, cost: 180, color: "orange", ability: "Burning damage" },
-  missile: { damage: 60, range: 130, fireRate: 4000, cost: 200, color: "silver", ability: "High damage" },
-  poison: { damage: 15, range: 110, fireRate: 3000, cost: 250, color: "limegreen", ability: "Poison splash" },
-  vortex: { damage: 0, range: 150, fireRate: 5000, cost: 300, color: "purple", ability: "Pulls enemies" },
+  basic: { damage: 10, range: 100, fireRate: 1000, cost: 50, persistentCost: 0, color: "gray", ability: "Basic shot" },
+  archer: { damage: 15, range: 120, fireRate: 2000, cost: 75, persistentCost: 225, color: "brown", ability: "Double shot" },
+  cannon: { damage: 30, range: 80, fireRate: 3000, cost: 100, persistentCost: 300, color: "black", ability: "Splash damage" },
+  sniper: { damage: 50, range: 150, fireRate: 4000, cost: 150, persistentCost: 350, color: "green", ability: "Critical hit" },
+  freeze: { damage: 5, range: 100, fireRate: 2000, cost: 120, persistentCost: 400, color: "lightblue", ability: "Slows enemies" },
+  mortar: { damage: 40, range: 120, fireRate: 5000, cost: 200, persistentCost: 450, color: "darkgray", ability: "Large splash" },
+  laser: { damage: 100, range: 150, fireRate: 10000, cost: 350, persistentCost: 500, color: "red", ability: "Continuous beam" },
+  tesla: { damage: 25, range: 120, fireRate: 3000, cost: 250, persistentCost: 550, color: "yellow", ability: "Chain lightning" },
+  flamethrower: { damage: 20, range: 80, fireRate: 2000, cost: 180, persistentCost: 600, color: "orange", ability: "Burning damage" },
+  missile: { damage: 60, range: 130, fireRate: 4000, cost: 200, persistentCost: 650, color: "silver", ability: "High damage" },
+  poison: { damage: 15, range: 110, fireRate: 3000, cost: 250, persistentCost: 700, color: "limegreen", ability: "Poison splash" },
+  vortex: { damage: 0, range: 150, fireRate: 5000, cost: 300, persistentCost: 750, color: "purple", ability: "Pulls enemies" },
 };
 
 const towerUpgradePaths = {
@@ -216,141 +217,64 @@ const towerUpgradePaths = {
   },
 };
 
-// Muted background colors
 const themeBackgrounds = {
-  map1: "#4a704a", // Darker green for grassland
-  map2: "#8b5a2b", // Muted brown for sandy terrain
-  map3: "#5e5e5e", // Dark gray for rocky path
-  map4: "#2e4d2e", // Dark forest green
-  map5: "#6b4e31", // Muted tan for mountain
-  map6: "#8a4f2a", // Dark orange-brown for desert
-  map7: "#3a6070", // Darker blue for river
-  map8: "#4a2f1f", // Dark brown for canyon
-  map9: "#b0c4de", // Light steel blue for arctic (muted from white)
+  map1: "#4a704a",
+  map2: "#8b5a2b",
+  map3: "#5e5e5e",
+  map4: "#2e4d2e",
+  map5: "#6b4e31",
+  map6: "#8a4f2a",
+  map7: "#3a6070",
+  map8: "#4a2f1f",
+  map9: "#b0c4de",
 };
 
 const paths = {
   map1: [
-    { x: 0, y: 540 },
-    { x: 300, y: 540 },
-    { x: 300, y: 300 },
-    { x: 600, y: 300 },
-    { x: 600, y: 600 },
-    { x: 900, y: 600 },
-    { x: 900, y: 200 },
-    { x: 1200, y: 200 },
-    { x: 1200, y: 700 },
-    { x: 1500, y: 700 },
-    { x: 1500, y: 400 },
-    { x: 1920, y: 400 },
+    { x: 0, y: 540 }, { x: 300, y: 540 }, { x: 300, y: 300 }, { x: 600, y: 300 },
+    { x: 600, y: 600 }, { x: 900, y: 600 }, { x: 900, y: 200 }, { x: 1200, y: 200 },
+    { x: 1200, y: 700 }, { x: 1500, y: 700 }, { x: 1500, y: 400 }, { x: 1920, y: 400 },
   ],
   map2: [
-    { x: 0, y: 540 },
-    { x: 400, y: 540 },
-    { x: 400, y: 200 },
-    { x: 800, y: 200 },
-    { x: 800, y: 600 },
-    { x: 1200, y: 600 },
-    { x: 1200, y: 300 },
-    { x: 1920, y: 300 },
+    { x: 0, y: 540 }, { x: 400, y: 540 }, { x: 400, y: 200 }, { x: 800, y: 200 },
+    { x: 800, y: 600 }, { x: 1200, y: 600 }, { x: 1200, y: 300 }, { x: 1920, y: 300 },
   ],
   map3: [
-    { x: 0, y: 540 },
-    { x: 300, y: 540 },
-    { x: 300, y: 200 },
-    { x: 600, y: 200 },
-    { x: 600, y: 600 },
-    { x: 900, y: 600 },
-    { x: 900, y: 300 },
-    { x: 1200, y: 300 },
-    { x: 1200, y: 700 },
-    { x: 1500, y: 700 },
-    { x: 1500, y: 400 },
-    { x: 1800, y: 400 },
-    { x: 1800, y: 200 },
-    { x: 1920, y: 200 },
+    { x: 0, y: 540 }, { x: 300, y: 540 }, { x: 300, y: 200 }, { x: 600, y: 200 },
+    { x: 600, y: 600 }, { x: 900, y: 600 }, { x: 900, y: 300 }, { x: 1200, y: 300 },
+    { x: 1200, y: 700 }, { x: 1500, y: 700 }, { x: 1500, y: 400 }, { x: 1800, y: 400 },
+    { x: 1800, y: 200 }, { x: 1920, y: 200 },
   ],
   map4: [
-    { x: 0, y: 540 },
-    { x: 500, y: 540 },
-    { x: 500, y: 300 },
-    { x: 1000, y: 300 },
-    { x: 1000, y: 700 },
-    { x: 1500, y: 700 },
-    { x: 1500, y: 400 },
-    { x: 1920, y: 400 },
+    { x: 0, y: 540 }, { x: 500, y: 540 }, { x: 500, y: 300 }, { x: 1000, y: 300 },
+    { x: 1000, y: 700 }, { x: 1500, y: 700 }, { x: 1500, y: 400 }, { x: 1920, y: 400 },
   ],
   map5: [
-    { x: 0, y: 540 },
-    { x: 300, y: 540 },
-    { x: 300, y: 200 },
-    { x: 600, y: 200 },
-    { x: 600, y: 600 },
-    { x: 900, y: 600 },
-    { x: 900, y: 400 },
-    { x: 1200, y: 400 },
-    { x: 1200, y: 700 },
-    { x: 1920, y: 700 },
+    { x: 0, y: 540 }, { x: 300, y: 540 }, { x: 300, y: 200 }, { x: 600, y: 200 },
+    { x: 600, y: 600 }, { x: 900, y: 600 }, { x: 900, y: 400 }, { x: 1200, y: 400 },
+    { x: 1200, y: 700 }, { x: 1920, y: 700 },
   ],
   map6: [
-    { x: 0, y: 540 },
-    { x: 200, y: 540 },
-    { x: 200, y: 300 },
-    { x: 400, y: 300 },
-    { x: 400, y: 600 },
-    { x: 600, y: 600 },
-    { x: 600, y: 200 },
-    { x: 800, y: 200 },
-    { x: 800, y: 500 },
-    { x: 1000, y: 500 },
-    { x: 1000, y: 300 },
-    { x: 1200, y: 300 },
-    { x: 1200, y: 700 },
-    { x: 1920, y: 700 },
+    { x: 0, y: 540 }, { x: 200, y: 540 }, { x: 200, y: 300 }, { x: 400, y: 300 },
+    { x: 400, y: 600 }, { x: 600, y: 600 }, { x: 600, y: 200 }, { x: 800, y: 200 },
+    { x: 800, y: 500 }, { x: 1000, y: 500 }, { x: 1000, y: 300 }, { x: 1200, y: 300 },
+    { x: 1200, y: 700 }, { x: 1920, y: 700 },
   ],
   map7: [
-    { x: 0, y: 540 },
-    { x: 400, y: 540 },
-    { x: 400, y: 200 },
-    { x: 800, y: 200 },
-    { x: 800, y: 600 },
-    { x: 1200, y: 600 },
-    { x: 1200, y: 400 },
-    { x: 1600, y: 400 },
-    { x: 1600, y: 700 },
-    { x: 1920, y: 700 },
+    { x: 0, y: 540 }, { x: 400, y: 540 }, { x: 400, y: 200 }, { x: 800, y: 200 },
+    { x: 800, y: 600 }, { x: 1200, y: 600 }, { x: 1200, y: 400 }, { x: 1600, y: 400 },
+    { x: 1600, y: 700 }, { x: 1920, y: 700 },
   ],
   map8: [
-    { x: 0, y: 540 },
-    { x: 300, y: 540 },
-    { x: 300, y: 300 },
-    { x: 600, y: 300 },
-    { x: 600, y: 600 },
-    { x: 900, y: 600 },
-    { x: 900, y: 200 },
-    { x: 1200, y: 200 },
-    { x: 1200, y: 500 },
-    { x: 1500, y: 500 },
-    { x: 1500, y: 700 },
-    { x: 1920, y: 700 },
+    { x: 0, y: 540 }, { x: 300, y: 540 }, { x: 300, y: 300 }, { x: 600, y: 300 },
+    { x: 600, y: 600 }, { x: 900, y: 600 }, { x: 900, y: 200 }, { x: 1200, y: 200 },
+    { x: 1200, y: 500 }, { x: 1500, y: 500 }, { x: 1500, y: 700 }, { x: 1920, y: 700 },
   ],
   map9: [
-    { x: 0, y: 540 },
-    { x: 200, y: 540 },
-    { x: 200, y: 200 },
-    { x: 400, y: 200 },
-    { x: 400, y: 600 },
-    { x: 600, y: 600 },
-    { x: 600, y: 300 },
-    { x: 800, y: 300 },
-    { x: 800, y: 700 },
-    { x: 1000, y: 700 },
-    { x: 1000, y: 400 },
-    { x: 1200, y: 400 },
-    { x: 1200, y: 200 },
-    { x: 1400, y: 200 },
-    { x: 1400, y: 600 },
-    { x: 1920, y: 600 },
+    { x: 0, y: 540 }, { x: 200, y: 540 }, { x: 200, y: 200 }, { x: 400, y: 200 },
+    { x: 400, y: 600 }, { x: 600, y: 600 }, { x: 600, y: 300 }, { x: 800, y: 300 },
+    { x: 800, y: 700 }, { x: 1000, y: 700 }, { x: 1000, y: 400 }, { x: 1200, y: 400 },
+    { x: 1200, y: 200 }, { x: 1400, y: 200 }, { x: 1400, y: 600 }, { x: 1920, y: 600 },
   ],
 };
 
@@ -369,10 +293,7 @@ let lastMousePos = null;
 
 canvas.addEventListener("mousemove", (event) => {
   const rect = canvas.getBoundingClientRect();
-  lastMousePos = {
-    x: event.clientX - rect.left,
-    y: event.clientY - rect.top,
-  };
+  lastMousePos = { x: event.clientX - rect.left, y: event.clientY - rect.top };
 });
 
 canvas.addEventListener("click", (event) => {
@@ -394,6 +315,66 @@ canvas.addEventListener("click", (event) => {
     updateTowerInfo();
   }
 });
+
+// Server communication functions
+async function fetchUserData() {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+  const response = await fetch("/user", {
+    headers: { "Authorization": `Bearer ${token}` },
+  });
+  if (!response.ok) throw new Error(`Failed to fetch user data: ${response.statusText}`);
+  const data = await response.json();
+  gameState.persistentMoney = data.money;
+}
+
+async function loadUnlockedTowers() {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+  const response = await fetch("/towers", {
+    headers: { "Authorization": `Bearer ${token}` },
+  });
+  if (!response.ok) throw new Error(`Failed to load towers: ${response.statusText}`);
+  const data = await response.json();
+  gameState.unlockedTowers = data.towers.length > 0 ? data.towers : ["basic"];
+}
+
+async function updatePersistentMoney() {
+  const token = localStorage.getItem("token");
+  if (!token) return;
+  const response = await fetch("/update-money", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ money: gameState.persistentMoney }),
+  });
+  if (!response.ok) console.error("Failed to update money:", await response.text());
+}
+
+async function unlockTower(towerType) {
+  const token = localStorage.getItem("token");
+  if (!token) return;
+  const response = await fetch("/unlock-tower", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ tower: towerType }),
+  });
+  if (response.ok) {
+    const data = await response.json();
+    gameState.unlockedTowers = data.towers;
+    gameState.persistentMoney -= towerStats[towerType].persistentCost;
+    showNotification(data.message);
+    initSidebar();
+  } else {
+    const error = await response.json();
+    showNotification(error.message);
+  }
+}
 
 class Enemy {
   constructor(type, wave) {
@@ -417,8 +398,8 @@ class Enemy {
 
   move(dt) {
     if (this.pathIndex >= scaledPath.length) {
-      gameState.playerHealth -= this.isBoss 
-        ? (selectedDifficulty === "easy" ? 2.5 : selectedDifficulty === "medium" ? 5 : 7.5) 
+      gameState.playerHealth -= this.isBoss
+        ? (selectedDifficulty === "easy" ? 2.5 : selectedDifficulty === "medium" ? 5 : 7.5)
         : (selectedDifficulty === "easy" ? 0.5 : selectedDifficulty === "medium" ? 1 : 1.5);
       gameState.enemies = gameState.enemies.filter(e => e !== this);
       return;
@@ -496,6 +477,8 @@ class Tower {
                   if (enemy.health <= 0) {
                     gameState.score += enemy.isBoss ? 50 : 10;
                     gameState.gameMoney += enemy.isBoss ? 100 : 20;
+                    gameState.persistentMoney += enemy.isBoss ? 10 : 2;
+                    updatePersistentMoney();
                     gameState.enemies = gameState.enemies.filter(e => e !== enemy);
                   }
                 }
@@ -507,6 +490,8 @@ class Tower {
                   if (extraTarget.health <= 0) {
                     gameState.score += extraTarget.isBoss ? 50 : 10;
                     gameState.gameMoney += extraTarget.isBoss ? 100 : 20;
+                    gameState.persistentMoney += extraTarget.isBoss ? 10 : 2;
+                    updatePersistentMoney();
                     gameState.enemies = gameState.enemies.filter(e => e !== extraTarget);
                   }
                 }
@@ -524,6 +509,8 @@ class Tower {
             if (enemy.health <= 0) {
               gameState.score += enemy.isBoss ? 50 : 10;
               gameState.gameMoney += enemy.isBoss ? 100 : 20;
+              gameState.persistentMoney += enemy.isBoss ? 10 : 2;
+              updatePersistentMoney();
               gameState.enemies = gameState.enemies.filter(e => e !== enemy);
             }
           });
@@ -540,7 +527,7 @@ class Tower {
                   const pullStrength = this.specials.pull * scaleX;
                   enemy.x += (dx / distance) * pullStrength * (gameState.gameSpeed / 60);
                   enemy.y += (dy / distance) * pullStrength * (gameState.gameSpeed / 60);
-                  const nearestPoint = scaledPath.reduce((closest, point) => 
+                  const nearestPoint = scaledPath.reduce((closest, point) =>
                     Math.hypot(point.x - enemy.x, point.y - enemy.y) < Math.hypot(closest.x - enemy.x, closest.y - enemy.y) ? point : closest
                   );
                   enemy.x = nearestPoint.x;
@@ -854,7 +841,7 @@ class Projectile {
         gameState.score += this.target.isBoss ? 50 : 10;
         gameState.gameMoney += this.target.isBoss ? 100 : 20;
         gameState.persistentMoney += this.target.isBoss ? 10 : 2;
-        localStorage.setItem("persistentMoney", gameState.persistentMoney);
+        updatePersistentMoney();
         gameState.enemies = gameState.enemies.filter(e => e !== this.target);
       }
       const tower = gameState.towers.find(t => t.type === this.type);
@@ -867,7 +854,7 @@ class Projectile {
                 gameState.score += enemy.isBoss ? 50 : 10;
                 gameState.gameMoney += enemy.isBoss ? 100 : 20;
                 gameState.persistentMoney += enemy.isBoss ? 10 : 2;
-                localStorage.setItem("persistentMoney", gameState.persistentMoney);
+                updatePersistentMoney();
                 gameState.enemies = gameState.enemies.filter(e => e !== enemy);
               }
             }
@@ -889,7 +876,7 @@ class Projectile {
                 gameState.score += enemy.isBoss ? 50 : 10;
                 gameState.gameMoney += enemy.isBoss ? 100 : 20;
                 gameState.persistentMoney += enemy.isBoss ? 10 : 2;
-                localStorage.setItem("persistentMoney", gameState.persistentMoney);
+                updatePersistentMoney();
                 gameState.enemies = gameState.enemies.filter(e => e !== enemy);
               }
             }
@@ -904,7 +891,7 @@ class Projectile {
                 gameState.score += this.target.isBoss ? 50 : 10;
                 gameState.gameMoney += this.target.isBoss ? 100 : 20;
                 gameState.persistentMoney += this.target.isBoss ? 10 : 2;
-                localStorage.setItem("persistentMoney", gameState.persistentMoney);
+                updatePersistentMoney();
                 gameState.enemies = gameState.enemies.filter(e => e !== this.target);
               }
             } else {
@@ -924,7 +911,7 @@ class Projectile {
                     gameState.score += enemy.isBoss ? 50 : 10;
                     gameState.gameMoney += enemy.isBoss ? 100 : 20;
                     gameState.persistentMoney += enemy.isBoss ? 10 : 2;
-                    localStorage.setItem("persistentMoney", gameState.persistentMoney);
+                    updatePersistentMoney();
                     gameState.enemies = gameState.enemies.filter(e => e !== enemy);
                   }
                 } else {
@@ -1025,7 +1012,7 @@ function updateTowerInfo() {
     const utilityUpgrades = towerUpgradePaths[gameState.selectedTower.type].utility;
     const powerCost = gameState.selectedTower.powerLevel < 4 ? powerUpgrades[gameState.selectedTower.powerLevel].cost : "Max";
     const utilityCost = gameState.selectedTower.utilityLevel < 4 ? utilityUpgrades[gameState.selectedTower.utilityLevel].cost : "Max";
-    
+
     powerButton.textContent = `Upgrade Power ($${powerCost})`;
     utilityButton.textContent = `Upgrade Utility ($${utilityCost})`;
     powerButton.disabled = gameState.selectedTower.powerLevel >= 4 || gameState.gameMoney < powerCost;
@@ -1041,7 +1028,7 @@ function endGame(won) {
   const endScreen = document.getElementById("end-screen");
   const persistentMoneyEarned = Math.floor(gameState.score / 10);
   gameState.persistentMoney += persistentMoneyEarned;
-  localStorage.setItem("persistentMoney", gameState.persistentMoney);
+  updatePersistentMoney();
 
   document.getElementById("end-message").textContent = won ? "Victory!" : "Game Over";
   document.getElementById("waves-survived").textContent = `Waves Survived: ${gameState.wave - 1}`;
@@ -1052,10 +1039,10 @@ function endGame(won) {
   const restartButton = document.getElementById("restart-button");
   const mainMenuButton = document.getElementById("main-menu-button");
 
-  restartButton.onclick = () => {
+  restartButton.onclick = async () => {
     endScreen.style.display = "none";
     resetGame();
-    init();
+    await init();
   };
 
   mainMenuButton.onclick = () => {
@@ -1082,20 +1069,38 @@ function resetGame() {
   gameState.gameSpeed = 1;
 }
 
-function init() {
+function initSidebar() {
   const sidebar = document.getElementById("sidebar");
   sidebar.innerHTML = "";
   Object.keys(towerStats).forEach(type => {
     const div = document.createElement("div");
     div.className = "tower-option";
-    div.textContent = `${type.charAt(0).toUpperCase() + type.slice(1)} ($${towerStats[type].cost})`;
-    div.addEventListener("click", () => {
-      gameState.selectedTowerType = type;
-      document.querySelectorAll(".tower-option").forEach(el => el.classList.remove("selected"));
-      div.classList.add("selected");
-    });
+    if (gameState.unlockedTowers.includes(type)) {
+      div.textContent = `${type.charAt(0).toUpperCase() + type.slice(1)} ($${towerStats[type].cost})`;
+      div.addEventListener("click", () => {
+        gameState.selectedTowerType = type;
+        document.querySelectorAll(".tower-option").forEach(el => el.classList.remove("selected"));
+        div.classList.add("selected");
+      });
+    } else {
+      div.textContent = `${type.charAt(0).toUpperCase() + type.slice(1)} ($${towerStats[type].persistentCost} to unlock)`;
+      div.style.opacity = "0.5";
+      div.addEventListener("click", () => unlockTower(type));
+    }
     sidebar.appendChild(div);
   });
+}
+
+async function init() {
+  try {
+    await fetchUserData();
+    await loadUnlockedTowers();
+  } catch (err) {
+    console.error("Initialization error:", err);
+    showNotification("Failed to load user data. Playing offline.");
+  }
+
+  initSidebar();
 
   const pauseButton = document.createElement("div");
   pauseButton.id = "pause-button";
@@ -1105,7 +1110,7 @@ function init() {
     pauseButton.classList.toggle("active");
     pauseButton.textContent = gameState.isPaused ? "Resume" : "Pause";
   });
-  sidebar.appendChild(pauseButton);
+  document.getElementById("sidebar").appendChild(pauseButton);
 
   const fastForwardButton = document.createElement("div");
   fastForwardButton.id = "fast-forward-button";
@@ -1116,7 +1121,7 @@ function init() {
     fastForwardButton.textContent = gameState.gameSpeed === 1 ? "Fast Forward (2x)" : "Normal Speed (1x)";
     updateStats();
   });
-  sidebar.appendChild(fastForwardButton);
+  document.getElementById("sidebar").appendChild(fastForwardButton);
 
   const homeButton = document.createElement("div");
   homeButton.id = "home-button";
@@ -1124,8 +1129,9 @@ function init() {
   homeButton.addEventListener("click", () => {
     resetGame();
     document.getElementById("map-selection").style.display = "block";
+    window.location.href = "/"; // Return to index.html
   });
-  sidebar.appendChild(homeButton);
+  document.getElementById("sidebar").appendChild(homeButton);
 
   document.getElementById("upgrade-power-button").addEventListener("click", () => {
     if (gameState.selectedTower) gameState.selectedTower.upgrade("power");
