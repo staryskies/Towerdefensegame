@@ -33,9 +33,26 @@
     .close-btn::after { transform: rotate(-45deg); }
     .close-btn:hover { background: #c0392b; transform: scale(1.1); }
     .close-btn:active { transform: scale(0.95); }
-    .map-option, .shop-item { background: #34495e; padding: 15px; margin: 12px 0; border-radius: 10px; cursor: pointer; transition: all 0.3s ease; text-align: left; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); }
+    .map-option, .shop-item { background: #34495e; padding: 15px; margin: 12px 0; border-radius: 10px; cursor: pointer; transition: all 0.3s ease; text-align: left; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); position: relative; overflow: visible; }
     .map-option:hover, .shop-item:hover { background: #3e5c76; transform: translateY(-2px); }
     .map-option.selected { background: linear-gradient(135deg, #3498db, #2980b9); color: #fff; }
+    .map-option:hover::after { 
+      content: attr(data-preview); 
+      position: absolute; 
+      bottom: 100%; 
+      left: 50%; 
+      transform: translateX(-50%); 
+      background: rgba(52, 73, 94, 0.95); 
+      color: #ecf0f1; 
+      padding: 8px 12px; 
+      border-radius: 8px; 
+      font-size: 0.9em; 
+      z-index: 1001; 
+      white-space: nowrap; 
+      display: block; 
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); 
+      pointer-events: none; 
+    }
     .shop-item h4 { margin-bottom: 8px; font-size: 1.2rem; color: #ecf0f1; }
     .shop-item p { margin: 5px 0; font-size: 0.95rem; color: #bdc3c7; }
     .unlock-btn { background: linear-gradient(135deg, #27ae60, #219653); padding: 10px 20px; margin-top: 8px; font-size: 0.95rem; border-radius: 8px; }
@@ -51,6 +68,7 @@
       h1 { font-size: 2rem; }
       button { padding: 12px 25px; font-size: 0.95rem; }
       #notification-box { bottom: 20px; right: 20px; max-width: 60vw; }
+      .map-option:hover::after { bottom: auto; top: 100%; }
     }
     @media (max-width: 480px) {
       .container, #map-selection, #tower-shop { padding: 20px; }
@@ -58,6 +76,7 @@
       button { padding: 10px 20px; font-size: 0.9rem; }
       .map-option, .shop-item { padding: 12px; }
       #notification-box { bottom: 15px; right: 15px; max-width: 80vw; font-size: 0.9rem; }
+      .map-option:hover::after { bottom: auto; top: 100%; }
     }
   </style>
 </head>
@@ -136,6 +155,18 @@
       poison: { persistentCost: 700, ability: "Poison splash" },
       vortex: { persistentCost: 750, ability: "Pulls enemies" },
     };
+
+    const mapData = [
+      { id: "map1", name: "Beginner Path", preview: "Straight path, beginner-friendly" },
+      { id: "map2", name: "Zigzag Path", preview: "Zigzag turns, moderate challenge" },
+      { id: "map3", name: "Snake Path", preview: "Twisting route, high difficulty" },
+      { id: "map4", name: "Forest Trail", preview: "Winding forest trail" },
+      { id: "map5", name: "Mountain Pass", preview: "Rugged mountain pass" },
+      { id: "map6", name: "Desert Maze", preview: "Complex desert maze" },
+      { id: "map7", name: "River Bend", preview: "Curving river route" },
+      { id: "map8", name: "Canyon Run", preview: "Narrow canyon run" },
+      { id: "map9", name: "Arctic Path", preview: "Icy path, 60 waves" },
+    ];
 
     function showNotification(message) {
       const notification = document.getElementById("notification-box");
@@ -246,18 +277,19 @@
     function populateMapList() {
       const mapList = document.getElementById("map-list");
       mapList.innerHTML = "";
-      for (let i = 1; i <= 9; i++) {
+      mapData.forEach(map => {
         const mapDiv = document.createElement("div");
         mapDiv.className = "map-option";
-        mapDiv.textContent = `Map ${i}`;
+        mapDiv.textContent = map.name;
+        mapDiv.setAttribute("data-preview", map.preview);
         mapDiv.addEventListener("click", () => {
-          localStorage.setItem("selectedMap", `map${i}`);
+          localStorage.setItem("selectedMap", map.id);
           document.querySelectorAll(".map-option").forEach(el => el.classList.remove("selected"));
           mapDiv.classList.add("selected");
         });
-        if (localStorage.getItem("selectedMap") === `map${i}`) mapDiv.classList.add("selected");
+        if (localStorage.getItem("selectedMap") === map.id) mapDiv.classList.add("selected");
         mapList.appendChild(mapDiv);
-      }
+      });
     }
 
     document.getElementById("difficulty-select").addEventListener("change", (e) => {

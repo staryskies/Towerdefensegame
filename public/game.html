@@ -191,101 +191,6 @@
       transform: translateY(-2px); 
       box-shadow: 0 6px 15px rgba(52, 152, 219, 0.4); 
     }
-    #map-selection { 
-      position: fixed; 
-      top: 50%; 
-      left: 50%; 
-      transform: translate(-50%, -50%); 
-      background: linear-gradient(to bottom, rgba(44, 62, 80, 0.95), rgba(52, 73, 94, 0.95)); 
-      padding: 40px; 
-      border-radius: 20px; 
-      text-align: center; 
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5); 
-      z-index: 1002; 
-      display: block; 
-      border: 1px solid #3e5c76; 
-      max-width: 500px; 
-      width: 90%; 
-    }
-    #map-selection h2 { 
-      font-size: 2em; 
-      margin-bottom: 20px; 
-      text-shadow: 0 2px 5px rgba(0, 0, 0, 0.3); 
-    }
-    .map-option { 
-      padding: 12px; 
-      background: #34495e; 
-      margin: 10px 0; 
-      border-radius: 10px; 
-      cursor: pointer; 
-      transition: all 0.3s ease; 
-      font-weight: 600; 
-      position: relative; 
-      border: 1px solid #3e5c76; 
-    }
-    .map-option:hover { 
-      background: linear-gradient(90deg, #3e5c76, #4a6a8a); 
-      transform: translateX(8px); 
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); 
-    }
-    .map-option.selected { 
-      background: linear-gradient(90deg, #3498db, #2980b9); 
-      transform: translateX(8px); 
-      border-color: #2980b9; 
-    }
-    .map-option::after { 
-      content: attr(data-preview); 
-      position: absolute; 
-      top: 100%; 
-      left: 50%; 
-      transform: translateX(-50%); 
-      background: rgba(52, 73, 94, 0.9); 
-      color: #ecf0f1; 
-      padding: 8px 12px; 
-      border-radius: 8px; 
-      font-size: 0.9em; 
-      display: none; 
-      z-index: 1003; 
-      white-space: nowrap; 
-    }
-    .map-option:hover::after { 
-      display: block; 
-    }
-    #difficulty-select { 
-      padding: 10px; 
-      margin: 15px 0; 
-      background: #34495e; 
-      color: #ecf0f1; 
-      border: 1px solid #3e5c76; 
-      border-radius: 8px; 
-      font-size: 1em; 
-      cursor: pointer; 
-      transition: all 0.3s ease; 
-    }
-    #difficulty-select:hover { 
-      background: #3e5c76; 
-    }
-    #start-game-button { 
-      padding: 14px 30px; 
-      background: linear-gradient(90deg, #3498db, #2980b9); 
-      color: white; 
-      border: none; 
-      border-radius: 10px; 
-      cursor: pointer; 
-      font-weight: bold; 
-      transition: all 0.3s ease; 
-      margin-top: 20px; 
-    }
-    #start-game-button:hover { 
-      background: linear-gradient(90deg, #2980b9, #2471a3); 
-      transform: translateY(-2px); 
-      box-shadow: 0 6px 15px rgba(52, 152, 219, 0.4); 
-    }
-    #persistent-money-display { 
-      margin-top: 15px; 
-      font-size: 1.2em; 
-      color: #bdc3c7; 
-    }
     #boss-indicator { 
       position: fixed; 
       top: 70px; 
@@ -307,38 +212,17 @@
       #sidebar, #stats-panel { width: 200px; }
       #tower-info-panel { left: 220px; width: 180px; }
       #notification-box { bottom: 20px; right: 20px; max-width: 60vw; }
-      #map-selection { padding: 30px; }
     }
     @media (max-width: 480px) {
       #sidebar, #stats-panel { width: 160px; }
       #tower-info-panel { left: 180px; width: 140px; bottom: 10px; }
       #notification-box { bottom: 15px; right: 15px; max-width: 80vw; font-size: 0.9rem; }
-      #map-selection { padding: 20px; }
-      #start-game-button, #restart-button, #main-menu-button { padding: 12px 20px; }
+      #restart-button, #main-menu-button { padding: 12px 20px; }
     }
   </style>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div id="map-selection">
-    <h2>Select a Map</h2>
-    <div class="map-option" data-map="map1" data-preview="Straight path, beginner-friendly">Beginner Path</div>
-    <div class="map-option" data-map="map2" data-preview="Zigzag turns, moderate challenge">Zigzag Path</div>
-    <div class="map-option" data-map="map3" data-preview="Twisting route, high difficulty">Snake Path</div>
-    <div class="map-option" data-map="map4" data-preview="Winding forest trail">Forest Trail</div>
-    <div class="map-option" data-map="map5" data-preview="Rugged mountain pass">Mountain Pass</div>
-    <div class="map-option" data-map="map6" data-preview="Complex desert maze">Desert Maze</div>
-    <div class="map-option" data-map="map7" data-preview="Curving river route">River Bend</div>
-    <div class="map-option" data-map="map8" data-preview="Narrow canyon run">Canyon Run</div>
-    <div class="map-option" data-map="map9" data-preview="Icy path, 60 waves">Arctic Path</div>
-    <select id="difficulty-select">
-      <option value="easy">Easy</option>
-      <option value="medium">Medium</option>
-      <option value="hard">Hard</option>
-    </select>
-    <div id="persistent-money-display">Persistent Money: $0</div>
-    <button id="start-game-button">Start Game</button>
-  </div>
   <div id="sidebar"></div>
   <canvas id="gameCanvas"></canvas>
   <div id="stats-panel">
@@ -371,68 +255,17 @@
   </div>
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      const mapOptions = document.querySelectorAll(".map-option");
-      const difficultySelect = document.getElementById("difficulty-select");
-      const persistentMoneyDisplay = document.getElementById("persistent-money-display");
-      let selectedMap = localStorage.getItem("selectedMap") || "map1";
-      let selectedDifficulty = localStorage.getItem("selectedDifficulty") || "easy";
-      let isSoundOn = localStorage.getItem("soundOn") === "true" || true;
+      // Check if map and difficulty are set from index.html
+      const selectedMap = localStorage.getItem("selectedMap");
+      const selectedDifficulty = localStorage.getItem("selectedDifficulty");
+      if (!selectedMap || !selectedDifficulty) {
+        alert("Please select a map and difficulty from the main menu.");
+        window.location.href = "/"; // Redirect back to index.html if not set
+        return;
+      }
 
-      // Update persistent money display
-      const updatePersistentMoney = () => {
-        const money = parseInt(localStorage.getItem("persistentMoney")) || 0;
-        persistentMoneyDisplay.textContent = `Persistent Money: $${money}`;
-      };
-      updatePersistentMoney();
-
-      // Highlight the selected map
-      mapOptions.forEach(option => {
-        if (option.getAttribute("data-map") === selectedMap) {
-          option.classList.add("selected");
-        }
-        option.addEventListener("click", () => {
-          mapOptions.forEach(o => o.classList.remove("selected"));
-          option.classList.add("selected");
-          selectedMap = option.getAttribute("data-map");
-          localStorage.setItem("selectedMap", selectedMap);
-        });
-      });
-
-      // Set initial difficulty
-      difficultySelect.value = selectedDifficulty;
-      difficultySelect.addEventListener("change", () => {
-        selectedDifficulty = difficultySelect.value;
-        localStorage.setItem("selectedDifficulty", selectedDifficulty);
-      });
-
-      // Start game only on button click
-      document.getElementById("start-game-button").addEventListener("click", () => {
-        if (selectedMap && selectedDifficulty) {
-          document.getElementById("map-selection").style.display = "none";
-          initGame();
-        } else {
-          alert("Please select a map and difficulty!");
-        }
-      });
-
-      // Add sound toggle to sidebar after game starts
-      const addSoundToggle = () => {
-        const sidebar = document.getElementById("sidebar");
-        const soundButton = document.createElement("div");
-        soundButton.id = "sound-toggle-button";
-        soundButton.textContent = isSoundOn ? "Sound: On" : "Sound: Off";
-        soundButton.classList.toggle("active", isSoundOn);
-        soundButton.addEventListener("click", () => {
-          isSoundOn = !isSoundOn;
-          localStorage.setItem("soundOn", isSoundOn);
-          soundButton.textContent = isSoundOn ? "Sound: On" : "Sound: Off";
-          soundButton.classList.toggle("active");
-          // Add sound toggle logic in game.js if needed
-        });
-        sidebar.appendChild(soundButton);
-      };
-
-      // No auto-start; wait for button click
+      // Initialize the game immediately with pre-selected values
+      initGame();
     });
 
     window.addEventListener("bossActive", (e) => {

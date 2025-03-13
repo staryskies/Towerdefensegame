@@ -17,7 +17,7 @@ const gameState = {
   towers: [],
   projectiles: [],
   playerHealth: 20,
-  persistentMoney: 0, // Fetched from server
+  persistentMoney: 0,
   gameMoney: 200,
   score: 0,
   wave: 1,
@@ -28,7 +28,9 @@ const gameState = {
   selectedTowerType: null,
   isSpawning: false,
   gameSpeed: 1,
-  unlockedTowers: ["basic"], // Default unlocked tower
+  unlockedTowers: ["basic"],
+  spawnTimer: 0, // Added for controlled spawning
+  enemiesToSpawn: 0, // Track enemies left to spawn in the wave
 };
 
 const towerStats = {
@@ -960,27 +962,37 @@ class Projectile {
 }
 
 function spawnWave() {
-  gameState.isSpawning = true;
   const maxWaves = selectedMap === "map9" ? 60 : 30;
   if (gameState.wave > maxWaves) {
     gameState.gameWon = true;
     endGame(true);
     return;
   }
+  gameState.isSpawning = true;
   const enemiesPerWave = Math.min(5 + gameState.wave * 2, 50);
-  let spawned = 0;
-  const spawnInterval = setInterval(() => {
-    if (spawned >= enemiesPerWave) {
-      clearInterval(spawnInterval);
-      gameState.isSpawning = false;
-      return;
-    }
-    const enemyType = enemyThemes[mapTheme][selectedDifficulty][0];
-    gameState.enemies.push(new Enemy(enemyType, gameState.wave));
-    spawned++;
-  }, 1000 / gameState.gameSpeed);
+  gameState.enemiesToSpawn = enemiesPerWave; // Set total enemies to spawn
+  gameState.spawnTimer = 0; // Reset spawn timer
 }
 
+function updateSpawning(dt) {
+  if (!gameState.isSpawning || gameState.enemiesToSpawn <= 0) {
+    if (gameState.enemies.length === 0 && gameState.playerHealth > 0) {
+      gameState.wave++;
+      spawnWave();
+    }
+    gameState.isSpawning = false;
+    return;
+  }
+
+  gameState.spawnTimer += dt * gameState.gameSpeed;
+  const spawnInterval = 1; // Spawn every 1 second (adjusted by gameSpeed)
+  if (gameState.spawnTimer >= spawnInterval) {
+    const enemyType = enemyThemes[mapTheme][selectedDifficulty][0];
+    gameState.enemies.push(new Enemy(enemyType, gameState.wave));
+    gameState.enemiesToSpawn--;
+    gameState.spawnTimer -= spawnInterval; // Reset timer for next spawn
+  }
+}
 function showNotification(message) {
   const notification = document.getElementById("notification-box");
   notification.textContent = message;
@@ -1128,8 +1140,7 @@ async function init() {
   homeButton.textContent = "Main Menu";
   homeButton.addEventListener("click", () => {
     resetGame();
-    document.getElementById("map-selection").style.display = "block";
-    window.location.href = "/"; // Return to index.html
+    window.location.href = "/";
   });
   document.getElementById("sidebar").appendChild(homeButton);
 
@@ -1141,7 +1152,7 @@ async function init() {
     if (gameState.selectedTower) gameState.selectedTower.upgrade("utility");
   });
 
-  spawnWave();
+  spawnWave(); // Start the first wave immediately
   requestAnimationFrame(update);
 }
 
@@ -1169,6 +1180,8 @@ function update(timestamp) {
   ctx.lineWidth = 40 * textScale;
   ctx.stroke();
 
+  updateSpawning(dt); // Handle spawning in the game loop
+
   gameState.enemies.forEach(enemy => {
     enemy.move(dt);
     enemy.draw();
@@ -1194,11 +1207,6 @@ function update(timestamp) {
     ctx.strokeStyle = "rgba(0, 255, 0, 0.3)";
     ctx.lineWidth = 2;
     ctx.stroke();
-  }
-
-  if (!gameState.isSpawning && gameState.enemies.length === 0 && gameState.playerHealth > 0) {
-    gameState.wave++;
-    spawnWave();
   }
 
   if (gameState.playerHealth <= 0) {
