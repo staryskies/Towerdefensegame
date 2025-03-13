@@ -8,9 +8,20 @@ const scaleX = canvas.width / 1920;
 const scaleY = canvas.height / 1080;
 const textScale = Math.min(scaleX, scaleY);
 
-let mapTheme = "grassland";
+const mapThemes = {
+  map1: "grassland",
+  map2: "desert",
+  map3: "stone",
+  map4: "forest",
+  map5: "mountain",
+  map6: "desert", // Changed from "river" to match background and path
+  map7: "river",  // Swapped with map6 for consistency
+  map8: "canyon",
+  map9: "arctic"
+};
 let selectedDifficulty = localStorage.getItem("selectedDifficulty") || "easy";
 let selectedMap = localStorage.getItem("selectedMap") || "map1";
+let mapTheme = mapThemes[selectedMap]; // Define mapTheme here
 
 const gameState = {
   enemies: [],
@@ -29,8 +40,8 @@ const gameState = {
   isSpawning: false,
   gameSpeed: 1,
   unlockedTowers: ["basic"],
-  spawnTimer: 0, // Added for controlled spawning
-  enemiesToSpawn: 0, // Track enemies left to spawn in the wave
+  spawnTimer: 0,
+  enemiesToSpawn: 0,
 };
 
 const towerStats = {
@@ -281,10 +292,45 @@ const paths = {
 };
 
 const enemyThemes = {
-  grassland: {
+  grassland: { // map1: Beginner Path
     easy: [{ health: 50, speed: 1, radius: 10, color: "red" }],
     medium: [{ health: 75, speed: 1.2, radius: 12, color: "darkred" }],
     hard: [{ health: 100, speed: 1.5, radius: 15, color: "crimson" }],
+  },
+  desert: { // map2: Zigzag Path, map6: Desert Maze
+    easy: [{ health: 60, speed: 0.9, radius: 11, color: "sandybrown" }],
+    medium: [{ health: 90, speed: 1.1, radius: 13, color: "peru" }],
+    hard: [{ health: 120, speed: 1.4, radius: 16, color: "sienna" }],
+  },
+  stone: { // map3: Snake Path
+    easy: [{ health: 70, speed: 0.8, radius: 12, color: "gray" }],
+    medium: [{ health: 105, speed: 1.0, radius: 14, color: "darkgray" }],
+    hard: [{ health: 140, speed: 1.3, radius: 17, color: "slategray" }],
+  },
+  forest: { // map4: Forest Trail
+    easy: [{ health: 55, speed: 1.1, radius: 10, color: "forestgreen" }],
+    medium: [{ health: 80, speed: 1.3, radius: 12, color: "darkgreen" }],
+    hard: [{ health: 110, speed: 1.6, radius: 15, color: "olive" }],
+  },
+  mountain: { // map5: Mountain Pass
+    easy: [{ health: 80, speed: 0.7, radius: 13, color: "brown" }],
+    medium: [{ health: 120, speed: 0.9, radius: 15, color: "saddlebrown" }],
+    hard: [{ health: 160, speed: 1.2, radius: 18, color: "maroon" }],
+  },
+  river: { // map7: River Bend
+    easy: [{ health: 50, speed: 1.2, radius: 10, color: "dodgerblue" }],
+    medium: [{ health: 75, speed: 1.4, radius: 12, color: "royalblue" }],
+    hard: [{ health: 100, speed: 1.7, radius: 15, color: "navy" }],
+  },
+  canyon: { // map8: Canyon Run
+    easy: [{ health: 65, speed: 1.0, radius: 11, color: "chocolate" }],
+    medium: [{ health: 95, speed: 1.2, radius: 13, color: "darkorange" }],
+    hard: [{ health: 130, speed: 1.5, radius: 16, color: "firebrick" }],
+  },
+  arctic: { // map9: Arctic Path
+    easy: [{ health: 60, speed: 0.9, radius: 12, color: "lightcyan" }],
+    medium: [{ health: 90, speed: 1.1, radius: 14, color: "cyan" }],
+    hard: [{ health: 120, speed: 1.4, radius: 17, color: "deepskyblue" }],
   },
 };
 
@@ -970,8 +1016,9 @@ function spawnWave() {
   }
   gameState.isSpawning = true;
   const enemiesPerWave = Math.min(5 + gameState.wave * 2, 50);
-  gameState.enemiesToSpawn = enemiesPerWave; // Set total enemies to spawn
-  gameState.spawnTimer = 0; // Reset spawn timer
+  gameState.enemiesToSpawn = enemiesPerWave;
+  gameState.spawnTimer = 0;
+  console.log(`Starting wave ${gameState.wave} with ${enemiesPerWave} enemies`);
 }
 
 function updateSpawning(dt) {
@@ -985,12 +1032,19 @@ function updateSpawning(dt) {
   }
 
   gameState.spawnTimer += dt * gameState.gameSpeed;
-  const spawnInterval = 1; // Spawn every 1 second (adjusted by gameSpeed)
+  const spawnInterval = 1; // 1 second interval, adjusted by gameSpeed
   if (gameState.spawnTimer >= spawnInterval) {
-    const enemyType = enemyThemes[mapTheme][selectedDifficulty][0];
-    gameState.enemies.push(new Enemy(enemyType, gameState.wave));
-    gameState.enemiesToSpawn--;
-    gameState.spawnTimer -= spawnInterval; // Reset timer for next spawn
+    try {
+      const enemyType = enemyThemes[mapTheme][selectedDifficulty][0];
+      if (!enemyType) throw new Error(`No enemy type defined for ${mapTheme}/${selectedDifficulty}`);
+      gameState.enemies.push(new Enemy(enemyType, gameState.wave));
+      gameState.enemiesToSpawn--;
+      gameState.spawnTimer -= spawnInterval;
+    } catch (error) {
+      console.error("Error spawning enemy:", error);
+      showNotification("Error spawning enemies!");
+      gameState.isSpawning = false; // Stop spawning to prevent infinite loop
+    }
   }
 }
 function showNotification(message) {
@@ -1060,7 +1114,7 @@ function endGame(won) {
   mainMenuButton.onclick = () => {
     endScreen.style.display = "none";
     resetGame();
-    document.getElementById("map-selection").style.display = "block";
+    window.location.href = "/"; // Redirect to index.html
   };
 }
 
