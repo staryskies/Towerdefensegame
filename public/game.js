@@ -431,7 +431,7 @@ class Enemy {
     const healthMultiplier = selectedDifficulty === "easy" ? 0.5 : selectedDifficulty === "medium" ? 1 : 1.25;
     this.health = Math.floor(type.health * healthMultiplier * (1 + ((wave - 1) * 14) / 59));
     this.maxHealth = this.health;
-    this.speed = type.speed * scaleX * 4; // Doubled speed for faster gameplay
+    this.speed = type.speed * scaleX * 10; // Doubled speed for faster gameplay
     this.radius = type.radius * textScale;
     this.color = type.color;
     this.pathIndex = 1;
@@ -859,7 +859,7 @@ class Projectile {
     this.y = y;
     this.target = target;
     this.damage = damage;
-    this.speed = speed * scaleX * 4; // Doubled speed for faster projectiles
+    this.speed = speed * scaleX * 10; // Doubled speed for faster projectiles
     this.type = type;
     this.radius = type === "missile" ? 8 * textScale : 5 * textScale;
     this.color = towerStats[type].color || "black";
