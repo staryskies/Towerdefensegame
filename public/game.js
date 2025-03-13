@@ -431,7 +431,7 @@ class Enemy {
     const healthMultiplier = selectedDifficulty === "easy" ? 0.5 : selectedDifficulty === "medium" ? 1 : 1.25;
     this.health = Math.floor(type.health * healthMultiplier * (1 + ((wave - 1) * 14) / 59));
     this.maxHealth = this.health;
-    this.speed = type.speed * scaleX;
+    this.speed = type.speed * scaleX * 4; // Doubled speed for faster gameplay
     this.radius = type.radius * textScale;
     this.color = type.color;
     this.pathIndex = 1;
@@ -859,7 +859,7 @@ class Projectile {
     this.y = y;
     this.target = target;
     this.damage = damage;
-    this.speed = speed * scaleX;
+    this.speed = speed * scaleX * 4; // Doubled speed for faster projectiles
     this.type = type;
     this.radius = type === "missile" ? 8 * textScale : 5 * textScale;
     this.color = towerStats[type].color || "black";
@@ -1206,68 +1206,81 @@ async function init() {
     if (gameState.selectedTower) gameState.selectedTower.upgrade("utility");
   });
 
-  spawnWave(); // Start the first wave immediately
+  spawnWave();
   requestAnimationFrame(update);
 }
 
+// Fixed FPS at 30
+const FPS = 30;
+const FRAME_TIME = 1000 / FPS; // ~33.33 ms per frame
 let lastTime = 0;
+let accumulatedTime = 0;
 
 function update(timestamp) {
   if (!lastTime) lastTime = timestamp;
-  const dt = (timestamp - lastTime) / 1000;
+  const elapsed = timestamp - lastTime;
   lastTime = timestamp;
+  accumulatedTime += elapsed;
 
   if (gameState.isPaused || gameState.gameOver || gameState.gameWon) {
     requestAnimationFrame(update);
     return;
   }
 
-  ctx.fillStyle = themeBackgrounds[selectedMap];
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // Update game logic at fixed 30 FPS
+  while (accumulatedTime >= FRAME_TIME) {
+    const dt = FRAME_TIME / 1000; // Convert to seconds for consistent physics
 
-  ctx.beginPath();
-  ctx.moveTo(scaledPath[0].x, scaledPath[0].y);
-  for (let i = 1; i < scaledPath.length; i++) {
-    ctx.lineTo(scaledPath[i].x, scaledPath[i].y);
-  }
-  ctx.strokeStyle = "brown";
-  ctx.lineWidth = 40 * textScale;
-  ctx.stroke();
+    ctx.fillStyle = themeBackgrounds[selectedMap];
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  updateSpawning(dt); // Handle spawning in the game loop
-
-  gameState.enemies.forEach(enemy => {
-    enemy.move(dt);
-    enemy.draw();
-  });
-
-  gameState.towers.forEach(tower => {
-    tower.shoot();
-    tower.draw();
-  });
-
-  gameState.projectiles.forEach(projectile => {
-    projectile.move(dt);
-    projectile.draw();
-  });
-
-  if (gameState.selectedTowerType && lastMousePos) {
     ctx.beginPath();
-    ctx.arc(lastMousePos.x, lastMousePos.y, 20 * textScale, 0, Math.PI * 2);
-    ctx.fillStyle = towerStats[gameState.selectedTowerType].color;
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(lastMousePos.x, lastMousePos.y, towerStats[gameState.selectedTowerType].range * scaleX, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(0, 255, 0, 0.3)";
-    ctx.lineWidth = 2;
+    ctx.moveTo(scaledPath[0].x, scaledPath[0].y);
+    for (let i = 1; i < scaledPath.length; i++) {
+      ctx.lineTo(scaledPath[i].x, scaledPath[i].y);
+    }
+    ctx.strokeStyle = "brown";
+    ctx.lineWidth = 40 * textScale;
     ctx.stroke();
+
+    updateSpawning(dt);
+
+    gameState.enemies.forEach(enemy => {
+      enemy.move(dt);
+      enemy.draw();
+    });
+
+    gameState.towers.forEach(tower => {
+      tower.shoot();
+      tower.draw();
+    });
+
+    gameState.projectiles.forEach(projectile => {
+      projectile.move(dt);
+      projectile.draw();
+    });
+
+    if (gameState.selectedTowerType && lastMousePos) {
+      ctx.beginPath();
+      ctx.arc(lastMousePos.x, lastMousePos.y, 20 * textScale, 0, Math.PI * 2);
+      ctx.fillStyle = towerStats[gameState.selectedTowerType].color;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(lastMousePos.x, lastMousePos.y, towerStats[gameState.selectedTowerType].range * scaleX, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(0, 255, 0, 0.3)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    if (gameState.playerHealth <= 0) {
+      endGame(false);
+    }
+
+    updateStats(); // Only update stats once per frame
+
+    accumulatedTime -= FRAME_TIME;
   }
 
-  if (gameState.playerHealth <= 0) {
-    endGame(false);
-  }
-
-  updateStats();
   requestAnimationFrame(update);
 }
 
