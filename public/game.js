@@ -486,22 +486,13 @@ class Tower {
     if (now - this.lastShot < this.fireRate / gameState.gameSpeed) return;
     let target = gameState.enemies.find(enemy => Math.hypot(enemy.x - this.x, enemy.y - this.y) < this.range);
     if (target) {
-      this.angle = Math.atan2(target.y - this.y, target.x - this.x) + Math.PI / 2;
       switch (this.type) {
-        case "archer":
-          if (now - this.lastShot >= 2000) {
-            gameState.projectiles.push(new Projectile(this.x, this.y, target, this.damage, 5, this.type));
-            gameState.projectiles.push(new Projectile(this.x + 10 * textScale, this.y - 10 * textScale, target, this.damage, 5, this.type));
-            if (this.specials.tripleShot) {
-              gameState.projectiles.push(new Projectile(this.x - 10 * textScale, this.y - 10 * textScale, target, this.damage, 5, this.type));
-            }
-            this.lastShot = now;
-          }
-          break;
         case "laser":
           if (now - this.lastShot >= 10000) {
-            let beamDuration = 5000 / gameState.gameSpeed;
+            this.lastShot = now; // Mark the start of the beam
+            let beamDuration = 5000 / gameState.gameSpeed; // Duration of beam
             let damageInterval = setInterval(() => {
+              // Dynamically find targets each tick
               gameState.enemies.forEach(enemy => {
                 if (Math.hypot(enemy.x - this.x, enemy.y - this.y) < this.range) {
                   enemy.health -= this.damage / 10;
@@ -515,7 +506,7 @@ class Tower {
                 }
               });
               if (this.specials.multiBeam) {
-                let extraTarget = gameState.enemies.find(e => e !== target && Math.hypot(e.x - this.x, e.y - this.y) < this.range);
+                let extraTarget = gameState.enemies.find(e => Math.hypot(e.x - this.x, e.y - this.y) < this.range && e !== target);
                 if (extraTarget) {
                   extraTarget.health -= this.damage / 10;
                   if (extraTarget.health <= 0) {
@@ -527,9 +518,8 @@ class Tower {
                   }
                 }
               }
-            }, 500 / gameState.gameSpeed);
+            }, 500 / gameState.gameSpeed); // Damage every 0.5s
             setTimeout(() => clearInterval(damageInterval), beamDuration);
-            this.lastShot = now;
           }
           break;
         case "tesla":
@@ -683,13 +673,52 @@ class Tower {
         ctx.rect(0, -5 * textScale, 25 * textScale, 10 * textScale);
         ctx.fillStyle = "darkred";
         ctx.fill();
-        if (Date.now() - this.lastShot < 5000) {
-          ctx.beginPath();
-          ctx.moveTo(25 * textScale, 0);
-          ctx.lineTo(25 * textScale + this.range, 0);
-          ctx.strokeStyle = `rgba(255, 0, 0, ${0.5 + 0.5 * Math.sin(Date.now() / 100)})`;
-          ctx.lineWidth = 4;
-          ctx.stroke();
+
+        // Dynamic beam drawing while active
+        if (Date.now() - this.lastShot < 5000 / gameState.gameSpeed) {
+          let target = gameState.enemies.find(enemy => Math.hypot(enemy.x - this.x, enemy.y - this.y) < this.range);
+          if (target) {
+            // Calculate angle to target dynamically
+            const dx = target.x - this.x;
+            const dy = target.y - this.y;
+            this.angle = Math.atan2(dy, dx); // Update angle each frame
+
+            // Restore and reapply rotation for beam
+            ctx.restore();
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(this.angle);
+
+            // Draw beam to target
+            ctx.beginPath();
+            ctx.moveTo(25 * textScale, 0);
+            const beamLength = Math.min(Math.hypot(dx, dy), this.range); // Limit to range or target distance
+            ctx.lineTo(25 * textScale + beamLength, 0);
+            ctx.strokeStyle = `rgba(255, 0, 0, ${0.5 + 0.5 * Math.sin(Date.now() / 100)})`;
+            ctx.lineWidth = 4;
+            ctx.stroke();
+
+            // Multi-beam if upgraded
+            if (this.specials.multiBeam) {
+              let extraTarget = gameState.enemies.find(e => e !== target && Math.hypot(e.x - this.x, e.y - this.y) < this.range);
+              if (extraTarget) {
+                const extraDx = extraTarget.x - this.x;
+                const extraDy = extraTarget.y - this.y;
+                const extraAngle = Math.atan2(extraDy, extraDx);
+                ctx.restore();
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(extraAngle);
+                ctx.beginPath();
+                ctx.moveTo(25 * textScale, 0);
+                const extraBeamLength = Math.min(Math.hypot(extraDx, extraDy), this.range);
+                ctx.lineTo(25 * textScale + extraBeamLength, 0);
+                ctx.strokeStyle = `rgba(255, 0, 0, ${0.5 + 0.5 * Math.sin(Date.now() / 100)})`;
+                ctx.lineWidth = 4;
+                ctx.stroke();
+              }
+            }
+          }
         }
         break;
       case "tesla":
@@ -831,7 +860,7 @@ class Tower {
     if (path === "power") this.powerLevel++;
     else this.utilityLevel++;
     showNotification(`${this.type} upgraded: ${upgrade.desc}`);
-    updateTowerInfo(); // Ensure UI updates immediately after upgrade
+    updateTowerInfo(); // Call immediately to refresh button states
   }
 }
 
@@ -1082,13 +1111,16 @@ function updateTowerInfo() {
 
     powerButton.textContent = `Upgrade Power ($${powerCost})`;
     utilityButton.textContent = `Upgrade Utility ($${utilityCost})`;
+    
+    // Dynamically enable/disable based on current money
     powerButton.disabled = nextPowerLevel >= 4 || (typeof powerCost === "number" && gameState.gameMoney < powerCost);
     utilityButton.disabled = nextUtilityLevel >= 4 || (typeof utilityCost === "number" && gameState.gameMoney < utilityCost);
   } else {
     panel.style.display = "none";
+    powerButton.disabled = true; // Disable buttons when no tower is selected
+    utilityButton.disabled = true;
   }
 }
-
 function endGame(won) {
   gameState.gameOver = !won;
   gameState.gameWon = won;
@@ -1233,9 +1265,8 @@ function update(timestamp) {
     return;
   }
 
-  // Update game logic at fixed 30 FPS
   while (accumulatedTime >= FRAME_TIME) {
-    const dt = FRAME_TIME / 1000; // Convert to seconds for consistent physics
+    const dt = FRAME_TIME / 1000;
 
     ctx.fillStyle = themeBackgrounds[selectedMap];
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -1282,7 +1313,8 @@ function update(timestamp) {
       endGame(false);
     }
 
-    updateStats(); // Only update stats once per frame
+    updateStats();
+    updateTowerInfo(); // Add this to refresh tower info every frame
 
     accumulatedTime -= FRAME_TIME;
   }
