@@ -1209,7 +1209,7 @@ async function init() {
 
   const fastForwardButton = document.createElement("div");
   fastForwardButton.id = "fast-forward-button";
-  fastForwardButton.textContent = "Fast Forward (1x)"; // Updated for 3x logic
+  fastForwardButton.textContent = "Fast Forward (1x)"; // Initial state
   fastForwardButton.addEventListener("click", () => {
     if (gameState.gameSpeed === 1) {
       gameState.gameSpeed = 2;
@@ -1218,12 +1218,15 @@ async function init() {
     } else if (gameState.gameSpeed === 2) {
       gameState.gameSpeed = 3;
       fastForwardButton.textContent = "Fast Forward (3x)";
+    } else if (gameState.gameSpeed === 3) {
+      gameState.gameSpeed = 4;
+      fastForwardButton.textContent = "Fast Forward (4x)";
     } else {
       gameState.gameSpeed = 1;
       fastForwardButton.textContent = "Fast Forward (1x)";
       fastForwardButton.classList.remove("active");
     }
-    updateStats();
+    updateStats(); // Reflect new speed in UI
   });
   document.getElementById("sidebar").appendChild(fastForwardButton);
 
