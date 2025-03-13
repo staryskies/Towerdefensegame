@@ -402,28 +402,6 @@ async function updatePersistentMoney() {
   if (!response.ok) console.error("Failed to update money:", await response.text());
 }
 
-async function unlockTower(towerType) {
-  const token = localStorage.getItem("token");
-  if (!token) return;
-  const response = await fetch("/unlock-tower", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ tower: towerType }),
-  });
-  if (response.ok) {
-    const data = await response.json();
-    gameState.unlockedTowers = data.towers;
-    gameState.persistentMoney -= towerStats[towerType].persistentCost;
-    showNotification(data.message);
-    initSidebar();
-  } else {
-    const error = await response.json();
-    showNotification(error.message);
-  }
-}
 
 class Enemy {
   constructor(type, wave) {
@@ -1026,36 +1004,43 @@ function updateSpawning(dt) {
   // Handle wave delay
   if (gameState.waveDelay > 0) {
     gameState.waveDelay -= dt * gameState.gameSpeed;
-    return; // Wait until delay is over
-  }
-
-  if (!gameState.isSpawning || gameState.enemiesToSpawn <= 0) {
-    if (gameState.enemies.length === 0 && gameState.playerHealth > 0 && !gameState.isSpawning) {
-      // Only proceed to next wave after a delay
-      gameState.waveDelay = 2; // 2-second delay between waves (adjustable)
-      gameState.isSpawning = false;
-      gameState.wave++;
+    if (gameState.waveDelay <= 0) {
+      // When delay ends, start the next wave
       spawnWave();
     }
     return;
   }
 
-  gameState.spawnTimer += dt * gameState.gameSpeed;
-  const spawnInterval = 1; // 1 second interval, adjusted by gameSpeed
-  if (gameState.spawnTimer >= spawnInterval) {
-    try {
-      const enemyType = enemyThemes[mapTheme][selectedDifficulty][0];
-      if (!enemyType) throw new Error(`No enemy type defined for ${mapTheme}/${selectedDifficulty}`);
-      gameState.enemies.push(new Enemy(enemyType, gameState.wave));
-      gameState.enemiesToSpawn--;
-      gameState.spawnTimer -= spawnInterval;
-    } catch (error) {
-      console.error("Error spawning enemy:", error);
-      showNotification("Error spawning enemies!");
-      gameState.isSpawning = false;
+  // If currently spawning and enemies remain to spawn
+  if (gameState.isSpawning && gameState.enemiesToSpawn > 0) {
+    gameState.spawnTimer += dt * gameState.gameSpeed;
+    const spawnInterval = 1; // 1 second interval, adjusted by gameSpeed
+    if (gameState.spawnTimer >= spawnInterval) {
+      try {
+        const enemyType = enemyThemes[mapTheme][selectedDifficulty][0];
+        if (!enemyType) throw new Error(`No enemy type defined for ${mapTheme}/${selectedDifficulty}`);
+        gameState.enemies.push(new Enemy(enemyType, gameState.wave));
+        gameState.enemiesToSpawn--;
+        gameState.spawnTimer -= spawnInterval;
+        if (gameState.enemiesToSpawn <= 0) {
+          gameState.isSpawning = false; // Stop spawning when all enemies are spawned
+        }
+      } catch (error) {
+        console.error("Error spawning enemy:", error);
+        showNotification("Error spawning enemies!");
+        gameState.isSpawning = false;
+      }
     }
+    return;
+  }
+
+  // Check for wave completion and transition
+  if (!gameState.isSpawning && gameState.enemies.length === 0 && gameState.playerHealth > 0) {
+    gameState.waveDelay = 2; // Set delay before next wave
+    gameState.wave++; // Increment wave here
   }
 }
+
 function showNotification(message) {
   const notification = document.getElementById("notification-box");
   notification.textContent = message;
@@ -1146,22 +1131,16 @@ function resetGame() {
 
 function initSidebar() {
   const sidebar = document.getElementById("sidebar");
-  sidebar.innerHTML = "";
-  Object.keys(towerStats).forEach(type => {
+  sidebar.innerHTML = ""; // Clear existing content
+  gameState.unlockedTowers.forEach(type => { // Only show unlocked towers
     const div = document.createElement("div");
     div.className = "tower-option";
-    if (gameState.unlockedTowers.includes(type)) {
-      div.textContent = `${type.charAt(0).toUpperCase() + type.slice(1)} ($${towerStats[type].cost})`;
-      div.addEventListener("click", () => {
-        gameState.selectedTowerType = type;
-        document.querySelectorAll(".tower-option").forEach(el => el.classList.remove("selected"));
-        div.classList.add("selected");
-      });
-    } else {
-      div.textContent = `${type.charAt(0).toUpperCase() + type.slice(1)} ($${towerStats[type].persistentCost} to unlock)`;
-      div.style.opacity = "0.5";
-      div.addEventListener("click", () => unlockTower(type));
-    }
+    div.textContent = `${type.charAt(0).toUpperCase() + type.slice(1)} ($${towerStats[type].cost})`;
+    div.addEventListener("click", () => {
+      gameState.selectedTowerType = type;
+      document.querySelectorAll(".tower-option").forEach(el => el.classList.remove("selected"));
+      div.classList.add("selected");
+    });
     sidebar.appendChild(div);
   });
 }
@@ -1189,11 +1168,20 @@ async function init() {
 
   const fastForwardButton = document.createElement("div");
   fastForwardButton.id = "fast-forward-button";
-  fastForwardButton.textContent = "Fast Forward (2x)";
+  fastForwardButton.textContent = "Fast Forward (1x)"; // Updated for 3x logic
   fastForwardButton.addEventListener("click", () => {
-    gameState.gameSpeed = gameState.gameSpeed === 1 ? 2 : 1;
-    fastForwardButton.classList.toggle("active");
-    fastForwardButton.textContent = gameState.gameSpeed === 1 ? "Fast Forward (2x)" : "Normal Speed (1x)";
+    if (gameState.gameSpeed === 1) {
+      gameState.gameSpeed = 2;
+      fastForwardButton.textContent = "Fast Forward (2x)";
+      fastForwardButton.classList.add("active");
+    } else if (gameState.gameSpeed === 2) {
+      gameState.gameSpeed = 3;
+      fastForwardButton.textContent = "Fast Forward (3x)";
+    } else {
+      gameState.gameSpeed = 1;
+      fastForwardButton.textContent = "Fast Forward (1x)";
+      fastForwardButton.classList.remove("active");
+    }
     updateStats();
   });
   document.getElementById("sidebar").appendChild(fastForwardButton);

@@ -273,7 +273,6 @@
     document.getElementById("close-map-selection").addEventListener("click", () => {
       document.getElementById("map-selection").style.display = "none";
     });
-
     function populateMapList() {
       const mapList = document.getElementById("map-list");
       mapList.innerHTML = "";
@@ -290,6 +289,8 @@
         if (localStorage.getItem("selectedMap") === map.id) mapDiv.classList.add("selected");
         mapList.appendChild(mapDiv);
       });
+      // Sync difficulty dropdown with localStorage
+      document.getElementById("difficulty-select").value = localStorage.getItem("selectedDifficulty") || "easy";
     }
 
     document.getElementById("difficulty-select").addEventListener("change", (e) => {
@@ -320,13 +321,14 @@
         const response = await fetch("/towers", {
           headers: { "Authorization": `Bearer ${token}` },
         });
+        if (!response.ok) throw new Error("Failed to fetch towers");
         const data = await response.json();
         const unlockedTowers = data.towers.length > 0 ? data.towers : ["basic"];
         const userData = await fetchUserData();
 
         Object.keys(towerStats).forEach(type => {
           const towerDiv = document.createElement("div");
-          towerDiv.className = "shop-item";
+          towerDiv.className = `shop-item ${unlockedTowers.includes(type) ? 'unlocked' : ''}`;
           towerDiv.innerHTML = `
             <h4>${type.charAt(0).toUpperCase() + type.slice(1)}</h4>
             <p>Cost: $${towerStats[type].persistentCost}</p>
@@ -351,7 +353,7 @@
                 if (response.ok) {
                   showNotification(result.message);
                   await updateUserMoneyDisplay();
-                  await populateTowerShop();
+                  await populateTowerShop(); // Refresh shop after unlock
                 } else {
                   showNotification(result.message);
                 }
@@ -361,7 +363,7 @@
             });
             towerDiv.appendChild(unlockButton);
           } else {
-            towerDiv.innerHTML += `<p style="color: #27ae60;">Unlocked</p>`;
+            towerDiv.innerHTML += `<p style="color: #ecf0f1; font-weight: bold;">Unlocked</p>`;
           }
           towerList.appendChild(towerDiv);
         });
