@@ -6,60 +6,337 @@
   <title>Tower Defense Game</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #2c3e50; }
-    #gameCanvas { display: block; width: 100%; height: 100%; background: #ecf0f1; }
-    #sidebar { position: fixed; top: 0; left: 0; width: 220px; height: 100%; background: rgba(44, 62, 80, 0.95); color: #ecf0f1; padding: 20px; z-index: 10; box-shadow: 5px 0 15px rgba(0, 0, 0, 0.3); overflow-y: auto; }
-    .tower-option { padding: 12px; background: #34495e; margin: 10px 0; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-weight: 500; }
-    .tower-option:hover { background: #3e5c76; transform: translateX(5px); }
-    .tower-option.selected { background: #3498db; transform: translateX(5px); }
-    #pause-button, #fast-forward-button, #home-button { padding: 12px; background: #34495e; margin: 10px 0; border-radius: 8px; cursor: pointer; text-align: center; transition: all 0.3s ease; font-weight: 500; }
-    #pause-button:hover, #fast-forward-button:hover, #home-button:hover { background: #3e5c76; transform: translateX(5px); }
-    #pause-button.active, #fast-forward-button.active { background: #3498db; transform: translateX(5px); }
-    #stats-panel { position: fixed; top: 0; right: 0; width: 220px; background: rgba(44, 62, 80, 0.95); color: #ecf0f1; padding: 20px; z-index: 10; box-shadow: -5px 0 15px rgba(0, 0, 0, 0.3); }
-    #stats-panel h3, #tower-info-panel h3 { font-size: 1.4em; margin-bottom: 15px; color: #ecf0f1; }
-    #stats-panel div, #tower-info-panel div { margin: 8px 0; font-size: 1em; color: #bdc3c7; }
-    #tower-info-panel { position: fixed; bottom: 20px; left: 240px; width: 200px; background: rgba(44, 62, 80, 0.95); color: #ecf0f1; padding: 15px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); display: none; z-index: 10; }
-    #upgrade-tower-button { width: 100%; padding: 10px; margin-top: 10px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.3s ease; }
-    #upgrade-tower-button:hover { background: #2980b9; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4); }
-    #notification-box { position: fixed; bottom: 30px; right: 30px; background: rgba(39, 174, 96, 0.95); color: #fff; padding: 15px 25px; border-radius: 10px; box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3); z-index: 1000; display: none; font-weight: 500; max-width: 350px; transition: opacity 0.3s ease; }
-    #notification-box.show { display: block; opacity: 1; }
-    #end-screen { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(44, 62, 80, 0.98); padding: 35px; border-radius: 20px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5); width: 90%; max-width: 450px; text-align: center; color: #ecf0f1; z-index: 1001; display: none; }
-    #end-screen h2 { font-size: 2em; margin-bottom: 20px; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
-    #end-screen p { margin: 8px 0; font-size: 1.1em; }
-    #restart-button, #main-menu-button { padding: 12px 25px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.3s ease; margin: 10px; }
-    #restart-button:hover, #main-menu-button:hover { background: #2980b9; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4); }
-    #map-selection { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(44, 62, 80, 0.95); color: #ecf0f1; padding: 30px; border-radius: 15px; text-align: center; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4); z-index: 1002; display: block; }
-    .map-option { padding: 10px; background: #34495e; margin: 10px 0; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-weight: 500; }
-    .map-option:hover { background: #3e5c76; transform: translateX(5px); }
-    .map-option.selected { background: #3498db; transform: translateX(5px); }
-    #start-game-button { padding: 12px 25px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.3s ease; margin-top: 20px; }
-    #start-game-button:hover { background: #2980b9; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4); }
-    #boss-indicator { position: fixed; top: 70px; left: 50%; transform: translateX(-50%); background: rgba(255, 0, 0, 0.8); color: white; padding: 5px 15px; border-radius: 5px; z-index: 1000; display: none; font-weight: 600; }
-    #boss-indicator.show { display: block; }
+    html, body { 
+      width: 100%; 
+      height: 100%; 
+      overflow: hidden; 
+      font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      background: linear-gradient(135deg, #2c3e50, #34495e); 
+      color: #ecf0f1; 
+    }
+    #gameCanvas { 
+      display: block; 
+      width: 100%; 
+      height: 100%; 
+      background: #ecf0f1; 
+    }
+    #sidebar { 
+      position: fixed; 
+      top: 0; 
+      left: 0; 
+      width: 240px; 
+      height: 100%; 
+      background: linear-gradient(to bottom, rgba(44, 62, 80, 0.95), rgba(52, 73, 94, 0.95)); 
+      padding: 20px; 
+      z-index: 10; 
+      box-shadow: 5px 0 20px rgba(0, 0, 0, 0.4); 
+      overflow-y: auto; 
+    }
+    .tower-option { 
+      padding: 14px; 
+      background: #34495e; 
+      margin: 12px 0; 
+      border-radius: 10px; 
+      cursor: pointer; 
+      transition: all 0.3s ease; 
+      font-weight: 600; 
+      border: 1px solid #3e5c76; 
+    }
+    .tower-option:hover { 
+      background: linear-gradient(90deg, #3e5c76, #4a6a8a); 
+      transform: translateX(8px); 
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); 
+    }
+    .tower-option.selected { 
+      background: linear-gradient(90deg, #3498db, #2980b9); 
+      transform: translateX(8px); 
+      border-color: #2980b9; 
+    }
+    #pause-button, #fast-forward-button, #home-button, #sound-toggle-button { 
+      padding: 14px; 
+      background: #34495e; 
+      margin: 12px 0; 
+      border-radius: 10px; 
+      cursor: pointer; 
+      text-align: center; 
+      transition: all 0.3s ease; 
+      font-weight: 600; 
+      border: 1px solid #3e5c76; 
+    }
+    #pause-button:hover, #fast-forward-button:hover, #home-button:hover, #sound-toggle-button:hover { 
+      background: linear-gradient(90deg, #3e5c76, #4a6a8a); 
+      transform: translateX(8px); 
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); 
+    }
+    #pause-button.active, #fast-forward-button.active, #sound-toggle-button.active { 
+      background: linear-gradient(90deg, #3498db, #2980b9); 
+      transform: translateX(8px); 
+    }
+    #stats-panel { 
+      position: fixed; 
+      top: 0; 
+      right: 0; 
+      width: 240px; 
+      background: linear-gradient(to bottom, rgba(44, 62, 80, 0.95), rgba(52, 73, 94, 0.95)); 
+      padding: 20px; 
+      z-index: 10; 
+      box-shadow: -5px 0 20px rgba(0, 0, 0, 0.4); 
+    }
+    #stats-panel h3, #tower-info-panel h3 { 
+      font-size: 1.5em; 
+      margin-bottom: 18px; 
+      color: #ecf0f1; 
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); 
+    }
+    #stats-panel div, #tower-info-panel div { 
+      margin: 10px 0; 
+      font-size: 1.1em; 
+      color: #bdc3c7; 
+    }
+    #tower-info-panel { 
+      position: fixed; 
+      bottom: 20px; 
+      left: 260px; 
+      width: 220px; 
+      background: linear-gradient(to bottom, rgba(44, 62, 80, 0.95), rgba(52, 73, 94, 0.95)); 
+      padding: 15px; 
+      border-radius: 12px; 
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3); 
+      display: none; 
+      z-index: 10; 
+      border: 1px solid #3e5c76; 
+    }
+    #upgrade-power-button, #upgrade-utility-button { 
+      width: 100%; 
+      padding: 12px; 
+      margin-top: 10px; 
+      background: linear-gradient(90deg, #3498db, #2980b9); 
+      color: white; 
+      border: none; 
+      border-radius: 8px; 
+      cursor: pointer; 
+      font-weight: bold; 
+      transition: all 0.3s ease; 
+    }
+    #upgrade-power-button:hover, #upgrade-utility-button:hover { 
+      background: linear-gradient(90deg, #2980b9, #2471a3); 
+      transform: translateY(-2px); 
+      box-shadow: 0 6px 15px rgba(52, 152, 219, 0.4); 
+    }
+    #upgrade-power-button:disabled, #upgrade-utility-button:disabled { 
+      background: #34495e; 
+      cursor: not-allowed; 
+      opacity: 0.6; 
+      transform: none; 
+      box-shadow: none; 
+    }
+    #notification-box { 
+      position: fixed; 
+      bottom: 30px; 
+      right: 30px; 
+      background: linear-gradient(90deg, rgba(39, 174, 96, 0.95), rgba(46, 204, 113, 0.95)); 
+      color: #fff; 
+      padding: 15px 25px; 
+      border-radius: 12px; 
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3); 
+      z-index: 1000; 
+      display: none; 
+      font-weight: 600; 
+      max-width: 350px; 
+      transition: opacity 0.3s ease; 
+    }
+    #notification-box.show { 
+      display: block; 
+      opacity: 1; 
+    }
+    #end-screen { 
+      position: fixed; 
+      top: 50%; 
+      left: 50%; 
+      transform: translate(-50%, -50%); 
+      background: linear-gradient(to bottom, rgba(44, 62, 80, 0.98), rgba(52, 73, 94, 0.98)); 
+      padding: 40px; 
+      border-radius: 20px; 
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5); 
+      width: 90%; 
+      max-width: 480px; 
+      text-align: center; 
+      color: #ecf0f1; 
+      z-index: 1001; 
+      display: none; 
+      border: 1px solid #3e5c76; 
+    }
+    #end-screen h2 { 
+      font-size: 2.2em; 
+      margin-bottom: 25px; 
+      text-shadow: 0 2px 5px rgba(0, 0, 0, 0.3); 
+    }
+    #end-screen p { 
+      margin: 10px 0; 
+      font-size: 1.2em; 
+    }
+    #restart-button, #main-menu-button { 
+      padding: 14px 30px; 
+      background: linear-gradient(90deg, #3498db, #2980b9); 
+      color: white; 
+      border: none; 
+      border-radius: 10px; 
+      cursor: pointer; 
+      font-weight: bold; 
+      transition: all 0.3s ease; 
+      margin: 12px; 
+    }
+    #restart-button:hover, #main-menu-button:hover { 
+      background: linear-gradient(90deg, #2980b9, #2471a3); 
+      transform: translateY(-2px); 
+      box-shadow: 0 6px 15px rgba(52, 152, 219, 0.4); 
+    }
+    #map-selection { 
+      position: fixed; 
+      top: 50%; 
+      left: 50%; 
+      transform: translate(-50%, -50%); 
+      background: linear-gradient(to bottom, rgba(44, 62, 80, 0.95), rgba(52, 73, 94, 0.95)); 
+      padding: 40px; 
+      border-radius: 20px; 
+      text-align: center; 
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5); 
+      z-index: 1002; 
+      display: block; 
+      border: 1px solid #3e5c76; 
+      max-width: 500px; 
+      width: 90%; 
+    }
+    #map-selection h2 { 
+      font-size: 2em; 
+      margin-bottom: 20px; 
+      text-shadow: 0 2px 5px rgba(0, 0, 0, 0.3); 
+    }
+    .map-option { 
+      padding: 12px; 
+      background: #34495e; 
+      margin: 10px 0; 
+      border-radius: 10px; 
+      cursor: pointer; 
+      transition: all 0.3s ease; 
+      font-weight: 600; 
+      position: relative; 
+      border: 1px solid #3e5c76; 
+    }
+    .map-option:hover { 
+      background: linear-gradient(90deg, #3e5c76, #4a6a8a); 
+      transform: translateX(8px); 
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); 
+    }
+    .map-option.selected { 
+      background: linear-gradient(90deg, #3498db, #2980b9); 
+      transform: translateX(8px); 
+      border-color: #2980b9; 
+    }
+    .map-option::after { 
+      content: attr(data-preview); 
+      position: absolute; 
+      top: 100%; 
+      left: 50%; 
+      transform: translateX(-50%); 
+      background: rgba(52, 73, 94, 0.9); 
+      color: #ecf0f1; 
+      padding: 8px 12px; 
+      border-radius: 8px; 
+      font-size: 0.9em; 
+      display: none; 
+      z-index: 1003; 
+      white-space: nowrap; 
+    }
+    .map-option:hover::after { 
+      display: block; 
+    }
+    #difficulty-select { 
+      padding: 10px; 
+      margin: 15px 0; 
+      background: #34495e; 
+      color: #ecf0f1; 
+      border: 1px solid #3e5c76; 
+      border-radius: 8px; 
+      font-size: 1em; 
+      cursor: pointer; 
+      transition: all 0.3s ease; 
+    }
+    #difficulty-select:hover { 
+      background: #3e5c76; 
+    }
+    #start-game-button { 
+      padding: 14px 30px; 
+      background: linear-gradient(90deg, #3498db, #2980b9); 
+      color: white; 
+      border: none; 
+      border-radius: 10px; 
+      cursor: pointer; 
+      font-weight: bold; 
+      transition: all 0.3s ease; 
+      margin-top: 20px; 
+    }
+    #start-game-button:hover { 
+      background: linear-gradient(90deg, #2980b9, #2471a3); 
+      transform: translateY(-2px); 
+      box-shadow: 0 6px 15px rgba(52, 152, 219, 0.4); 
+    }
+    #persistent-money-display { 
+      margin-top: 15px; 
+      font-size: 1.2em; 
+      color: #bdc3c7; 
+    }
+    #boss-indicator { 
+      position: fixed; 
+      top: 70px; 
+      left: 50%; 
+      transform: translateX(-50%); 
+      background: linear-gradient(90deg, rgba(255, 0, 0, 0.8), rgba(231, 76, 60, 0.8)); 
+      color: white; 
+      padding: 8px 20px; 
+      border-radius: 8px; 
+      z-index: 1000; 
+      display: none; 
+      font-weight: 600; 
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); 
+    }
+    #boss-indicator.show { 
+      display: block; 
+    }
     @media (max-width: 768px) {
-      #sidebar, #stats-panel { width: 180px; }
-      #tower-info-panel { left: 200px; width: 160px; }
+      #sidebar, #stats-panel { width: 200px; }
+      #tower-info-panel { left: 220px; width: 180px; }
       #notification-box { bottom: 20px; right: 20px; max-width: 60vw; }
+      #map-selection { padding: 30px; }
     }
     @media (max-width: 480px) {
-      #sidebar, #stats-panel { width: 150px; }
-      #tower-info-panel { left: 170px; width: 130px; bottom: 10px; }
+      #sidebar, #stats-panel { width: 160px; }
+      #tower-info-panel { left: 180px; width: 140px; bottom: 10px; }
       #notification-box { bottom: 15px; right: 15px; max-width: 80vw; font-size: 0.9rem; }
+      #map-selection { padding: 20px; }
+      #start-game-button, #restart-button, #main-menu-button { padding: 12px 20px; }
     }
   </style>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
 </head>
 <body>
   <div id="map-selection">
     <h2>Select a Map</h2>
-    <div class="map-option" data-map="map1" data-difficulty="easy">Beginner Path (Easy)</div>
-    <div class="map-option" data-map="map2" data-difficulty="medium">Zigzag Path (Medium)</div>
-    <div class="map-option" data-map="map3" data-difficulty="hard">Snake Path (Hard)</div>
-    <div class="map-option" data-map="map4" data-difficulty="easy">Forest Trail (Easy)</div>
-    <div class="map-option" data-map="map5" data-difficulty="medium">Mountain Pass (Medium)</div>
-    <div class="map-option" data-map="map6" data-difficulty="hard">Desert Maze (Hard)</div>
-    <div class="map-option" data-map="map7" data-difficulty="easy">River Bend (Easy)</div>
-    <div class="map-option" data-map="map8" data-difficulty="medium">Canyon Run (Medium)</div>
-    <div class="map-option" data-map="map9" data-difficulty="hard">Arctic Path (Hard, 60 Waves)</div>
+    <div class="map-option" data-map="map1" data-preview="Straight path, beginner-friendly">Beginner Path</div>
+    <div class="map-option" data-map="map2" data-preview="Zigzag turns, moderate challenge">Zigzag Path</div>
+    <div class="map-option" data-map="map3" data-preview="Twisting route, high difficulty">Snake Path</div>
+    <div class="map-option" data-map="map4" data-preview="Winding forest trail">Forest Trail</div>
+    <div class="map-option" data-map="map5" data-preview="Rugged mountain pass">Mountain Pass</div>
+    <div class="map-option" data-map="map6" data-preview="Complex desert maze">Desert Maze</div>
+    <div class="map-option" data-map="map7" data-preview="Curving river route">River Bend</div>
+    <div class="map-option" data-map="map8" data-preview="Narrow canyon run">Canyon Run</div>
+    <div class="map-option" data-map="map9" data-preview="Icy path, 60 waves">Arctic Path</div>
+    <select id="difficulty-select">
+      <option value="easy">Easy</option>
+      <option value="medium">Medium</option>
+      <option value="hard">Hard</option>
+    </select>
+    <div id="persistent-money-display">Persistent Money: $0</div>
     <button id="start-game-button">Start Game</button>
   </div>
   <div id="sidebar"></div>
@@ -79,7 +356,8 @@
     <div id="tower-range">Range: </div>
     <div id="tower-level">Level: </div>
     <div id="tower-ability">Ability: </div>
-    <button id="upgrade-tower-button">Upgrade</button>
+    <button id="upgrade-power-button">Upgrade Power ($0)</button>
+    <button id="upgrade-utility-button">Upgrade Utility ($0)</button>
   </div>
   <div id="notification-box"></div>
   <div id="boss-indicator"></div>
@@ -94,8 +372,18 @@
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       const mapOptions = document.querySelectorAll(".map-option");
+      const difficultySelect = document.getElementById("difficulty-select");
+      const persistentMoneyDisplay = document.getElementById("persistent-money-display");
       let selectedMap = localStorage.getItem("selectedMap") || "map1";
       let selectedDifficulty = localStorage.getItem("selectedDifficulty") || "easy";
+      let isSoundOn = localStorage.getItem("soundOn") === "true" || true;
+
+      // Update persistent money display
+      const updatePersistentMoney = () => {
+        const money = parseInt(localStorage.getItem("persistentMoney")) || 0;
+        persistentMoneyDisplay.textContent = `Persistent Money: $${money}`;
+      };
+      updatePersistentMoney();
 
       // Highlight the selected map
       mapOptions.forEach(option => {
@@ -106,18 +394,18 @@
           mapOptions.forEach(o => o.classList.remove("selected"));
           option.classList.add("selected");
           selectedMap = option.getAttribute("data-map");
-          selectedDifficulty = option.getAttribute("data-difficulty");
           localStorage.setItem("selectedMap", selectedMap);
-          localStorage.setItem("selectedDifficulty", selectedDifficulty);
         });
       });
 
-      // If map and difficulty are already selected, start the game immediately
-      if (localStorage.getItem("selectedMap") && localStorage.getItem("selectedDifficulty")) {
-        document.getElementById("map-selection").style.display = "none";
-        initGame();
-      }
+      // Set initial difficulty
+      difficultySelect.value = selectedDifficulty;
+      difficultySelect.addEventListener("change", () => {
+        selectedDifficulty = difficultySelect.value;
+        localStorage.setItem("selectedDifficulty", selectedDifficulty);
+      });
 
+      // Start game only on button click
       document.getElementById("start-game-button").addEventListener("click", () => {
         if (selectedMap && selectedDifficulty) {
           document.getElementById("map-selection").style.display = "none";
@@ -126,6 +414,25 @@
           alert("Please select a map and difficulty!");
         }
       });
+
+      // Add sound toggle to sidebar after game starts
+      const addSoundToggle = () => {
+        const sidebar = document.getElementById("sidebar");
+        const soundButton = document.createElement("div");
+        soundButton.id = "sound-toggle-button";
+        soundButton.textContent = isSoundOn ? "Sound: On" : "Sound: Off";
+        soundButton.classList.toggle("active", isSoundOn);
+        soundButton.addEventListener("click", () => {
+          isSoundOn = !isSoundOn;
+          localStorage.setItem("soundOn", isSoundOn);
+          soundButton.textContent = isSoundOn ? "Sound: On" : "Sound: Off";
+          soundButton.classList.toggle("active");
+          // Add sound toggle logic in game.js if needed
+        });
+        sidebar.appendChild(soundButton);
+      };
+
+      // No auto-start; wait for button click
     });
 
     window.addEventListener("bossActive", (e) => {
@@ -143,7 +450,6 @@
       }
     }
   </script>
-  <script src="/stats.js"></script>
   <script src="/game.js"></script>
 </body>
 </html>

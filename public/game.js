@@ -51,181 +51,182 @@ const towerUpgradePaths = {
       { cost: 50, damage: 1.2, desc: "Damage +20%" },
       { cost: 100, damage: 1.3, desc: "Damage +30%" },
       { cost: 150, range: 1.2, desc: "Range +20%" },
-      { cost: 200, fireRate: 0.9, desc: "Fire Rate +10%" }
+      { cost: 200, fireRate: 0.9, desc: "Fire Rate +10%" },
     ],
     utility: [
       { cost: 50, range: 1.1, desc: "Range +10%" },
       { cost: 100, fireRate: 0.9, desc: "Fire Rate +10%" },
       { cost: 150, damage: 1.2, desc: "Damage +20%" },
-      { cost: 200, range: 1.15, desc: "Range +15%" }
-    ]
+      { cost: 200, range: 1.15, desc: "Range +15%" },
+    ],
   },
   archer: {
     power: [
       { cost: 75, damage: 1.25, desc: "Damage +25%" },
       { cost: 150, damage: 1.35, desc: "Damage +35%" },
       { cost: 225, fireRate: 0.85, desc: "Fire Rate +15%" },
-      { cost: 300, damage: 1.4, desc: "Damage +40%" }
+      { cost: 300, damage: 1.4, desc: "Damage +40%" },
     ],
     utility: [
       { cost: 75, range: 1.15, desc: "Range +15%" },
       { cost: 150, fireRate: 0.9, desc: "Fire Rate +10%" },
       { cost: 225, range: 1.2, desc: "Range +20%" },
-      { cost: 300, special: "tripleShot", desc: "Triple Shot" }
-    ]
+      { cost: 300, special: "tripleShot", desc: "Triple Shot" },
+    ],
   },
   cannon: {
     power: [
       { cost: 100, damage: 1.3, desc: "Damage +30%" },
       { cost: 200, damage: 1.4, desc: "Damage +40%" },
       { cost: 300, range: 1.25, desc: "Range +25%" },
-      { cost: 400, damage: 1.5, desc: "Damage +50%" }
+      { cost: 400, damage: 1.5, desc: "Damage +50%" },
     ],
     utility: [
       { cost: 100, range: 1.2, desc: "Range +20%" },
       { cost: 200, fireRate: 0.9, desc: "Fire Rate +10%" },
       { cost: 300, special: "splash", desc: "Splash +50%" },
-      { cost: 400, fireRate: 0.85, desc: "Fire Rate +15%" }
-    ]
+      { cost: 400, fireRate: 0.85, desc: "Fire Rate +15%" },
+    ],
   },
   sniper: {
     power: [
       { cost: 150, damage: 1.35, desc: "Damage +35%" },
       { cost: 300, damage: 1.5, desc: "Damage +50%" },
       { cost: 450, range: 1.3, desc: "Range +30%" },
-      { cost: 600, damage: 1.6, desc: "Damage +60%" }
+      { cost: 600, damage: 1.6, desc: "Damage +60%" },
     ],
     utility: [
       { cost: 150, range: 1.25, desc: "Range +25%" },
       { cost: 300, fireRate: 0.9, desc: "Fire Rate +10%" },
       { cost: 450, special: "crit", desc: "Crit Chance +20%" },
-      { cost: 600, fireRate: 0.85, desc: "Fire Rate +15%" }
-    ]
+      { cost: 600, fireRate: 0.85, desc: "Fire Rate +15%" },
+    ],
   },
   freeze: {
     power: [
       { cost: 120, damage: 1.3, desc: "Damage +30%" },
       { cost: 240, damage: 1.4, desc: "Damage +40%" },
       { cost: 360, range: 1.25, desc: "Range +25%" },
-      { cost: 480, special: "slow", desc: "Slow +50%" }
+      { cost: 480, special: "slow", desc: "Slow +50%" },
     ],
     utility: [
       { cost: 120, range: 1.2, desc: "Range +20%" },
       { cost: 240, fireRate: 0.9, desc: "Fire Rate +10%" },
       { cost: 360, fireRate: 0.85, desc: "Fire Rate +15%" },
-      { cost: 480, range: 1.3, desc: "Range +30%" }
-    ]
+      { cost: 480, range: 1.3, desc: "Range +30%" },
+    ],
   },
   mortar: {
     power: [
       { cost: 200, damage: 1.4, desc: "Damage +40%" },
       { cost: 400, damage: 1.5, desc: "Damage +50%" },
       { cost: 600, range: 1.3, desc: "Range +30%" },
-      { cost: 800, damage: 1.6, desc: "Damage +60%" }
+      { cost: 800, damage: 1.6, desc: "Damage +60%" },
     ],
     utility: [
       { cost: 200, range: 1.25, desc: "Range +25%" },
       { cost: 400, special: "splash", desc: "Splash +50%" },
       { cost: 600, fireRate: 0.9, desc: "Fire Rate +10%" },
-      { cost: 800, fireRate: 0.85, desc: "Fire Rate +15%" }
-    ]
+      { cost: 800, fireRate: 0.85, desc: "Fire Rate +15%" },
+    ],
   },
   laser: {
     power: [
       { cost: 350, damage: 1.5, desc: "Damage +50%" },
       { cost: 700, damage: 1.75, desc: "Damage +75%" },
       { cost: 1050, range: 1.4, desc: "Range +40%" },
-      { cost: 1400, damage: 2.0, desc: "Damage +100%" }
+      { cost: 1400, damage: 2.0, desc: "Damage +100%" },
     ],
     utility: [
       { cost: 350, range: 1.3, desc: "Range +30%" },
       { cost: 700, fireRate: 0.8, desc: "Recharge -20%" },
       { cost: 1050, fireRate: 0.7, desc: "Recharge -30%" },
-      { cost: 1400, special: "multiBeam", desc: "Multi-Target Beam" }
-    ]
+      { cost: 1400, special: "multiBeam", desc: "Multi-Target Beam" },
+    ],
   },
   tesla: {
     power: [
       { cost: 250, damage: 1.4, desc: "Damage +40%" },
       { cost: 500, damage: 1.6, desc: "Damage +60%" },
       { cost: 750, range: 1.35, desc: "Range +35%" },
-      { cost: 1000, damage: 1.8, desc: "Damage +80%" }
+      { cost: 1000, damage: 1.8, desc: "Damage +80%" },
     ],
     utility: [
       { cost: 250, range: 1.25, desc: "Range +25%" },
       { cost: 500, fireRate: 0.85, desc: "Recharge -15%" },
       { cost: 750, special: "chain", desc: "Chain +2 Targets" },
-      { cost: 1000, fireRate: 0.7, desc: "Recharge -30%" }
-    ]
+      { cost: 1000, fireRate: 0.7, desc: "Recharge -30%" },
+    ],
   },
   flamethrower: {
     power: [
       { cost: 180, damage: 1.35, desc: "Damage +35%" },
       { cost: 360, damage: 1.5, desc: "Damage +50%" },
       { cost: 540, range: 1.3, desc: "Range +30%" },
-      { cost: 720, damage: 1.6, desc: "Damage +60%" }
+      { cost: 720, damage: 1.6, desc: "Damage +60%" },
     ],
     utility: [
       { cost: 180, range: 1.2, desc: "Range +20%" },
       { cost: 360, fireRate: 0.9, desc: "Fire Rate +10%" },
       { cost: 540, special: "burn", desc: "Burn +50%" },
-      { cost: 720, fireRate: 0.85, desc: "Fire Rate +15%" }
-    ]
+      { cost: 720, fireRate: 0.85, desc: "Fire Rate +15%" },
+    ],
   },
   missile: {
     power: [
       { cost: 200, damage: 1.4, desc: "Damage +40%" },
       { cost: 400, damage: 1.55, desc: "Damage +55%" },
       { cost: 600, range: 1.3, desc: "Range +30%" },
-      { cost: 800, damage: 1.7, desc: "Damage +70%" }
+      { cost: 800, damage: 1.7, desc: "Damage +70%" },
     ],
     utility: [
       { cost: 200, range: 1.25, desc: "Range +25%" },
       { cost: 400, fireRate: 0.9, desc: "Fire Rate +10%" },
       { cost: 600, fireRate: 0.85, desc: "Fire Rate +15%" },
-      { cost: 800, range: 1.35, desc: "Range +35%" }
-    ]
+      { cost: 800, range: 1.35, desc: "Range +35%" },
+    ],
   },
   poison: {
     power: [
       { cost: 250, damage: 1.4, desc: "Damage +40%" },
       { cost: 500, damage: 1.6, desc: "Damage +60%" },
       { cost: 750, range: 1.3, desc: "Range +30%" },
-      { cost: 1000, damage: 1.8, desc: "Damage +80%" }
+      { cost: 1000, damage: 1.8, desc: "Damage +80%" },
     ],
     utility: [
       { cost: 250, range: 1.25, desc: "Range +25%" },
       { cost: 500, special: "splash", desc: "Splash +50%" },
       { cost: 750, fireRate: 0.9, desc: "Fire Rate +10%" },
-      { cost: 1000, fireRate: 0.85, desc: "Fire Rate +15%" }
-    ]
+      { cost: 1000, fireRate: 0.85, desc: "Fire Rate +15%" },
+    ],
   },
   vortex: {
     power: [
       { cost: 200, range: 1.3, desc: "Range +30%" },
       { cost: 400, special: "pull", desc: "Pull +50%" },
       { cost: 600, range: 1.4, desc: "Range +40%" },
-      { cost: 800, special: "pull", desc: "Pull +100%" }
+      { cost: 800, special: "pull", desc: "Pull +100%" },
     ],
     utility: [
       { cost: 200, fireRate: 0.85, desc: "Recharge -15%" },
       { cost: 400, range: 1.25, desc: "Range +25%" },
       { cost: 600, fireRate: 0.7, desc: "Recharge -30%" },
-      { cost: 800, fireRate: 0.6, desc: "Recharge -40%" }
-    ]
-  }
+      { cost: 800, fireRate: 0.6, desc: "Recharge -40%" },
+    ],
+  },
 };
 
+// Muted background colors
 const themeBackgrounds = {
-  map1: "lightgreen",
-  map2: "sandybrown",
-  map3: "lightgray",
-  map4: "forestgreen",
-  map5: "tan",
-  map6: "darkorange",
-  map7: "lightblue",
-  map8: "brown",
-  map9: "white",
+  map1: "#4a704a", // Darker green for grassland
+  map2: "#8b5a2b", // Muted brown for sandy terrain
+  map3: "#5e5e5e", // Dark gray for rocky path
+  map4: "#2e4d2e", // Dark forest green
+  map5: "#6b4e31", // Muted tan for mountain
+  map6: "#8a4f2a", // Dark orange-brown for desert
+  map7: "#3a6070", // Darker blue for river
+  map8: "#4a2f1f", // Dark brown for canyon
+  map9: "#b0c4de", // Light steel blue for arctic (muted from white)
 };
 
 const paths = {
@@ -351,6 +352,14 @@ const paths = {
     { x: 1400, y: 600 },
     { x: 1920, y: 600 },
   ],
+};
+
+const enemyThemes = {
+  grassland: {
+    easy: [{ health: 50, speed: 1, radius: 10, color: "red" }],
+    medium: [{ health: 75, speed: 1.2, radius: 12, color: "darkred" }],
+    hard: [{ health: 100, speed: 1.5, radius: 15, color: "crimson" }],
+  },
 };
 
 const scaledPath = paths[selectedMap].map(point => ({ x: point.x * scaleX, y: point.y * scaleY }));
@@ -778,7 +787,7 @@ class Tower {
     const upgrades = towerUpgradePaths[this.type][path];
     const level = path === "power" ? this.powerLevel : this.utilityLevel;
     if (level >= 4) {
-      showNotification("Max upgrades reached for this path!");
+      showNotification(`Max upgrades reached for ${path} path!`);
       return;
     }
     const upgrade = upgrades[level];
@@ -1002,6 +1011,8 @@ function updateStats() {
 
 function updateTowerInfo() {
   const panel = document.getElementById("tower-info-panel");
+  const powerButton = document.getElementById("upgrade-power-button");
+  const utilityButton = document.getElementById("upgrade-utility-button");
   if (gameState.selectedTower) {
     panel.style.display = "block";
     document.getElementById("tower-type").textContent = `Type: ${gameState.selectedTower.type}`;
@@ -1009,6 +1020,16 @@ function updateTowerInfo() {
     document.getElementById("tower-range").textContent = `Range: ${Math.round(gameState.selectedTower.range / scaleX)}`;
     document.getElementById("tower-level").textContent = `Power: ${gameState.selectedTower.powerLevel}/4 | Utility: ${gameState.selectedTower.utilityLevel}/4`;
     document.getElementById("tower-ability").textContent = `Ability: ${towerStats[gameState.selectedTower.type].ability}`;
+
+    const powerUpgrades = towerUpgradePaths[gameState.selectedTower.type].power;
+    const utilityUpgrades = towerUpgradePaths[gameState.selectedTower.type].utility;
+    const powerCost = gameState.selectedTower.powerLevel < 4 ? powerUpgrades[gameState.selectedTower.powerLevel].cost : "Max";
+    const utilityCost = gameState.selectedTower.utilityLevel < 4 ? utilityUpgrades[gameState.selectedTower.utilityLevel].cost : "Max";
+    
+    powerButton.textContent = `Upgrade Power ($${powerCost})`;
+    utilityButton.textContent = `Upgrade Utility ($${utilityCost})`;
+    powerButton.disabled = gameState.selectedTower.powerLevel >= 4 || gameState.gameMoney < powerCost;
+    utilityButton.disabled = gameState.selectedTower.utilityLevel >= 4 || gameState.gameMoney < utilityCost;
   } else {
     panel.style.display = "none";
   }
@@ -1027,206 +1048,21 @@ function endGame(won) {
   document.getElementById("persistent-money-earned").textContent = `Persistent Money Earned: $${persistentMoneyEarned}`;
   document.getElementById("persistent-money-total").textContent = `Total Persistent Money: $${gameState.persistentMoney}`;
   endScreen.style.display = "block";
-}
 
-function draw() {
-  ctx.fillStyle = themeBackgrounds[selectedMap];
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const restartButton = document.getElementById("restart-button");
+  const mainMenuButton = document.getElementById("main-menu-button");
 
-  ctx.beginPath();
-  ctx.moveTo(scaledPath[0].x, scaledPath[0].y);
-  for (let i = 1; i < scaledPath.length; i++) {
-    ctx.lineTo(scaledPath[i].x, scaledPath[i].y);
-  }
-  ctx.strokeStyle = "brown";
-  ctx.lineWidth = 10 * textScale;
-  ctx.stroke();
-
-  gameState.enemies.forEach(enemy => enemy.draw());
-  gameState.towers.forEach(tower => tower.draw());
-  gameState.projectiles.forEach(projectile => projectile.draw());
-
-  if (gameState.selectedTowerType && lastMousePos) {
-    const { x, y } = lastMousePos;
-    ctx.beginPath();
-    ctx.arc(x, y, towerStats[gameState.selectedTowerType].range * scaleX, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(0, 255, 0, 0.3)";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.closePath();
-
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.beginPath();
-    switch (gameState.selectedTowerType) {
-      case "basic":
-        ctx.moveTo(-12 * textScale, -12 * textScale);
-        for (let i = 0; i < 6; i++) {
-          ctx.lineTo(12 * textScale * Math.cos((i * Math.PI) / 3), 12 * textScale * Math.sin((i * Math.PI) / 3));
-        }
-        ctx.closePath();
-        break;
-      case "archer":
-        ctx.arc(0, 0, 15 * textScale, Math.PI / 4, 3 * Math.PI / 4);
-        ctx.lineTo(0, -15 * textScale);
-        ctx.closePath();
-        break;
-      case "cannon":
-        ctx.arc(0, 0, 15 * textScale, 0, Math.PI * 2);
-        ctx.fillRect(0, -5 * textScale, 20 * textScale, 10 * textScale);
-        break;
-      case "sniper":
-        ctx.rect(-8 * textScale, -12 * textScale, 16 * textScale, 24 * textScale);
-        ctx.rect(0, -8 * textScale, 35 * textScale, 8 * textScale);
-        break;
-      case "freeze":
-        ctx.moveTo(0, -15 * textScale);
-        ctx.lineTo(-10 * textScale, 0);
-        ctx.lineTo(0, 15 * textScale);
-        ctx.lineTo(10 * textScale, 0);
-        ctx.closePath();
-        break;
-      case "mortar":
-        ctx.arc(0, 0, 18 * textScale, 0, Math.PI * 2);
-        ctx.rect(0, -12 * textScale, 25 * textScale, 24 * textScale);
-        break;
-      case "laser":
-        ctx.moveTo(-12 * textScale, -12 * textScale);
-        ctx.lineTo(12 * textScale, -12 * textScale);
-        ctx.lineTo(0, 12 * textScale);
-        ctx.closePath();
-        ctx.rect(0, -5 * textScale, 25 * textScale, 10 * textScale);
-        break;
-      case "tesla":
-        ctx.moveTo(-10 * textScale, 10 * textScale);
-        ctx.lineTo(10 * textScale, 10 * textScale);
-        ctx.lineTo(0, -10 * textScale);
-        ctx.closePath();
-        break;
-      case "flamethrower":
-        ctx.arc(0, 0, 12 * textScale, 0, Math.PI * 2);
-        ctx.rect(0, -10 * textScale, 20 * textScale, 20 * textScale);
-        break;
-      case "missile":
-        ctx.moveTo(-12 * textScale, 12 * textScale);
-        ctx.lineTo(12 * textScale, 12 * textScale);
-        ctx.lineTo(0, -12 * textScale);
-        ctx.closePath();
-        ctx.rect(0, -8 * textScale, 25 * textScale, 16 * textScale);
-        break;
-      case "poison":
-        ctx.arc(0, 0, 15 * textScale, 0, Math.PI * 2);
-        ctx.rect(0, -10 * textScale, 20 * textScale, 10 * textScale);
-        break;
-      case "vortex":
-        ctx.arc(0, 0, 15 * textScale, 0, Math.PI * 2);
-        ctx.quadraticCurveTo(10 * textScale, -15 * textScale, 20 * textScale, 0);
-        break;
-    }
-    ctx.fillStyle = "rgba(128, 128, 128, 0.5)";
-    ctx.fill();
-    ctx.restore();
-  }
-}
-
-const FIXED_TIMESTEP = 1000 / 60;
-let lastTime = performance.now();
-let accumulatedTime = 0;
-
-function update(dt) {
-  if (gameState.isPaused || gameState.gameOver || gameState.gameWon) return;
-
-  const timeScale = dt / (1000 / 60);
-  gameState.enemies.forEach(enemy => enemy.move(timeScale));
-  gameState.towers.forEach(tower => tower.shoot());
-  gameState.projectiles.forEach(projectile => projectile.move(timeScale));
-
-  if (gameState.playerHealth <= 0) {
-    endGame(false);
-  }
-
-  if (gameState.enemies.length === 0 && !gameState.isSpawning && !gameState.gameWon && !gameState.gameOver) {
-    gameState.wave++;
-    spawnWave();
-  }
-
-  updateStats();
-  updateTowerInfo();
-}
-
-function gameLoop(currentTime) {
-  const deltaTime = currentTime - lastTime;
-  lastTime = currentTime;
-  accumulatedTime += deltaTime;
-
-  while (accumulatedTime >= FIXED_TIMESTEP) {
-    if (!gameState.gameOver && !gameState.gameWon) {
-      update(FIXED_TIMESTEP / 1000);
-    }
-    accumulatedTime -= FIXED_TIMESTEP;
-  }
-
-  draw();
-  requestAnimationFrame(gameLoop);
-}
-
-function initSidebar() {
-  const sidebar = document.getElementById("sidebar");
-  sidebar.innerHTML = `
-    <div id="pause-button">Pause</div>
-    <div id="fast-forward-button">Fast Forward (2x)</div>
-    <div id="home-button">Main Menu</div>
-  `;
-
-  Object.keys(towerStats).forEach(type => {
-    const div = document.createElement("div");
-    div.className = "tower-option";
-    div.textContent = `${type} ($${towerStats[type].cost})`;
-    div.addEventListener("click", () => {
-      document.querySelectorAll(".tower-option").forEach(opt => opt.classList.remove("selected"));
-      div.classList.add("selected");
-      gameState.selectedTowerType = type;
-      gameState.selectedTower = null;
-      updateTowerInfo();
-    });
-    sidebar.appendChild(div);
-  });
-
-  const pauseButton = document.getElementById("pause-button");
-  pauseButton.addEventListener("click", () => {
-    gameState.isPaused = !gameState.isPaused;
-    pauseButton.textContent = gameState.isPaused ? "Resume" : "Pause";
-    pauseButton.classList.toggle("active", gameState.isPaused);
-  });
-
-  const fastForwardButton = document.getElementById("fast-forward-button");
-  fastForwardButton.addEventListener("click", () => {
-    gameState.gameSpeed = gameState.gameSpeed === 1 ? 2 : 1;
-    fastForwardButton.textContent = `Fast Forward (${gameState.gameSpeed}x)`;
-    fastForwardButton.classList.toggle("active", gameState.gameSpeed === 2);
-    updateStats();
-  });
-
-  const homeButton = document.getElementById("home-button");
-  homeButton.addEventListener("click", () => {
-    gameState.gameOver = true;
-    document.getElementById("map-selection").style.display = "block";
-    document.getElementById("end-screen").style.display = "none";
-  });
-}
-
-function initEndScreen() {
-  document.getElementById("restart-button").addEventListener("click", () => {
-    document.getElementById("end-screen").style.display = "none";
+  restartButton.onclick = () => {
+    endScreen.style.display = "none";
     resetGame();
-    spawnWave();
-    requestAnimationFrame(gameLoop);
-  });
+    init();
+  };
 
-  document.getElementById("main-menu-button").addEventListener("click", () => {
-    document.getElementById("end-screen").style.display = "none";
+  mainMenuButton.onclick = () => {
+    endScreen.style.display = "none";
+    resetGame();
     document.getElementById("map-selection").style.display = "block";
-  });
+  };
 }
 
 function resetGame() {
@@ -1244,26 +1080,127 @@ function resetGame() {
   gameState.selectedTowerType = null;
   gameState.isSpawning = false;
   gameState.gameSpeed = 1;
-  document.getElementById("pause-button").textContent = "Pause";
-  document.getElementById("pause-button").classList.remove("active");
-  document.getElementById("fast-forward-button").textContent = "Fast Forward (1x)";
-  document.getElementById("fast-forward-button").classList.remove("active");
-  updateStats();
 }
 
-async function init() {
-  console.log("Initializing game...");
-  initSidebar();
-  initEndScreen();
-  document.getElementById("upgrade-tower-button").addEventListener("click", () => {
-    if (gameState.selectedTower) {
-      gameState.selectedTower.upgrade("power"); // Default to power path; add utility button if desired
-    }
+function init() {
+  const sidebar = document.getElementById("sidebar");
+  sidebar.innerHTML = "";
+  Object.keys(towerStats).forEach(type => {
+    const div = document.createElement("div");
+    div.className = "tower-option";
+    div.textContent = `${type.charAt(0).toUpperCase() + type.slice(1)} ($${towerStats[type].cost})`;
+    div.addEventListener("click", () => {
+      gameState.selectedTowerType = type;
+      document.querySelectorAll(".tower-option").forEach(el => el.classList.remove("selected"));
+      div.classList.add("selected");
+    });
+    sidebar.appendChild(div);
   });
+
+  const pauseButton = document.createElement("div");
+  pauseButton.id = "pause-button";
+  pauseButton.textContent = "Pause";
+  pauseButton.addEventListener("click", () => {
+    gameState.isPaused = !gameState.isPaused;
+    pauseButton.classList.toggle("active");
+    pauseButton.textContent = gameState.isPaused ? "Resume" : "Pause";
+  });
+  sidebar.appendChild(pauseButton);
+
+  const fastForwardButton = document.createElement("div");
+  fastForwardButton.id = "fast-forward-button";
+  fastForwardButton.textContent = "Fast Forward (2x)";
+  fastForwardButton.addEventListener("click", () => {
+    gameState.gameSpeed = gameState.gameSpeed === 1 ? 2 : 1;
+    fastForwardButton.classList.toggle("active");
+    fastForwardButton.textContent = gameState.gameSpeed === 1 ? "Fast Forward (2x)" : "Normal Speed (1x)";
+    updateStats();
+  });
+  sidebar.appendChild(fastForwardButton);
+
+  const homeButton = document.createElement("div");
+  homeButton.id = "home-button";
+  homeButton.textContent = "Main Menu";
+  homeButton.addEventListener("click", () => {
+    resetGame();
+    document.getElementById("map-selection").style.display = "block";
+  });
+  sidebar.appendChild(homeButton);
+
+  document.getElementById("upgrade-power-button").addEventListener("click", () => {
+    if (gameState.selectedTower) gameState.selectedTower.upgrade("power");
+  });
+
+  document.getElementById("upgrade-utility-button").addEventListener("click", () => {
+    if (gameState.selectedTower) gameState.selectedTower.upgrade("utility");
+  });
+
   spawnWave();
-  console.log("Game initialized with persistent money:", gameState.persistentMoney, "and game money:", gameState.gameMoney);
-  requestAnimationFrame(gameLoop);
+  requestAnimationFrame(update);
 }
 
-// Ensure init is globally accessible for index.html
-window.init = init;
+let lastTime = 0;
+
+function update(timestamp) {
+  if (!lastTime) lastTime = timestamp;
+  const dt = (timestamp - lastTime) / 1000;
+  lastTime = timestamp;
+
+  if (gameState.isPaused || gameState.gameOver || gameState.gameWon) {
+    requestAnimationFrame(update);
+    return;
+  }
+
+  ctx.fillStyle = themeBackgrounds[selectedMap];
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.beginPath();
+  ctx.moveTo(scaledPath[0].x, scaledPath[0].y);
+  for (let i = 1; i < scaledPath.length; i++) {
+    ctx.lineTo(scaledPath[i].x, scaledPath[i].y);
+  }
+  ctx.strokeStyle = "brown";
+  ctx.lineWidth = 40 * textScale;
+  ctx.stroke();
+
+  gameState.enemies.forEach(enemy => {
+    enemy.move(dt);
+    enemy.draw();
+  });
+
+  gameState.towers.forEach(tower => {
+    tower.shoot();
+    tower.draw();
+  });
+
+  gameState.projectiles.forEach(projectile => {
+    projectile.move(dt);
+    projectile.draw();
+  });
+
+  if (gameState.selectedTowerType && lastMousePos) {
+    ctx.beginPath();
+    ctx.arc(lastMousePos.x, lastMousePos.y, 20 * textScale, 0, Math.PI * 2);
+    ctx.fillStyle = towerStats[gameState.selectedTowerType].color;
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(lastMousePos.x, lastMousePos.y, towerStats[gameState.selectedTowerType].range * scaleX, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(0, 255, 0, 0.3)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  if (!gameState.isSpawning && gameState.enemies.length === 0 && gameState.playerHealth > 0) {
+    gameState.wave++;
+    spawnWave();
+  }
+
+  if (gameState.playerHealth <= 0) {
+    endGame(false);
+  }
+
+  updateStats();
+  requestAnimationFrame(update);
+}
+
+init();
