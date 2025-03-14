@@ -8,19 +8,15 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// Configuration
-const SECRET_KEY = process.env.SECRET_KEY || "your-secret-key"; // Use env var for security
-const PORT = process.env.PORT || 3000; // Render assigns PORT dynamically
+const SECRET_KEY = process.env.SECRET_KEY || "your-secret-key";
+const PORT = process.env.PORT || 3000;
 
-// Middleware
 app.use(express.json());
-app.use(express.static(path.join(__dirname))); // Serve static files (html, js, etc.)
+app.use(express.static(path.join(__dirname)));
 
-// In-memory storage (replace with a database in production)
-const users = new Map(); // { username: { password, money, towers } }
-const games = new Map(); // { map_difficulty: { players: [], towers: [], wave } }
+const users = new Map();
+const games = new Map();
 
-// Middleware to verify JWT
 function authenticateToken(req, res, next) {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
@@ -33,11 +29,29 @@ function authenticateToken(req, res, next) {
   });
 }
 
-// HTTP Routes
+// Serve index.html at root
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "map.html"));
+  res.sendFile(path.join(__dirname, "index.html"));
 });
 
+// Handle incorrect GET /signup
+app.get("/signup", (req, res) => {
+  res.status(405).json({ error: "Method not allowed. Use POST to signup." });
+});
+
+// Signup endpoint
+app.post("/signup", (req, res) => {
+  const { username, password } = req.body;
+  console.log("Signup attempt:", { username, password });
+  if (!username || !password) return res.status(400).json({ error: "Username and password required" });
+  if (users.has(username)) return res.status(400).json({ error: "User already exists" });
+
+  users.set(username, { password, money: 0, towers: ["basic"] });
+  const token = jwt.sign({ username }, SECRET_KEY, { expiresIn: "1h" });
+  res.json({ token });
+});
+
+// Register endpoint (kept for compatibility)
 app.post("/register", (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ error: "Username and password required" });
@@ -48,12 +62,16 @@ app.post("/register", (req, res) => {
   res.json({ token });
 });
 
+// Login endpoint
 app.post("/login", (req, res) => {
   const { username, password } = req.body;
+  console.log("Login attempt:", { username, password });
   if (!username || !password) return res.status(400).json({ error: "Username and password required" });
   const user = users.get(username);
-  if (!user || user.password !== password) return res.status(401).json({ error: "Invalid credentials" });
-
+  if (!user || user.password !== password) {
+    console.log("Login failed for:", username);
+    return res.status(401).json({ error: "Invalid credentials" });
+  }
   const token = jwt.sign({ username }, SECRET_KEY, { expiresIn: "1h" });
   res.json({ token });
 });
@@ -155,8 +173,6 @@ wss.on("connection", (ws, req) => {
         });
         games.delete(gameKey);
         break;
-      default:
-        ws.send(JSON.stringify({ type: "error", message: "Unknown message type" }));
     }
   });
 
@@ -176,18 +192,12 @@ wss.on("connection", (ws, req) => {
       }
     });
   });
-
-  ws.on("error", (error) => {
-    console.error("WebSocket error:", error);
-  });
 });
 
-// Start Server
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
 
-// Handle Uncaught Exceptions
 process.on("uncaughtException", (err) => {
   console.error("Uncaught Exception:", err);
 });
