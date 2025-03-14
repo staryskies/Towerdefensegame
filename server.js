@@ -4,39 +4,36 @@ const WebSocket = require('ws');
 const jwt = require('jsonwebtoken');
 const { Pool } = require('pg');
 const path = require('path');
+const bcrypt = require('bcrypt');
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// Environment Variables (Render-specific)
-const SECRET_KEY = process.env.SECRET_KEY || 'your-secret-key'; // Set in Render dashboard
-const DATABASE_URL = process.env.DATABASE_URL; // Provided by Render PostgreSQL
+const SECRET_KEY = process.env.SECRET_KEY || 'your-secret-key';
+const DATABASE_URL = process.env.DATABASE_URL;
+const saltRounds = 10;
 
-// PostgreSQL Connection Pool
 const pool = new Pool({
   connectionString: DATABASE_URL,
-  ssl: { rejectUnauthorized: false }, // Required for Render PostgreSQL
+  ssl: { rejectUnauthorized: false },
 });
 
-// Game State
-const games = new Map(); // Map<map_difficulty_key, { players: Set<WebSocket>, towers: [], wave: number, gameMoney: number }>
-const parties = new Map(); // Map<partyId, { leader: string, players: Set<WebSocket>, map: string, difficulty: string, towers: [], gameMoney: number }>
+const games = new Map();
+const parties = new Map();
 
-// Middleware
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
-// Authentication Routes
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ message: 'Missing credentials' });
-
   try {
-    const result = await pool.query('SELECT * FROM users WHERE username = $1 AND password = $2', [username, password]);
+    const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
     if (result.rows.length === 0) return res.status(401).json({ message: 'Invalid username or password' });
-
     const user = result.rows[0];
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) return res.status(401).json({ message: 'Invalid username or password' });
     const token = jwt.sign({ id: user.id, username: user.username, money: user.money }, SECRET_KEY, { expiresIn: '1h' });
     res.json({ token });
   } catch (err) {
@@ -48,20 +45,16 @@ app.post('/login', async (req, res) => {
 app.post('/signup', async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ message: 'Missing credentials' });
-
   try {
     const checkUser = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
     if (checkUser.rows.length > 0) return res.status(409).json({ message: 'Username taken' });
-
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
     const result = await pool.query(
       'INSERT INTO users (username, password, money) VALUES ($1, $2, $3) RETURNING *',
-      [username, password, 0]
+      [username, hashedPassword, 0]
     );
     const user = result.rows[0];
-
-    // Grant 'basic' tower to new users
     await pool.query('INSERT INTO user_towers (user_id, tower) VALUES ($1, $2) ON CONFLICT DO NOTHING', [user.id, 'basic']);
-
     const token = jwt.sign({ id: user.id, username: user.username, money: user.money }, SECRET_KEY, { expiresIn: '1h' });
     res.json({ token });
   } catch (err) {
@@ -70,16 +63,13 @@ app.post('/signup', async (req, res) => {
   }
 });
 
-// User Routes
 app.get('/user', async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ message: 'Unauthorized' });
-
   try {
     const decoded = jwt.verify(token, SECRET_KEY);
     const result = await pool.query('SELECT username, money FROM users WHERE id = $1', [decoded.id]);
     if (result.rows.length === 0) return res.status(404).json({ message: 'User not found' });
-
     const user = result.rows[0];
     res.json({ username: user.username, money: user.money });
   } catch (err) {
@@ -91,7 +81,6 @@ app.get('/user', async (req, res) => {
 app.post('/update-money', async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ message: 'Unauthorized' });
-
   try {
     const decoded = jwt.verify(token, SECRET_KEY);
     const { money } = req.body;
@@ -106,7 +95,6 @@ app.post('/update-money', async (req, res) => {
 app.get('/towers', async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ message: 'Unauthorized' });
-
   try {
     const decoded = jwt.verify(token, SECRET_KEY);
     const result = await pool.query('SELECT tower FROM user_towers WHERE user_id = $1', [decoded.id]);
@@ -121,7 +109,6 @@ app.get('/towers', async (req, res) => {
 app.post('/unlock-tower', async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ message: 'Unauthorized' });
-
   try {
     const decoded = jwt.verify(token, SECRET_KEY);
     const { tower } = req.body;
@@ -129,22 +116,16 @@ app.post('/unlock-tower', async (req, res) => {
       basic: 0, archer: 225, cannon: 300, sniper: 350, freeze: 400, mortar: 450,
       laser: 500, tesla: 550, flamethrower: 600, missile: 650, poison: 700, vortex: 750
     };
-
     if (!towerStats.hasOwnProperty(tower)) return res.status(400).json({ message: 'Invalid tower' });
-
     const userResult = await pool.query('SELECT money FROM users WHERE id = $1', [decoded.id]);
     const userMoney = userResult.rows[0].money;
-
     const towerCheck = await pool.query('SELECT * FROM user_towers WHERE user_id = $1 AND tower = $2', [decoded.id, tower]);
     if (towerCheck.rows.length > 0) return res.status(400).json({ message: 'Tower already unlocked' });
-
     if (userMoney < towerStats[tower]) return res.status(400).json({ message: 'Not enough money' });
-
     await pool.query('BEGIN');
     await pool.query('UPDATE users SET money = money - $1 WHERE id = $2', [towerStats[tower], decoded.id]);
     await pool.query('INSERT INTO user_towers (user_id, tower) VALUES ($1, $2)', [decoded.id, tower]);
     await pool.query('COMMIT');
-
     res.json({ message: `Unlocked ${tower}!` });
   } catch (err) {
     await pool.query('ROLLBACK');
@@ -153,7 +134,6 @@ app.post('/unlock-tower', async (req, res) => {
   }
 });
 
-// WebSocket Handling
 wss.on('connection', (ws, req) => {
   const token = new URLSearchParams(req.url.split('?')[1]).get('token');
   let userId, username;
@@ -162,16 +142,15 @@ wss.on('connection', (ws, req) => {
     userId = decoded.id;
     username = decoded.username;
   } catch (err) {
+    ws.send(JSON.stringify({ type: 'error', message: 'Invalid or expired token' }));
     ws.close();
     return;
   }
-
   ws.userId = userId;
   ws.username = username;
 
   ws.on('message', (message) => {
     const data = JSON.parse(message);
-
     switch (data.type) {
       case 'join':
         const gameKey = `${data.map}_${data.difficulty}`;
@@ -185,14 +164,19 @@ wss.on('connection', (ws, req) => {
         break;
 
       case 'createParty':
-        const partyId = Math.random().toString(36).substring(2, 8).toUpperCase();
+        const { partyId, map, difficulty } = data;
+        if (!partyId || parties.has(partyId)) {
+          ws.send(JSON.stringify({ type: 'partyError', message: 'Invalid or taken party ID' }));
+          return;
+        }
         parties.set(partyId, {
           leader: username,
           players: new Set([ws]),
-          map: 'map1',
-          difficulty: 'easy',
+          map: map || 'map1',
+          difficulty: difficulty || 'easy',
           towers: [],
-          gameMoney: 200,
+          gameMoney: difficulty === 'easy' ? 200 : difficulty === 'medium' ? 400 : 600,
+          started: false,
         });
         ws.partyId = partyId;
         ws.send(JSON.stringify({ type: 'partyCreated', partyId, leader: username }));
@@ -210,6 +194,7 @@ wss.on('connection', (ws, req) => {
             gameMoney: party.gameMoney,
             map: party.map,
             difficulty: party.difficulty,
+            started: party.started,
           }));
           broadcastPartyPlayers(data.partyId);
         } else {
@@ -237,9 +222,30 @@ wss.on('connection', (ws, req) => {
           if (party.leader === username) {
             party.towers = [];
             party.gameMoney = party.difficulty === 'easy' ? 200 : party.difficulty === 'medium' ? 400 : 600;
+            party.started = false;
             party.players.forEach(client => {
               if (client.readyState === WebSocket.OPEN) {
                 client.send(JSON.stringify({ type: 'partyRestart', gameMoney: party.gameMoney }));
+              }
+            });
+          }
+        }
+        break;
+
+      case 'startGame':
+        if (ws.partyId && parties.has(ws.partyId)) {
+          const party = parties.get(ws.partyId);
+          if (party.leader === username && !party.started) {
+            party.started = true;
+            party.players.forEach(client => {
+              if (client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({
+                  type: 'startGame',
+                  partyId: party.partyId,
+                  map: party.map,
+                  difficulty: party.difficulty,
+                  gameMoney: party.gameMoney,
+                }));
               }
             });
           }
@@ -324,6 +330,7 @@ wss.on('connection', (ws, req) => {
             party.difficulty = data.difficulty;
             party.gameMoney = data.difficulty === 'easy' ? 200 : data.difficulty === 'medium' ? 400 : 600;
             party.towers = [];
+            party.started = false;
             party.players.forEach(client => {
               if (client.readyState === WebSocket.OPEN) {
                 client.send(JSON.stringify({ type: 'mapSelected', map: data.map, difficulty: data.difficulty }));
@@ -393,6 +400,5 @@ function broadcastPartyPlayers(partyId) {
   });
 }
 
-// Start Server
-const PORT = process.env.PORT || 3000; // Render assigns PORT dynamically
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));

@@ -69,11 +69,11 @@
     <div id="login-form">
       <div class="form-group">
         <label for="login-username">Username</label>
-        <input type="text" id="login-username" placeholder="Username" aria-required="true">
+        <input type="text" id="login-username" placeholder="Username" aria-required="true" required>
       </div>
       <div class="form-group">
         <label for="login-password">Password</label>
-        <input type="password" id="login-password" placeholder="Password" aria-required="true">
+        <input type="password" id="login-password" placeholder="Password" aria-required="true" required>
       </div>
       <button id="login-button" aria-label="Login">Login</button>
       <p><a href="#" id="show-signup">Need an account? Sign up</a></p>
@@ -81,11 +81,11 @@
     <div id="signup-form" style="display: none;">
       <div class="form-group">
         <label for="signup-username">Username</label>
-        <input type="text" id="signup-username" placeholder="Username" aria-required="true">
+        <input type="text" id="signup-username" placeholder="Username" aria-required="true" required>
       </div>
       <div class="form-group">
         <label for="signup-password">Password</label>
-        <input type="password" id="signup-password" placeholder="Password" aria-required="true">
+        <input type="password" id="signup-password" placeholder="Password" aria-required="true" required>
       </div>
       <button id="signup-button" aria-label="Sign Up">Sign Up</button>
       <p><a href="#" id="show-login">Already have an account? Log in</a></p>
@@ -96,22 +96,26 @@
   <div class="container" id="main-menu" style="display: none;">
     <h1>Tower Defense</h1>
     <div id="user-money">Persistent Money: $0</div>
-    <button id="play-solo-button" aria-label="Play Solo">Play Solo</button>
-    <button id="create-party-button" aria-label="Create Party">Create Party</button>
+    <button id="play-solo-button" aria-label="Play Solo" title="Start a solo game">Play Solo</button>
+    <div class="form-group">
+      <label for="create-party-id">Create Party ID</label>
+      <input type="text" id="create-party-id" placeholder="Enter Party ID (e.g., ABC123)" title="Enter a unique party ID">
+    </div>
+    <button id="create-party-button" aria-label="Create Party" title="Create a new party with the entered ID">Create Party</button>
     <div class="form-group">
       <label for="join-party-id">Join Party ID</label>
-      <input type="text" id="join-party-id" placeholder="Enter Party ID">
+      <input type="text" id="join-party-id" placeholder="Enter Party ID" title="Join an existing party by ID">
     </div>
-    <button id="join-party-button" aria-label="Join Party">Join Party</button>
-    <div id="party-id-display"></div>
-    <button id="start-party-button" aria-label="Start Party Game" disabled>Start Party Game</button>
-    <button id="open-tower-shop" aria-label="Open Tower Shop">Tower Shop</button>
-    <button id="logout-button" aria-label="Logout">Logout</button>
+    <button id="join-party-button" aria-label="Join Party" title="Join a party with the entered ID">Join Party</button>
+    <div id="party-id-display" aria-live="polite"></div>
+    <button id="start-party-button" aria-label="Start Party Game" title="Start the game for all party members" disabled>Start Party Game</button>
+    <button id="open-tower-shop" aria-label="Open Tower Shop" title="Browse and unlock towers">Tower Shop</button>
+    <button id="logout-button" aria-label="Logout" title="Log out of your account">Logout</button>
   </div>
 
   <!-- Tower Shop -->
   <div id="tower-shop" style="display: none;">
-    <h2>Tower Shop <button class="close-btn" id="close-tower-shop" aria-label="Close Tower Shop"></button></h2>
+    <h2>Tower Shop <button class="close-btn" id="close-tower-shop" aria-label="Close Tower Shop" title="Close the tower shop"></button></h2>
     <div id="global-money">Persistent Money: $0</div>
     <div id="tower-list"></div>
   </div>
@@ -135,6 +139,7 @@
     let ws;
     let partyId = null;
     let isPartyLeader = false;
+    const WS_URL = window.location.hostname === 'localhost' ? 'ws://localhost:3000' : 'wss://mathematically.onrender.com';
 
     function showNotification(message) {
       const notification = document.getElementById("notification-box");
@@ -150,11 +155,15 @@
         return;
       }
 
-      ws = new WebSocket(`wss://${window.location.hostname}/ws?token=${token}`);
+      ws = new WebSocket(`${WS_URL}/ws?token=${token}`);
 
       ws.onopen = () => {
         console.log("WebSocket connected");
         showNotification("Connected to server!");
+        if (localStorage.getItem("partyId")) {
+          partyId = localStorage.getItem("partyId");
+          ws.send(JSON.stringify({ type: "joinParty", partyId }));
+        }
       };
 
       ws.onmessage = (event) => {
@@ -163,6 +172,8 @@
           case "partyCreated":
             partyId = data.partyId;
             isPartyLeader = true;
+            localStorage.setItem("partyId", partyId);
+            localStorage.setItem("isPartyMode", "true");
             document.getElementById("party-id-display").textContent = `Party ID: ${partyId}`;
             document.getElementById("start-party-button").disabled = false;
             showNotification(`Party created! ID: ${partyId}`);
@@ -170,29 +181,39 @@
           case "partyJoined":
             partyId = data.partyId;
             isPartyLeader = data.leader === localStorage.getItem("username");
+            localStorage.setItem("partyId", partyId);
+            localStorage.setItem("isPartyMode", "true");
             document.getElementById("party-id-display").textContent = `Party ID: ${partyId}`;
             document.getElementById("start-party-button").disabled = !isPartyLeader;
             showNotification(`Joined party ${partyId}`);
+            if (data.started) {
+              window.location.href = "/game.html";
+            }
             break;
           case "partyError":
             showNotification(data.message);
+            break;
+          case "startGame":
+            localStorage.setItem("selectedMap", data.map);
+            localStorage.setItem("selectedDifficulty", data.difficulty);
+            window.location.href = "/game.html";
+            break;
+          case "playerList":
+            console.log("Party players:", data.players);
             break;
         }
       };
 
       ws.onerror = (error) => {
         console.error("WebSocket error:", error);
-        showNotification("WebSocket connection failed.");
+        showNotification("WebSocket connection failed. Reconnecting...");
       };
 
       ws.onclose = () => {
         console.log("WebSocket disconnected");
-        showNotification("Disconnected from server.");
+        showNotification("Disconnected from server. Reconnecting...");
         ws = null;
-        partyId = null;
-        isPartyLeader = false;
-        document.getElementById("party-id-display").textContent = "";
-        document.getElementById("start-party-button").disabled = true;
+        setTimeout(initWebSocket, 2000); // Attempt to reconnect after 2 seconds
       };
     }
 
@@ -220,8 +241,12 @@
 
     // Authentication
     document.getElementById("login-button").addEventListener("click", async () => {
-      const username = document.getElementById("login-username").value;
+      const username = document.getElementById("login-username").value.trim();
       const password = document.getElementById("login-password").value;
+      if (!username || !password) {
+        showNotification("Please enter both username and password.");
+        return;
+      }
       try {
         const response = await fetch("/login", {
           method: "POST",
@@ -240,13 +265,17 @@
           showNotification(data.message || "Login failed.");
         }
       } catch (err) {
-        showNotification("Error during login.");
+        showNotification("Error during login. Please try again.");
       }
     });
 
     document.getElementById("signup-button").addEventListener("click", async () => {
-      const username = document.getElementById("signup-username").value;
+      const username = document.getElementById("signup-username").value.trim();
       const password = document.getElementById("signup-password").value;
+      if (!username || !password) {
+        showNotification("Please enter both username and password.");
+        return;
+      }
       try {
         const response = await fetch("/signup", {
           method: "POST",
@@ -265,7 +294,7 @@
           showNotification(data.message || "Signup failed.");
         }
       } catch (err) {
-        showNotification("Error during signup.");
+        showNotification("Error during signup. Please try again.");
       }
     });
 
@@ -282,8 +311,13 @@
     });
 
     document.getElementById("logout-button").addEventListener("click", () => {
+      if (partyId && ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "leaveParty", partyId }));
+      }
       localStorage.removeItem("token");
       localStorage.removeItem("username");
+      localStorage.removeItem("partyId");
+      localStorage.removeItem("isPartyMode");
       if (ws) ws.close();
       document.getElementById("main-menu").style.display = "none";
       document.getElementById("auth-screen").style.display = "block";
@@ -298,38 +332,45 @@
       if (partyId && ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: "leaveParty", partyId }));
       }
+      localStorage.removeItem("partyId");
+      localStorage.removeItem("isPartyMode");
       window.location.href = "/map.html";
     });
 
     document.getElementById("create-party-button").addEventListener("click", () => {
       if (!ws || ws.readyState !== WebSocket.OPEN) {
-        showNotification("Not connected to server. Please try again.");
+        showNotification("Not connected to server. Reconnecting...");
         initWebSocket();
         return;
       }
       if (partyId) {
-        showNotification("You are already in a party!");
+        showNotification("You are already in a party! Leave it first.");
         return;
       }
-      ws.send(JSON.stringify({ type: "createParty" }));
+      const createId = document.getElementById("create-party-id").value.trim().toUpperCase();
+      if (!createId) {
+        showNotification("Please enter a Party ID to create.");
+        return;
+      }
+      ws.send(JSON.stringify({ type: "createParty", partyId: createId, map: "map1", difficulty: "easy" }));
     });
 
     document.getElementById("join-party-button").addEventListener("click", () => {
       if (!ws || ws.readyState !== WebSocket.OPEN) {
-        showNotification("Not connected to server. Please try again.");
+        showNotification("Not connected to server. Reconnecting...");
         initWebSocket();
         return;
       }
       if (partyId) {
-        showNotification("You are already in a party!");
+        showNotification("You are already in a party! Leave it first.");
         return;
       }
-      const joinId = document.getElementById("join-party-id").value.trim();
-      if (joinId) {
-        ws.send(JSON.stringify({ type: "joinParty", partyId: joinId }));
-      } else {
-        showNotification("Please enter a Party ID.");
+      const joinId = document.getElementById("join-party-id").value.trim().toUpperCase();
+      if (!joinId) {
+        showNotification("Please enter a Party ID to join.");
+        return;
       }
+      ws.send(JSON.stringify({ type: "joinParty", partyId: joinId }));
     });
 
     document.getElementById("start-party-button").addEventListener("click", () => {
@@ -341,9 +382,7 @@
         showNotification("Not in a party or not connected!");
         return;
       }
-      localStorage.setItem("partyId", partyId);
-      localStorage.setItem("isPartyMode", "true");
-      window.location.href = "/map.html"; // Party leader selects map in map.html
+      ws.send(JSON.stringify({ type: "startGame", partyId }));
     });
 
     // Tower Shop
@@ -384,6 +423,7 @@
             unlockButton.className = "unlock-btn";
             unlockButton.textContent = "Unlock";
             unlockButton.disabled = userData.money < towerStats[type].persistentCost;
+            unlockButton.title = userData.money < towerStats[type].persistentCost ? `Need $${towerStats[type].persistentCost - userData.money} more` : `Unlock ${type} tower`;
             unlockButton.addEventListener("click", async () => {
               try {
                 const response = await fetch("/unlock-tower", {

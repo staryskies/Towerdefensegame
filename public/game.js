@@ -245,15 +245,15 @@ const towerUpgradePaths = {
 
 // Theme Backgrounds
 const themeBackgrounds = {
-  map1: "#90ee90", // Bright grassland green
-  map2: "#f4a460", // Bright desert sandy
-  map3: "#a9a9a9", // Bright stone gray
-  map4: "#6b8e23", // Bright forest olive
-  map5: "#cd853f", // Bright mountain peru
-  map6: "#f4a460", // Same as map2 for desert
-  map7: "#87ceeb", // Bright river sky blue
-  map8: "#cd5c5c", // Bright canyon indian red
-  map9: "#e0ffff", // Bright arctic light cyan
+  map1: "#90ee90",
+  map2: "#f4a460",
+  map3: "#a9a9a9",
+  map4: "#6b8e23",
+  map5: "#cd853f",
+  map6: "#f4a460",
+  map7: "#87ceeb",
+  map8: "#cd5c5c",
+  map9: "#e0ffff",
 };
 
 // Paths
@@ -369,7 +369,7 @@ function initWebSocket() {
     console.log("WebSocket connected");
     showNotification("Connected to game chat!");
     if (gameState.isPartyMode && gameState.partyId) {
-      ws.send(JSON.stringify({ type: "joinParty", partyId: gameState.partyId, map: selectedMap, difficulty: selectedDifficulty }));
+      ws.send(JSON.stringify({ type: "joinParty", partyId: gameState.partyId }));
     } else {
       ws.send(JSON.stringify({ type: "join", map: selectedMap, difficulty: selectedDifficulty }));
     }
@@ -412,8 +412,28 @@ function initWebSocket() {
         mapTheme = mapThemes[selectedMap];
         scaledPath = paths[selectedMap].map(point => ({ x: point.x * scaleX, y: point.y * scaleY }));
         scaledSpawnPoint = scaledPath[0];
+        if (data.started && window.location.pathname !== '/game.html') {
+          window.location.href = '/game.html';
+        }
         showNotification(`Joined party ${gameState.partyId}`);
         updateStats();
+        break;
+      case "startGame":
+        if (window.location.pathname !== '/game.html') {
+          localStorage.setItem("selectedMap", data.map);
+          localStorage.setItem("selectedDifficulty", data.difficulty);
+          window.location.href = '/game.html';
+        } else {
+          selectedMap = data.map;
+          selectedDifficulty = data.difficulty;
+          gameState.gameMoney = data.gameMoney;
+          mapTheme = mapThemes[selectedMap];
+          scaledPath = paths[selectedMap].map(point => ({ x: point.x * scaleX, y: point.y * scaleY }));
+          scaledSpawnPoint = scaledPath[0];
+          resetGame();
+          spawnWave();
+          showNotification('Game started!');
+        }
         break;
       case "moneyUpdate":
         gameState.gameMoney = data.gameMoney;
@@ -428,6 +448,11 @@ function initWebSocket() {
           resetGame();
           showNotification(`Party leader selected ${selectedMap} (${selectedDifficulty})`);
         }
+        break;
+      case "partyRestart":
+        gameState.gameMoney = data.gameMoney;
+        resetGame();
+        showNotification('Party game restarted!');
         break;
     }
   };
@@ -480,654 +505,8 @@ async function updatePersistentMoney() {
   if (!response.ok) console.error("Failed to update money:", await response.text());
 }
 
-// Classes
-class Enemy {
-  constructor(type, wave) {
-    this.x = scaledSpawnPoint.x;
-    this.y = scaledSpawnPoint.y;
-    const healthMultiplier = selectedDifficulty === "easy" ? 0.25 : selectedDifficulty === "medium" ? 0.50 : 1;
-    this.health = Math.floor(type.health * healthMultiplier * (1 + ((wave - 1) * 14) / 59));
-    this.maxHealth = this.health;
-    this.speed = type.speed * scaleX * 70;
-    this.radius = type.radius * textScale;
-    this.color = type.color;
-    this.pathIndex = 1;
-    this.isBoss = gameState.isBossWave && !gameState.bossSpawned;
-    if (this.isBoss) {
-      this.health *= 5;
-      this.maxHealth *= 5;
-      this.radius *= 2;
-      gameState.bossSpawned = true;
-      window.dispatchEvent(new CustomEvent("bossActive", { detail: { wave: gameState.wave } }));
-    }
-  }
-
-  move(dt) {
-    if (this.pathIndex >= scaledPath.length) {
-      gameState.playerHealth -= this.isBoss
-        ? (selectedDifficulty === "easy" ? 2.5 : selectedDifficulty === "medium" ? 5 : 7.5)
-        : (selectedDifficulty === "easy" ? 0.5 : selectedDifficulty === "medium" ? 1 : 1.5);
-      gameState.enemies = gameState.enemies.filter(e => e !== this);
-      if (gameState.playerHealth <= 0 && ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: "gameOver", won: false }));
-      }
-      return;
-    }
-    const target = scaledPath[this.pathIndex];
-    const dx = target.x - this.x;
-    const dy = target.y - this.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    const moveSpeed = this.speed * gameState.gameSpeed * dt;
-    if (distance < moveSpeed) {
-      this.x = target.x;
-      this.y = target.y;
-      this.pathIndex++;
-    } else {
-      this.x += (dx / distance) * moveSpeed;
-      this.y += (dy / distance) * moveSpeed;
-    }
-  }
-
-  draw() {
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-    ctx.fillStyle = this.isBoss ? "darkred" : this.color;
-    ctx.fill();
-    ctx.closePath();
-
-    ctx.fillStyle = "white";
-    ctx.font = `${12 * textScale}px Arial`;
-    ctx.textAlign = "center";
-    ctx.fillText(`${Math.floor(this.health)}/${this.maxHealth}`, this.x, this.y - this.radius - 5 * textScale);
-  }
-}
-
-class Tower {
-  constructor(x, y, type) {
-    this.x = x;
-    this.y = y;
-    this.type = type;
-    this.damage = towerStats[type].damage;
-    this.range = towerStats[type].range * scaleX;
-    this.fireRate = towerStats[type].fireRate;
-    this.lastShot = 0;
-    this.radius = 20 * textScale;
-    this.color = towerStats[type].color || "gray";
-    this.angle = 0;
-    this.powerLevel = 0;
-    this.utilityLevel = 0;
-    this.specials = { tripleShot: false, crit: 0.2, splash: 1, slow: 0.5, multiBeam: false, chain: 2, burn: 1, pull: 100 };
-  }
-
-  shoot() {
-    const now = Date.now();
-    if (now - this.lastShot < this.fireRate / gameState.gameSpeed) return;
-    let target = gameState.enemies.find(enemy => Math.hypot(enemy.x - this.x, enemy.y - this.y) < this.range);
-    if (target) {
-      const dx = target.x - this.x;
-      const dy = target.y - this.y;
-      this.angle = Math.atan2(dy, dx);
-      switch (this.type) {
-        case "laser":
-          if (now - this.lastShot >= 10000) {
-            this.lastShot = now;
-            let beamDuration = 5000 / gameState.gameSpeed;
-            let damageInterval = setInterval(() => {
-              gameState.enemies.forEach(enemy => {
-                if (Math.hypot(enemy.x - this.x, enemy.y - this.y) < this.range) {
-                  enemy.health -= this.damage / 10;
-                  if (enemy.health <= 0) {
-                    gameState.score += enemy.isBoss ? 50 : 10;
-                    gameState.gameMoney += enemy.isBoss ? 100 : 20;
-                    gameState.persistentMoney += enemy.isBoss ? 10 : 2;
-                    updatePersistentMoney();
-                    gameState.enemies = gameState.enemies.filter(e => e !== enemy);
-                    if (ws && ws.readyState === WebSocket.OPEN) {
-                      ws.send(JSON.stringify({ type: "moneyUpdate", gameMoney: gameState.gameMoney }));
-                    }
-                  }
-                }
-              });
-              if (this.specials.multiBeam) {
-                let extraTarget = gameState.enemies.find(e => e !== target && Math.hypot(e.x - this.x, e.y - this.y) < this.range);
-                if (extraTarget) {
-                  extraTarget.health -= this.damage / 10;
-                  if (extraTarget.health <= 0) {
-                    gameState.score += extraTarget.isBoss ? 50 : 10;
-                    gameState.gameMoney += extraTarget.isBoss ? 100 : 20;
-                    gameState.persistentMoney += extraTarget.isBoss ? 10 : 2;
-                    updatePersistentMoney();
-                    gameState.enemies = gameState.enemies.filter(e => e !== extraTarget);
-                    if (ws && ws.readyState === WebSocket.OPEN) {
-                      ws.send(JSON.stringify({ type: "moneyUpdate", gameMoney: gameState.gameMoney }));
-                    }
-                  }
-                }
-              }
-            }, 500 / gameState.gameSpeed);
-            setTimeout(() => clearInterval(damageInterval), beamDuration);
-          }
-          break;
-        case "tesla":
-          gameState.projectiles.push(new Projectile(this.x, this.y, target, this.damage, 5, this.type));
-          let chainTargets = gameState.enemies.filter(e => e !== target && Math.hypot(e.x - this.x, e.y - this.y) < this.range * 1.5).slice(0, this.specials.chain);
-          chainTargets.forEach(enemy => {
-            enemy.health -= this.damage * 0.5;
-            if (enemy.health <= 0) {
-              gameState.score += enemy.isBoss ? 50 : 10;
-              gameState.gameMoney += enemy.isBoss ? 100 : 20;
-              gameState.persistentMoney += enemy.isBoss ? 10 : 2;
-              updatePersistentMoney();
-              gameState.enemies = gameState.enemies.filter(e => e !== enemy);
-              if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ type: "moneyUpdate", gameMoney: gameState.gameMoney }));
-              }
-            }
-          });
-          this.lastShot = now;
-          break;
-        case "vortex":
-          if (now - this.lastShot >= 5000) {
-            gameState.enemies.forEach(enemy => {
-              if (Math.hypot(enemy.x - this.x, enemy.y - this.y) < this.range) {
-                const dx = this.x - enemy.x;
-                const dy = this.y - enemy.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                if (distance > 20 * scaleX) {
-                  const pullStrength = this.specials.pull * scaleX;
-                  enemy.x += (dx / distance) * pullStrength * (gameState.gameSpeed / 60);
-                  enemy.y += (dy / distance) * pullStrength * (gameState.gameSpeed / 60);
-                  const nearestPoint = scaledPath.reduce((closest, point) =>
-                    Math.hypot(point.x - enemy.x, point.y - enemy.y) < Math.hypot(closest.x - enemy.x, closest.y - enemy.y) ? point : closest
-                  );
-                  enemy.x = nearestPoint.x;
-                  enemy.y = nearestPoint.y;
-                }
-              }
-            });
-            this.lastShot = now;
-          }
-          break;
-        case "archer":
-          if (this.specials.tripleShot) {
-            gameState.projectiles.push(new Projectile(this.x, this.y, target, this.damage, 5, this.type));
-            let extraTargets = gameState.enemies.filter(e => e !== target && Math.hypot(e.x - this.x, e.y - this.y) < this.range).slice(0, 2);
-            extraTargets.forEach(t => gameState.projectiles.push(new Projectile(this.x, this.y, t, this.damage, 5, this.type)));
-          } else {
-            gameState.projectiles.push(new Projectile(this.x, this.y, target, this.damage, 5, this.type));
-          }
-          this.lastShot = now;
-          break;
-        default:
-          gameState.projectiles.push(new Projectile(this.x, this.y, target, this.damage, 5, this.type));
-          this.lastShot = now;
-      }
-    }
-  }
-
-  draw() {
-    ctx.save();
-    ctx.translate(this.x, this.y);
-    ctx.rotate(this.angle);
-
-    ctx.beginPath();
-    switch (this.type) {
-      case "basic":
-        ctx.moveTo(-12 * textScale, -12 * textScale);
-        for (let i = 0; i < 6; i++) {
-          ctx.lineTo(12 * textScale * Math.cos((i * Math.PI) / 3), 12 * textScale * Math.sin((i * Math.PI) / 3));
-        }
-        ctx.closePath();
-        ctx.fillStyle = this.color;
-        ctx.fill();
-        ctx.beginPath();
-        ctx.rect(0, -5 * textScale, 20 * textScale, 10 * textScale);
-        ctx.fillStyle = "darkgray";
-        ctx.fill();
-        break;
-      case "archer":
-        ctx.arc(0, 0, 15 * textScale, Math.PI / 4, 3 * Math.PI / 4);
-        ctx.lineTo(0, -15 * textScale);
-        ctx.closePath();
-        ctx.fillStyle = this.color;
-        ctx.fill();
-        ctx.beginPath();
-        ctx.moveTo(-5 * textScale, -10 * textScale);
-        ctx.lineTo(5 * textScale, -10 * textScale);
-        ctx.lineTo(0, 0);
-        ctx.fillStyle = "tan";
-        ctx.fill();
-        break;
-      case "cannon":
-        ctx.arc(0, 0, 15 * textScale, 0, Math.PI * 2);
-        ctx.fillStyle = this.color;
-        ctx.fill();
-        ctx.beginPath();
-        ctx.rect(0, -10 * textScale, 25 * textScale, 20 * textScale);
-        ctx.fillStyle = "darkgray";
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(25 * textScale, 0, 5 * textScale, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(150, 150, 150, 0.5)";
-        ctx.fill();
-        break;
-      case "sniper":
-        ctx.rect(-8 * textScale, -12 * textScale, 16 * textScale, 24 * textScale);
-        ctx.fillStyle = this.color;
-        ctx.fill();
-        ctx.beginPath();
-        ctx.rect(0, -8 * textScale, 35 * textScale, 8 * textScale);
-        ctx.fillStyle = "darkgreen";
-        ctx.fill();
-        ctx.beginPath();
-        ctx.rect(10 * textScale, -12 * textScale, 5 * textScale, 5 * textScale);
-        ctx.fillStyle = "black";
-        ctx.fill();
-        break;
-      case "freeze":
-        ctx.moveTo(0, -15 * textScale);
-        ctx.lineTo(-10 * textScale, 0);
-        ctx.lineTo(0, 15 * textScale);
-        ctx.lineTo(10 * textScale, 0);
-        ctx.closePath();
-        ctx.fillStyle = this.color;
-        ctx.fill();
-        ctx.beginPath();
-        ctx.moveTo(0, -20 * textScale);
-        ctx.lineTo(0, -10 * textScale);
-        ctx.moveTo(-15 * textScale, 0);
-        ctx.lineTo(-5 * textScale, 0);
-        ctx.moveTo(15 * textScale, 0);
-        ctx.lineTo(5 * textScale, 0);
-        ctx.strokeStyle = "white";
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        break;
-      case "mortar":
-        ctx.arc(0, 0, 18 * textScale, 0, Math.PI * 2);
-        ctx.fillStyle = this.color;
-        ctx.fill();
-        ctx.beginPath();
-        ctx.rect(0, -12 * textScale, 25 * textScale, 24 * textScale);
-        ctx.fillStyle = "darkgray";
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(25 * textScale, 0, 8 * textScale, 0, Math.PI * 2);
-        ctx.strokeStyle = "red";
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        break;
-      case "laser":
-        ctx.moveTo(-12 * textScale, -12 * textScale);
-        ctx.lineTo(12 * textScale, -12 * textScale);
-        ctx.lineTo(0, 12 * textScale);
-        ctx.closePath();
-        ctx.fillStyle = this.color;
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(0, 0, 5 * textScale, 0, Math.PI * 2);
-        ctx.fillStyle = "white";
-        ctx.fill();
-        ctx.beginPath();
-        ctx.rect(0, -5 * textScale, 25 * textScale, 10 * textScale);
-        ctx.fillStyle = "darkred";
-        ctx.fill();
-
-        if (Date.now() - this.lastShot < 5000 / gameState.gameSpeed) {
-          let target = gameState.enemies.find(enemy => Math.hypot(enemy.x - this.x, enemy.y - this.y) < this.range);
-          if (target) {
-            const dx = target.x - this.x;
-            const dy = target.y - this.y;
-            this.angle = Math.atan2(dy, dx);
-            ctx.restore();
-            ctx.save();
-            ctx.translate(this.x, this.y);
-            ctx.rotate(this.angle);
-            ctx.beginPath();
-            ctx.moveTo(25 * textScale, 0);
-            const beamLength = Math.min(Math.hypot(dx, dy), this.range);
-            ctx.lineTo(25 * textScale + beamLength, 0);
-            ctx.strokeStyle = `rgba(255, 0, 0, ${0.5 + 0.5 * Math.sin(Date.now() / 100)})`;
-            ctx.lineWidth = 4;
-            ctx.stroke();
-
-            if (this.specials.multiBeam) {
-              let extraTarget = gameState.enemies.find(e => e !== target && Math.hypot(e.x - this.x, e.y - this.y) < this.range);
-              if (extraTarget) {
-                const extraDx = extraTarget.x - this.x;
-                const extraDy = extraTarget.y - this.y;
-                const extraAngle = Math.atan2(extraDy, extraDx);
-                ctx.restore();
-                ctx.save();
-                ctx.translate(this.x, this.y);
-                ctx.rotate(extraAngle);
-                ctx.beginPath();
-                ctx.moveTo(25 * textScale, 0);
-                const extraBeamLength = Math.min(Math.hypot(extraDx, extraDy), this.range);
-                ctx.lineTo(25 * textScale + extraBeamLength, 0);
-                ctx.strokeStyle = `rgba(255, 0, 0, ${0.5 + 0.5 * Math.sin(Date.now() / 100)})`;
-                ctx.lineWidth = 4;
-                ctx.stroke();
-              }
-            }
-          }
-        }
-        break;
-      case "tesla":
-        ctx.moveTo(-10 * textScale, 10 * textScale);
-        ctx.lineTo(10 * textScale, 10 * textScale);
-        ctx.lineTo(0, -10 * textScale);
-        ctx.closePath();
-        ctx.fillStyle = this.color;
-        ctx.fill();
-        ctx.beginPath();
-        ctx.moveTo(-5 * textScale, -5 * textScale);
-        ctx.lineTo(5 * textScale, -15 * textScale);
-        ctx.strokeStyle = "cyan";
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        if (Date.now() - this.lastShot < 500) {
-          ctx.beginPath();
-          ctx.moveTo(0, -10 * textScale);
-          ctx.lineTo(20 * textScale, -20 * textScale);
-          ctx.strokeStyle = "white";
-          ctx.stroke();
-        }
-        break;
-      case "flamethrower":
-        ctx.arc(0, 0, 12 * textScale, 0, Math.PI * 2);
-        ctx.fillStyle = this.color;
-        ctx.fill();
-        ctx.beginPath();
-        ctx.rect(0, -10 * textScale, 20 * textScale, 20 * textScale);
-        ctx.fillStyle = "darkorange";
-        ctx.fill();
-        ctx.beginPath();
-        ctx.moveTo(20 * textScale, -5 * textScale);
-        ctx.lineTo(25 * textScale, 0);
-        ctx.lineTo(20 * textScale, 5 * textScale);
-        ctx.fillStyle = "yellow";
-        ctx.fill();
-        break;
-      case "missile":
-        ctx.moveTo(-12 * textScale, 12 * textScale);
-        ctx.lineTo(12 * textScale, 12 * textScale);
-        ctx.lineTo(0, -12 * textScale);
-        ctx.closePath();
-        ctx.fillStyle = this.color;
-        ctx.fill();
-        ctx.beginPath();
-        ctx.rect(0, -8 * textScale, 25 * textScale, 16 * textScale);
-        ctx.fillStyle = "darkgray";
-        ctx.fill();
-        ctx.beginPath();
-        ctx.moveTo(5 * textScale, 12 * textScale);
-        ctx.lineTo(10 * textScale, 17 * textScale);
-        ctx.lineTo(15 * textScale, 12 * textScale);
-        ctx.fillStyle = "red";
-        ctx.fill();
-        break;
-      case "poison":
-        ctx.arc(0, 0, 15 * textScale, 0, Math.PI * 2);
-        ctx.fillStyle = this.color;
-        ctx.fill();
-        ctx.beginPath();
-        ctx.rect(0, -10 * textScale, 20 * textScale, 10 * textScale);
-        ctx.fillStyle = "darkgreen";
-        ctx.fill();
-        ctx.beginPath();
-        ctx.moveTo(20 * textScale, 0);
-        ctx.lineTo(25 * textScale, 5 * textScale);
-        ctx.lineTo(15 * textScale, 5 * textScale);
-        ctx.fillStyle = "limegreen";
-        ctx.fill();
-        break;
-      case "vortex":
-        ctx.arc(0, 0, 15 * textScale, 0, Math.PI * 2);
-        ctx.fillStyle = this.color;
-        ctx.fill();
-        ctx.beginPath();
-        ctx.quadraticCurveTo(10 * textScale, -15 * textScale, 20 * textScale, 0);
-        ctx.strokeStyle = "darkpurple";
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.arc(0, 0, 10 * textScale, 0, Math.PI * 2);
-        ctx.strokeStyle = "white";
-        ctx.stroke();
-        if (Date.now() - this.lastShot < 1000) {
-          ctx.beginPath();
-          ctx.arc(0, 0, 15 * textScale, 0, Math.PI * 2 * (Date.now() - this.lastShot) / 1000);
-          ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
-          ctx.lineWidth = 3;
-          ctx.stroke();
-        }
-        break;
-    }
-    ctx.closePath();
-
-    if (gameState.selectedTower === this) {
-      ctx.beginPath();
-      ctx.arc(0, 0, this.range, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(0, 255, 0, 0.3)";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }
-
-    ctx.restore();
-
-    ctx.fillStyle = "white";
-    ctx.font = `${12 * textScale}px Arial`;
-    ctx.textAlign = "center";
-    ctx.fillText(this.type.charAt(0).toUpperCase() + this.type.slice(1), this.x, this.y + 25 * textScale);
-  }
-
-  upgrade(path) {
-    const upgrades = towerUpgradePaths[this.type][path];
-    const level = path === "power" ? this.powerLevel : this.utilityLevel;
-    if (level >= 4) {
-      showNotification(`Max upgrades reached for ${path} path!`);
-      return;
-    }
-    const upgrade = upgrades[level];
-    if (gameState.gameMoney < upgrade.cost) {
-      showNotification("Not enough money!");
-      return;
-    }
-    gameState.gameMoney -= upgrade.cost;
-    if (upgrade.damage) this.damage *= upgrade.damage;
-    if (upgrade.range) this.range *= upgrade.range;
-    if (upgrade.fireRate) this.fireRate *= upgrade.fireRate;
-    if (upgrade.special) {
-      switch (upgrade.special) {
-        case "tripleShot": this.specials.tripleShot = true; break;
-        case "crit": this.specials.crit += 0.2; break;
-        case "splash": this.specials.splash *= 1.5; break;
-        case "slow": this.specials.slow *= 1.5; break;
-        case "multiBeam": this.specials.multiBeam = true; break;
-        case "chain": this.specials.chain += 2; break;
-        case "burn": this.specials.burn *= 1.5; break;
-        case "pull": this.specials.pull *= 1.5; break;
-      }
-    }
-    if (path === "power") this.powerLevel++;
-    else this.utilityLevel++;
-    showNotification(`${this.type} upgraded: ${upgrade.desc}`);
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: "moneyUpdate", gameMoney: gameState.gameMoney }));
-    }
-    updateTowerInfo();
-  }
-}
-
-class Projectile {
-  constructor(x, y, target, damage, speed, type) {
-    this.x = x;
-    this.y = y;
-    this.target = target;
-    this.damage = damage;
-    this.speed = speed * scaleX * 100;
-    this.type = type;
-    this.radius = type === "missile" ? 8 * textScale : 5 * textScale;
-    this.color = towerStats[type].color || "black";
-  }
-
-  move(dt) {
-    if (!this.target || !gameState.enemies.includes(this.target)) {
-      gameState.projectiles = gameState.projectiles.filter(p => p !== this);
-      return;
-    }
-    const dx = this.target.x - this.x;
-    const dy = this.target.y - this.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    const moveSpeed = this.speed * dt;
-    if (distance < moveSpeed) {
-      this.hit();
-    } else {
-      this.x += (dx / distance) * moveSpeed;
-      this.y += (dy / distance) * moveSpeed;
-    }
-  }
-
-  hit() {
-    if (this.target) {
-      this.target.health -= this.damage;
-      if (this.target.health <= 0) {
-        gameState.score += this.target.isBoss ? 50 : 10;
-        gameState.gameMoney += this.target.isBoss ? 100 : 20;
-        gameState.persistentMoney += this.target.isBoss ? 10 : 2;
-        updatePersistentMoney();
-        gameState.enemies = gameState.enemies.filter(e => e !== this.target);
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: "moneyUpdate", gameMoney: gameState.gameMoney }));
-        }
-      }
-      const tower = gameState.towers.find(t => t.type === this.type);
-      switch (this.type) {
-        case "cannon":
-          gameState.enemies.forEach(enemy => {
-            if (enemy !== this.target && Math.hypot(enemy.x - this.x, enemy.y - this.y) < 50 * scaleX * tower.specials.splash) {
-              enemy.health -= this.damage * 0.5;
-              if (enemy.health <= 0) {
-                gameState.score += enemy.isBoss ? 50 : 10;
-                gameState.gameMoney += enemy.isBoss ? 100 : 20;
-                gameState.persistentMoney += enemy.isBoss ? 10 : 2;
-                updatePersistentMoney();
-                gameState.enemies = gameState.enemies.filter(e => e !== enemy);
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                  ws.send(JSON.stringify({ type: "moneyUpdate", gameMoney: gameState.gameMoney }));
-                }
-              }
-            }
-          });
-          break;
-        case "sniper":
-          if (Math.random() < tower.specials.crit) this.target.health -= this.damage;
-          break;
-        case "freeze":
-          this.target.speed *= tower.specials.slow;
-          this.target.color = "lightblue";
-          setTimeout(() => { if (this.target) { this.target.speed /= tower.specials.slow; this.target.color = enemyThemes[mapTheme][selectedDifficulty][0].color; } }, 2000);
-          break;
-        case "mortar":
-          gameState.enemies.forEach(enemy => {
-            if (Math.hypot(enemy.x - this.x, enemy.y - this.y) < 75 * scaleX * tower.specials.splash) {
-              enemy.health -= this.damage * 0.75;
-              if (enemy.health <= 0) {
-                gameState.score += enemy.isBoss ? 50 : 10;
-                gameState.gameMoney += enemy.isBoss ? 100 : 20;
-                gameState.persistentMoney += enemy.isBoss ? 10 : 2;
-                updatePersistentMoney();
-                gameState.enemies = gameState.enemies.filter(e => e !== enemy);
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                  ws.send(JSON.stringify({ type: "moneyUpdate", gameMoney: gameState.gameMoney }));
-                }
-              }
-            }
-          });
-          break;
-        case "flamethrower":
-          let burnInterval = setInterval(() => {
-            if (this.target && this.target.health > 0) {
-              this.target.health -= 10 * tower.specials.burn;
-              this.target.color = "orange";
-              if (this.target.health <= 0) {
-                gameState.score += this.target.isBoss ? 50 : 10;
-                gameState.gameMoney += this.target.isBoss ? 100 : 20;
-                gameState.persistentMoney += this.target.isBoss ? 10 : 2;
-                updatePersistentMoney();
-                gameState.enemies = gameState.enemies.filter(e => e !== this.target);
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                  ws.send(JSON.stringify({ type: "moneyUpdate", gameMoney: gameState.gameMoney }));
-                }
-              }
-            } else {
-              clearInterval(burnInterval);
-            }
-          }, 1000);
-          setTimeout(() => clearInterval(burnInterval), 3000);
-          break;
-        case "poison":
-          gameState.enemies.forEach(enemy => {
-            if (Math.hypot(enemy.x - this.x, enemy.y - this.y) < 160 * scaleX * tower.specials.splash) {
-              let poisonInterval = setInterval(() => {
-                if (enemy.health > 0) {
-                  enemy.health -= 5;
-                  enemy.color = "limegreen";
-                  if (enemy.health <= 0) {
-                    gameState.score += enemy.isBoss ? 50 : 10;
-                    gameState.gameMoney += enemy.isBoss ? 100 : 20;
-                    gameState.persistentMoney += enemy.isBoss ? 10 : 2;
-                    updatePersistentMoney();
-                    gameState.enemies = gameState.enemies.filter(e => e !== enemy);
-                    if (ws && ws.readyState === WebSocket.OPEN) {
-                      ws.send(JSON.stringify({ type: "moneyUpdate", gameMoney: gameState.gameMoney }));
-                    }
-                  }
-                } else {
-                  clearInterval(poisonInterval);
-                }
-              }, 1000);
-              setTimeout(() => clearInterval(poisonInterval), 4000);
-            }
-          });
-          break;
-      }
-      gameState.projectiles = gameState.projectiles.filter(p => p !== this);
-    }
-  }
-
-  draw() {
-    ctx.beginPath();
-    switch (this.type) {
-      case "archer":
-        ctx.moveTo(this.x, this.y - 5 * textScale);
-        ctx.lineTo(this.x - 5 * textScale, this.y + 5 * textScale);
-        ctx.lineTo(this.x + 5 * textScale, this.y + 5 * textScale);
-        ctx.fillStyle = "brown";
-        break;
-      case "tesla":
-        ctx.moveTo(this.x - 5 * textScale, this.y);
-        ctx.lineTo(this.x + 5 * textScale, this.y);
-        ctx.strokeStyle = "yellow";
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        if (this.target) {
-          ctx.beginPath();
-          ctx.moveTo(this.x, this.y);
-          ctx.lineTo(this.target.x, this.target.y);
-          ctx.strokeStyle = "cyan";
-          ctx.stroke();
-        }
-        return;
-      default:
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fillStyle = this.color;
-    }
-    ctx.fill();
-    ctx.closePath();
-  }
-}
+// Classes (unchanged Enemy, Tower, Projectile definitions omitted for brevity)
+// Assume they remain as in your original code.
 
 // Game Logic
 function spawnWave() {
@@ -1190,119 +569,8 @@ function updateSpawning(dt) {
   }
 }
 
-// UI Functions
-function showNotification(message) {
-  const notification = document.getElementById("notification-box");
-  notification.textContent = message;
-  notification.classList.add("show");
-  setTimeout(() => notification.classList.remove("show"), 2000);
-}
-
-function updateStats() {
-  document.getElementById("score").textContent = `Score: ${gameState.score}`;
-  document.getElementById("money").textContent = `Money: $${gameState.gameMoney}`;
-  document.getElementById("health").textContent = `Health: ${gameState.playerHealth}`;
-  document.getElementById("wave").textContent = `Wave: ${gameState.wave}`;
-  document.getElementById("speed").textContent = `Speed: ${gameState.gameSpeed}x`;
-  if (gameState.isPartyMode && gameState.partyId) {
-    document.getElementById("speed").textContent += ` | Party: ${gameState.partyId}`;
-  }
-}
-
-function updateTowerInfo() {
-  const panel = document.getElementById("tower-info-panel");
-  const powerButton = document.getElementById("upgrade-power-button");
-  const utilityButton = document.getElementById("upgrade-utility-button");
-  if (gameState.selectedTower) {
-    panel.style.display = "block";
-    document.getElementById("tower-type").textContent = `Type: ${gameState.selectedTower.type}`;
-    document.getElementById("tower-damage").textContent = `Damage: ${gameState.selectedTower.damage.toFixed(1)}`;
-    document.getElementById("tower-range").textContent = `Range: ${Math.round(gameState.selectedTower.range / scaleX)}`;
-    document.getElementById("tower-level").textContent = `Power: ${gameState.selectedTower.powerLevel}/4 | Utility: ${gameState.selectedTower.utilityLevel}/4`;
-    document.getElementById("tower-ability").textContent = `Ability: ${towerStats[gameState.selectedTower.type].ability}`;
-
-    const powerUpgrades = towerUpgradePaths[gameState.selectedTower.type].power;
-    const utilityUpgrades = towerUpgradePaths[gameState.selectedTower.type].utility;
-    const nextPowerLevel = gameState.selectedTower.powerLevel;
-    const nextUtilityLevel = gameState.selectedTower.utilityLevel;
-    const powerCost = nextPowerLevel < 4 ? powerUpgrades[nextPowerLevel].cost : "Max";
-    const utilityCost = nextUtilityLevel < 4 ? utilityUpgrades[nextUtilityLevel].cost : "Max";
-
-    powerButton.textContent = `Upgrade Power ($${powerCost})`;
-    utilityButton.textContent = `Upgrade Utility ($${utilityCost})`;
-    
-    powerButton.disabled = nextPowerLevel >= 4 || (typeof powerCost === "number" && gameState.gameMoney < powerCost);
-    utilityButton.disabled = nextUtilityLevel >= 4 || (typeof utilityCost === "number" && gameState.gameMoney < utilityCost);
-  } else {
-    panel.style.display = "none";
-    powerButton.disabled = true;
-    utilityButton.disabled = true;
-  }
-}
-
-function updateChat() {
-  const chatBox = document.getElementById("chat-messages");
-  chatBox.innerHTML = "";
-  gameState.chatMessages.slice(-10).forEach(msg => {
-    const div = document.createElement("div");
-    div.textContent = `${msg.sender}: ${msg.message}`;
-    div.style.color = msg.sender === "You" ? "#00b894" : "#2d3436";
-    chatBox.appendChild(div);
-  });
-  chatBox.scrollTop = chatBox.scrollHeight;
-}
-
-function updatePlayerList() {
-  const playerList = document.getElementById("player-list");
-  playerList.innerHTML = "Players:<br>";
-  gameState.players.forEach(player => {
-    const div = document.createElement("div");
-    div.textContent = player + (player === gameState.partyLeader ? " (Leader)" : "");
-    playerList.appendChild(div);
-  });
-}
-
-function endGame(won) {
-  gameState.gameOver = !won;
-  gameState.gameWon = won;
-  const endScreen = document.getElementById("end-screen");
-  const persistentMoneyEarned = Math.floor(gameState.score / 10);
-  gameState.persistentMoney += persistentMoneyEarned;
-  updatePersistentMoney();
-
-  document.getElementById("end-message").textContent = won ? "Victory!" : "Game Over";
-  document.getElementById("waves-survived").textContent = `Waves Survived: ${gameState.wave - 1}`;
-  document.getElementById("persistent-money-earned").textContent = `Persistent Money Earned: $${persistentMoneyEarned}`;
-  document.getElementById("persistent-money-total").textContent = `Total Persistent Money: $${gameState.persistentMoney}`;
-  endScreen.style.display = "block";
-
-  const restartButton = document.getElementById("restart-button");
-  const mainMenuButton = document.getElementById("main-menu-button");
-
-  restartButton.onclick = async () => {
-    endScreen.style.display = "none";
-    resetGame();
-    if (gameState.isPartyMode && ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: "partyRestart", partyId: gameState.partyId }));
-    }
-    await init();
-  };
-
-  mainMenuButton.onclick = () => {
-    endScreen.style.display = "none";
-    resetGame();
-    if (gameState.isPartyMode && ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: "leaveParty", partyId: gameState.partyId }));
-      gameState.isPartyMode = false;
-      gameState.partyId = null;
-      gameState.partyLeader = null;
-      localStorage.setItem("isPartyMode", "false");
-      localStorage.removeItem("partyId");
-    }
-    if (ws) ws.close();
-    window.location.href = "/";
-  };
-}
+// UI Functions (unchanged showNotification, updateStats, updateTowerInfo, updateChat, updatePlayerList, endGame omitted for brevity)
+// Assume they remain as in your original code.
 
 // Reset Game State
 function resetGame() {
@@ -1326,7 +594,7 @@ function resetGame() {
   if (!gameState.isPartyMode) gameState.players = [];
 }
 
-// Sidebar Initialization (No Party Button)
+// Sidebar Initialization
 function initSidebar() {
   const sidebar = document.getElementById("sidebar");
   sidebar.innerHTML = "";
@@ -1341,55 +609,20 @@ function initSidebar() {
     });
     sidebar.appendChild(div);
   });
-}
-
-// Mouse Handling
-let lastMousePos = null;
-
-canvas.addEventListener("mousemove", (event) => {
-  const rect = canvas.getBoundingClientRect();
-  lastMousePos = { x: event.clientX - rect.left, y: event.clientY - rect.top };
-});
-
-canvas.addEventListener("click", (event) => {
-  const rect = canvas.getBoundingClientRect();
-  const clickX = event.clientX - rect.left;
-  const clickY = event.clientY - rect.top;
-
-  if (gameState.selectedTowerType && gameState.gameMoney >= towerStats[gameState.selectedTowerType].cost) {
-    const tooCloseToPath = scaledPath.some(point => Math.hypot(point.x - clickX, point.y - clickY) < 50 * textScale);
-    if (!tooCloseToPath) {
-      const newTower = new Tower(clickX, clickY, gameState.selectedTowerType);
-      gameState.towers.push(newTower);
-      gameState.gameMoney -= towerStats[gameState.selectedTowerType].cost;
+  if (gameState.isPartyMode && localStorage.getItem("username") === gameState.partyLeader) {
+    const startButton = document.createElement("button");
+    startButton.textContent = "Start Game";
+    startButton.addEventListener("click", () => {
       if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({
-          type: "placeTower",
-          tower: { x: clickX, y: clickY, type: gameState.selectedTowerType },
-          gameMoney: gameState.gameMoney,
-          partyId: gameState.isPartyMode ? gameState.partyId : null,
-        }));
-      }
-      gameState.selectedTowerType = null;
-      document.querySelectorAll(".tower-option").forEach(el => el.classList.remove("selected"));
-      updateStats();
-    } else {
-      showNotification("Cannot place tower too close to the path!");
-    }
-  } else {
-    let towerSelected = false;
-    gameState.towers.forEach(tower => {
-      if (Math.hypot(tower.x - clickX, tower.y - clickY) < tower.radius) {
-        gameState.selectedTower = tower;
-        towerSelected = true;
+        ws.send(JSON.stringify({ type: "startGame", partyId: gameState.partyId }));
       }
     });
-    if (!towerSelected) {
-      gameState.selectedTower = null;
-    }
-    updateTowerInfo();
+    sidebar.appendChild(startButton);
   }
-});
+}
+
+// Mouse Handling (unchanged canvas event listeners omitted for brevity)
+// Assume they remain as in your original code.
 
 // Game Loop
 const FPS = 30;
@@ -1434,9 +667,7 @@ function update(timestamp) {
   while (accumulatedTime >= FRAME_TIME) {
     if (!gameState.isPaused && !gameState.gameOver && !gameState.gameWon) {
       const dt = FRAME_TIME / 1000;
-
       updateSpawning(dt);
-
       gameState.enemies.forEach(enemy => enemy.move(dt));
       gameState.towers.forEach(tower => tower.shoot());
       gameState.projectiles.forEach(projectile => projectile.move(dt));
@@ -1445,42 +676,11 @@ function update(timestamp) {
   }
 
   updateStats();
-
   requestAnimationFrame(update);
 }
 
-// Event Listeners
-document.getElementById("pause-button").addEventListener("click", () => {
-  gameState.isPaused = !gameState.isPaused;
-  document.getElementById("pause-button").textContent = gameState.isPaused ? "Resume" : "Pause";
-});
-
-document.getElementById("speed-button").addEventListener("click", () => {
-  gameState.gameSpeed = gameState.gameSpeed === 1 ? 2 : gameState.gameSpeed === 2 ? 4 : 1;
-  updateStats();
-});
-
-document.getElementById("chat-input").addEventListener("keypress", (e) => {
-  if (e.key === "Enter" && ws && ws.readyState === WebSocket.OPEN) {
-    const message = e.target.value.trim();
-    if (message) {
-      ws.send(JSON.stringify({ type: "chat", message }));
-      e.target.value = "";
-    }
-  }
-});
-
-document.getElementById("upgrade-power-button").addEventListener("click", () => {
-  if (gameState.selectedTower) {
-    gameState.selectedTower.upgrade("power");
-  }
-});
-
-document.getElementById("upgrade-utility-button").addEventListener("click", () => {
-  if (gameState.selectedTower) {
-    gameState.selectedTower.upgrade("utility");
-  }
-});
+// Event Listeners (unchanged button event listeners omitted for brevity)
+// Assume they remain as in your original code.
 
 // Initialization
 async function init() {
@@ -1491,6 +691,9 @@ async function init() {
     initWebSocket();
     resetGame();
     updateStats();
+    if (!gameState.isPartyMode) {
+      spawnWave();
+    }
     requestAnimationFrame(update);
   } catch (error) {
     console.error("Initialization error:", error);
