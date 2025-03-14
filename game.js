@@ -378,7 +378,13 @@ canvas.addEventListener("click", (event) => {
 let ws;
 function initWebSocket() {
   const token = localStorage.getItem("token");
-  ws = new WebSocket(`ws://${window.location.host}/ws?token=${token}`);
+  if (!token) {
+    console.warn("No token found for WebSocket connection");
+    showNotification("Please log in to join the game chat.");
+    return;
+  }
+  
+  ws = new WebSocket(`wss://mathematically.onrender.com/ws?token=${token}`);
 
   ws.onopen = () => {
     console.log("WebSocket connected");
@@ -414,14 +420,14 @@ function initWebSocket() {
     }
   };
 
+  ws.onerror = (error) => {
+    console.error("WebSocket error:", error);
+    showNotification("WebSocket connection failed.");
+  };
+
   ws.onclose = () => {
     console.log("WebSocket disconnected");
     showNotification("Disconnected from game chat.");
-  };
-
-  ws.onerror = (error) => {
-    console.error("WebSocket error:", error);
-    showNotification("Chat connection error!");
   };
 }
 
@@ -1274,9 +1280,8 @@ async function init() {
     console.error("Initialization error:", err);
     showNotification("Failed to load user data. Playing offline.");
   }
-
   initSidebar();
-  initWebSocket();
+  initWebSocket()
 
   const pauseButton = document.createElement("div");
   pauseButton.id = "pause-button";
