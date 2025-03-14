@@ -6,44 +6,44 @@
   <title>Tower Defense</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background: linear-gradient(135deg, #1a2634, #2c3e50); }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: linear-gradient(135deg, #dfe6e9, #b2bec3); }
     body { display: flex; justify-content: center; align-items: center; position: relative; }
-    .container { background: rgba(44, 62, 80, 0.98); padding: 35px; border-radius: 20px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5); width: 90%; max-width: 450px; text-align: center; color: #ecf0f1; transition: transform 0.3s ease; }
+    .container { background: rgba(236, 240, 241, 0.95); padding: 35px; border-radius: 20px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2); width: 90%; max-width: 450px; text-align: center; color: #2d3436; transition: transform 0.3s ease; }
     .container:hover { transform: translateY(-5px); }
-    h1 { font-size: 2.2em; margin-bottom: 25px; color: #ecf0f1; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
+    h1 { font-size: 2.2em; margin-bottom: 25px; color: #2d3436; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
     .form-group { margin-bottom: 20px; text-align: left; }
-    .form-group label { display: block; margin-bottom: 8px; font-size: 1.1rem; color: #bdc3c7; }
-    input { width: 100%; padding: 12px; margin: 5px 0; border: 2px solid #34495e; border-radius: 8px; background: #3e5c76; color: #ecf0f1; font-size: 1rem; transition: border-color 0.3s ease; }
-    input:focus { border-color: #3498db; outline: none; }
-    input::placeholder { color: #95a5a6; }
-    button { padding: 14px 30px; background: linear-gradient(135deg, #3498db, #2980b9); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 1rem; transition: all 0.3s ease; margin: 10px 8px; }
-    button:disabled { background: #34495e; cursor: not-allowed; opacity: 0.7; }
-    button:hover:not(:disabled) { background: linear-gradient(135deg, #2980b9, #1f6391); transform: translateY(-3px); box-shadow: 0 6px 20px rgba(52, 152, 219, 0.5); }
+    .form-group label { display: block; margin-bottom: 8px; font-size: 1.1rem; color: #636e72; }
+    input { width: 100%; padding: 12px; margin: 5px 0; border: 2px solid #b2bec3; border-radius: 8px; background: #ffffff; color: #2d3436; font-size: 1rem; transition: border-color 0.3s ease; }
+    input:focus { border-color: #00b894; outline: none; }
+    input::placeholder { color: #b2bec3; }
+    button { padding: 14px 30px; background: linear-gradient(135deg, #00b894, #00cec9); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 1rem; transition: all 0.3s ease; margin: 10px 8px; }
+    button:disabled { background: #b2bec3; cursor: not-allowed; opacity: 0.7; }
+    button:hover:not(:disabled) { background: linear-gradient(135deg, #00cec9, #0984e3); transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0, 184, 148, 0.5); }
     button:active:not(:disabled) { transform: translateY(1px); }
-    a { color: #3498db; text-decoration: none; font-size: 0.95rem; transition: color 0.3s ease; }
-    a:hover { color: #2980b9; text-decoration: underline; }
+    a { color: #00b894; text-decoration: none; font-size: 0.95rem; transition: color 0.3s ease; }
+    a:hover { color: #0984e3; text-decoration: underline; }
     #main-menu { display: none; flex-direction: column; align-items: center; }
-    #user-money { margin: 20px 0; font-size: 1.3rem; color: #ecf0f1; background: rgba(52, 73, 94, 0.8); padding: 8px 15px; border-radius: 8px; }
-    #tower-shop { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(44, 62, 80, 0.98); padding: 35px; border-radius: 20px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5); width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; color: #ecf0f1; z-index: 1000; transition: transform 0.3s ease; }
+    #user-money { margin: 20px 0; font-size: 1.3rem; color: #2d3436; background: rgba(178, 190, 195, 0.8); padding: 8px 15px; border-radius: 8px; }
+    #tower-shop { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(236, 240, 241, 0.95); padding: 35px; border-radius: 20px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2); width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; color: #2d3436; z-index: 1000; transition: transform 0.3s ease; }
     #tower-shop.show { transform: translate(-50%, -50%) scale(1.02); }
-    #tower-shop h2 { font-size: 1.8rem; margin-bottom: 20px; position: relative; padding-right: 40px; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
-    .close-btn { position: absolute; top: 15px; right: 15px; background: #e74c3c; border: none; border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease; }
+    #tower-shop h2 { font-size: 1.8rem; margin-bottom: 20px; position: relative; padding-right: 40px; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
+    .close-btn { position: absolute; top: 15px; right: 15px; background: #ff7675; border: none; border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease; }
     .close-btn::before, .close-btn::after { content: ''; position: absolute; width: 20px; height: 3px; background: #fff; }
     .close-btn::before { transform: rotate(45deg); }
     .close-btn::after { transform: rotate(-45deg); }
-    .close-btn:hover { background: #c0392b; transform: scale(1.1); }
+    .close-btn:hover { background: #d63031; transform: scale(1.1); }
     .close-btn:active { transform: scale(0.95); }
-    .shop-item { background: #34495e; padding: 15px; margin: 12px 0; border-radius: 10px; cursor: pointer; transition: all 0.3s ease; text-align: left; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); position: relative; overflow: visible; }
-    .shop-item:hover { background: #3e5c76; transform: translateY(-2px); }
-    .shop-item h4 { margin-bottom: 8px; font-size: 1.2rem; color: #ecf0f1; }
-    .shop-item p { margin: 5px 0; font-size: 0.95rem; color: #bdc3c7; }
-    .unlock-btn { background: linear-gradient(135deg, #27ae60, #219653); padding: 10px 20px; margin-top: 8px; font-size: 0.95rem; border-radius: 8px; }
-    .unlock-btn:disabled { background: #34495e; cursor: not-allowed; }
-    .unlock-btn:hover:not(:disabled) { background: linear-gradient(135deg, #219653, #1b7742); transform: translateY(-2px); }
-    #global-money { margin: 20px 0; font-size: 1.3rem; background: rgba(52, 73, 94, 0.8); padding: 8px 15px; border-radius: 8px; }
-    #notification-box { position: fixed; bottom: 30px; right: 30px; background: rgba(39, 174, 96, 0.95); color: #fff; padding: 15px 25px; border-radius: 10px; box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3); z-index: 1000; display: none; font-weight: 500; max-width: 350px; transition: opacity 0.3s ease; }
+    .shop-item { background: #dfe6e9; padding: 15px; margin: 12px 0; border-radius: 10px; cursor: pointer; transition: all 0.3s ease; text-align: left; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); position: relative; overflow: visible; }
+    .shop-item:hover { background: #b2bec3; transform: translateY(-2px); }
+    .shop-item h4 { margin-bottom: 8px; font-size: 1.2rem; color: #2d3436; }
+    .shop-item p { margin: 5px 0; font-size: 0.95rem; color: #636e72; }
+    .unlock-btn { background: linear-gradient(135deg, #00b894, #00cec9); padding: 10px 20px; margin-top: 8px; font-size: 0.95rem; border-radius: 8px; }
+    .unlock-btn:disabled { background: #b2bec3; cursor: not-allowed; }
+    .unlock-btn:hover:not(:disabled) { background: linear-gradient(135deg, #00cec9, #0984e3); transform: translateY(-2px); }
+    #global-money { margin: 20px 0; font-size: 1.3rem; background: rgba(178, 190, 195, 0.8); padding: 8px 15px; border-radius: 8px; }
+    #notification-box { position: fixed; bottom: 30px; right: 30px; background: rgba(0, 184, 148, 0.95); color: #fff; padding: 15px 25px; border-radius: 10px; box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2); z-index: 1000; display: none; font-weight: 500; max-width: 350px; transition: opacity 0.3s ease; }
     #notification-box.show { display: block; opacity: 1; }
-    body.shop-open::before { content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); z-index: 999; }
+    body.shop-open::before { content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); z-index: 999; }
     @media (max-width: 768px) {
       .container, #tower-shop { padding: 25px; max-width: 90%; }
       h1 { font-size: 2rem; }
@@ -288,7 +288,7 @@
                 if (response.ok) {
                   showNotification(result.message);
                   await updateUserMoneyDisplay();
-                  await populateTowerShop(); // Refresh shop after unlock
+                  await populateTowerShop();
                 } else {
                   showNotification(result.message);
                 }
@@ -298,7 +298,7 @@
             });
             towerDiv.appendChild(unlockButton);
           } else {
-            towerDiv.innerHTML += `<p style="color: #ecf0f1; font-weight: bold;">Unlocked</p>`;
+            towerDiv.innerHTML += `<p style="color: #2d3436; font-weight: bold;">Unlocked</p>`;
           }
           towerList.appendChild(towerDiv);
         });

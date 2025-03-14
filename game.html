@@ -10,8 +10,8 @@
       padding: 0;
       overflow: hidden;
       font-family: Arial, sans-serif;
-      background: #2c3e50;
-      color: #ecf0f1;
+      background: #dfe6e9;
+      color: #2d3436;
     }
     #gameCanvas {
       display: block;
@@ -21,59 +21,75 @@
       top: 10px;
       left: 10px;
       width: 200px;
-      background: rgba(44, 62, 80, 0.9);
+      background: rgba(236, 240, 241, 0.95);
       padding: 10px;
       border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     }
     .tower-option {
       padding: 5px;
       margin: 5px 0;
-      background: #3e5c76;
+      background: #b2bec3;
       border-radius: 5px;
       cursor: pointer;
+      transition: background 0.3s ease;
     }
     .tower-option:hover, .tower-option.selected {
-      background: #3498db;
+      background: #00b894;
+      color: #fff;
     }
-    #pause-button, #fast-forward-button, #home-button {
+    #party-button, #pause-button, #fast-forward-button, #home-button {
       padding: 5px;
       margin: 5px 0;
-      background: #3498db;
+      background: #00b894;
       border-radius: 5px;
       cursor: pointer;
       text-align: center;
+      color: #fff;
+      transition: background 0.3s ease;
+    }
+    #party-button:hover, #pause-button:hover, #fast-forward-button:hover, #home-button:hover {
+      background: #00cec9;
     }
     #pause-button.active, #fast-forward-button.active {
-      background: #e74c3c;
+      background: #ff7675;
     }
     #stats {
       position: fixed;
       top: 10px;
       right: 10px;
-      background: rgba(44, 62, 80, 0.9);
+      background: rgba(236, 240, 241, 0.95);
       padding: 10px;
       border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     }
     #tower-info-panel {
       position: fixed;
       bottom: 10px;
       left: 230px;
       width: 250px;
-      background: rgba(44, 62, 80, 0.9);
+      background: rgba(236, 240, 241, 0.95);
       padding: 10px;
       border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
       display: none;
     }
     #upgrade-power-button, #upgrade-utility-button {
       padding: 5px;
       margin: 5px 0;
-      background: #3498db;
+      background: #00b894;
       border-radius: 5px;
       cursor: pointer;
       width: 100%;
+      color: #fff;
+      border: none;
+      transition: background 0.3s ease;
+    }
+    #upgrade-power-button:hover, #upgrade-utility-button:hover {
+      background: #00cec9;
     }
     #upgrade-power-button:disabled, #upgrade-utility-button:disabled {
-      background: #7f8c8d;
+      background: #b2bec3;
       cursor: not-allowed;
     }
     #notification-box {
@@ -81,11 +97,12 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      background: rgba(231, 76, 60, 0.9);
+      background: rgba(0, 184, 148, 0.95);
       padding: 20px;
       border-radius: 10px;
       color: white;
       display: none;
+      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
     }
     #notification-box.show {
       display: block;
@@ -95,20 +112,25 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      background: rgba(44, 62, 80, 0.9);
+      background: rgba(236, 240, 241, 0.95);
       padding: 20px;
       border-radius: 10px;
       text-align: center;
       display: none;
+      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
     }
     #restart-button, #main-menu-button {
       padding: 10px 20px;
       margin: 10px;
-      background: #3498db;
+      background: #00b894;
       border-radius: 5px;
       cursor: pointer;
       border: none;
       color: white;
+      transition: background 0.3s ease;
+    }
+    #restart-button:hover, #main-menu-button:hover {
+      background: #00cec9;
     }
     #chat-container {
       position: fixed;
@@ -116,11 +138,12 @@
       right: 10px;
       width: 280px;
       height: 200px;
-      background: rgba(44, 62, 80, 0.9);
+      background: rgba(236, 240, 241, 0.95);
       border-radius: 10px;
       padding: 10px;
-      color: #ecf0f1;
+      color: #2d3436;
       display: none;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     }
     #chat-messages {
       height: 120px;
@@ -133,19 +156,57 @@
       margin-top: 5px;
       border: none;
       border-radius: 5px;
-      background: #3e5c76;
-      color: #ecf0f1;
+      background: #dfe6e9;
+      color: #2d3436;
     }
     #toggle-chat {
       position: fixed;
       bottom: 220px;
       right: 10px;
       padding: 5px 10px;
-      background: #3498db;
+      background: #00b894;
       color: white;
       border: none;
       border-radius: 5px;
       cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    #toggle-chat:hover {
+      background: #00cec9;
+    }
+    #party-modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(236, 240, 241, 0.95);
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+      color: #2d3436;
+      z-index: 1000;
+    }
+    #party-modal button {
+      padding: 10px 20px;
+      margin: 5px;
+      background: #00b894;
+      border-radius: 5px;
+      cursor: pointer;
+      border: none;
+      color: white;
+      transition: background 0.3s ease;
+    }
+    #party-modal button:hover {
+      background: #00cec9;
+    }
+    #party-modal input, #party-modal select {
+      width: 100%;
+      padding: 8px;
+      margin: 5px 0;
+      border: 2px solid #b2bec3;
+      border-radius: 5px;
+      background: #ffffff;
+      color: #2d3436;
     }
   </style>
 </head>

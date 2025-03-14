@@ -1,3 +1,4 @@
+// Game Setup
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
@@ -8,6 +9,7 @@ const scaleX = canvas.width / 1920;
 const scaleY = canvas.height / 1080;
 const textScale = Math.min(scaleX, scaleY);
 
+// Map and Theme Definitions
 const mapThemes = {
   map1: "grassland",
   map2: "desert",
@@ -17,12 +19,13 @@ const mapThemes = {
   map6: "desert",
   map7: "river",
   map8: "canyon",
-  map9: "arctic"
+  map9: "arctic",
 };
 let selectedDifficulty = localStorage.getItem("selectedDifficulty") || "easy";
 let selectedMap = localStorage.getItem("selectedMap") || "map1";
 let mapTheme = mapThemes[selectedMap];
 
+// Game State
 const gameState = {
   enemies: [],
   towers: [],
@@ -45,10 +48,14 @@ const gameState = {
   waveDelay: 0,
   isBossWave: false,
   bossSpawned: false,
-  chatMessages: [], // New: Store chat messages
-  players: [], // New: Track connected players
+  chatMessages: [],
+  players: [],
+  partyLeader: null,
+  isPartyMode: false,
+  partyId: null,
 };
 
+// Tower Definitions
 const towerStats = {
   basic: { damage: 10, range: 100, fireRate: 1000, cost: 50, persistentCost: 0, color: "gray", ability: "Basic shot" },
   archer: { damage: 15, range: 120, fireRate: 2000, cost: 75, persistentCost: 225, color: "brown", ability: "Double shot" },
@@ -235,18 +242,20 @@ const towerUpgradePaths = {
   },
 };
 
+// Theme Backgrounds (Brighter Colors)
 const themeBackgrounds = {
-  map1: "#4a704a",
-  map2: "#8b5a2b",
-  map3: "#5e5e5e",
-  map4: "#2e4d2e",
-  map5: "#6b4e31",
-  map6: "#8a4f2a",
-  map7: "#3a6070",
-  map8: "#4a2f1f",
-  map9: "#b0c4de",
+  map1: "#90ee90", // Bright grassland green
+  map2: "#f4a460", // Bright desert sandy
+  map3: "#a9a9a9", // Bright stone gray
+  map4: "#6b8e23", // Bright forest olive
+  map5: "#cd853f", // Bright mountain peru
+  map6: "#f4a460", // Same as map2 for desert
+  map7: "#87ceeb", // Bright river sky blue
+  map8: "#cd5c5c", // Bright canyon indian red
+  map9: "#e0ffff", // Bright arctic light cyan
 };
 
+// Paths
 const paths = {
   map1: [
     { x: 0, y: 540 }, { x: 300, y: 540 }, { x: 300, y: 300 }, { x: 600, y: 300 },
@@ -296,6 +305,7 @@ const paths = {
   ],
 };
 
+// Enemy Themes
 const enemyThemes = {
   grassland: {
     easy: [{ health: 50, speed: 1, radius: 10, color: "red" }],
@@ -339,40 +349,8 @@ const enemyThemes = {
   },
 };
 
-const scaledPath = paths[selectedMap].map(point => ({ x: point.x * scaleX, y: point.y * scaleY }));
-const scaledSpawnPoint = scaledPath[0];
-
-let lastMousePos = null;
-
-canvas.addEventListener("mousemove", (event) => {
-  const rect = canvas.getBoundingClientRect();
-  lastMousePos = { x: event.clientX - rect.left, y: event.clientY - rect.top };
-});
-
-canvas.addEventListener("click", (event) => {
-  const rect = canvas.getBoundingClientRect();
-  const clickX = event.clientX - rect.left;
-  const clickY = event.clientY - rect.top;
-
-  if (gameState.selectedTowerType && gameState.gameMoney >= towerStats[gameState.selectedTowerType].cost) {
-    const tooCloseToPath = scaledPath.some(point => Math.hypot(point.x - clickX, point.y - clickY) < 50 * textScale);
-    if (!tooCloseToPath) {
-      const newTower = new Tower(clickX, clickY, gameState.selectedTowerType);
-      gameState.towers.push(newTower);
-      gameState.gameMoney -= towerStats[gameState.selectedTowerType].cost;
-      gameState.selectedTowerType = null;
-      // Broadcast tower placement to other players
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: "placeTower", tower: { x: clickX, y: clickY, type: newTower.type } }));
-      }
-    } else {
-      showNotification("Cannot place tower too close to path!");
-    }
-  } else {
-    gameState.selectedTower = gameState.towers.find(tower => Math.hypot(tower.x - clickX, tower.y - clickY) < tower.radius);
-    updateTowerInfo();
-  }
-});
+let scaledPath = paths[selectedMap].map(point => ({ x: point.x * scaleX, y: point.y * scaleY }));
+let scaledSpawnPoint = scaledPath[0];
 
 // WebSocket for Chat and Multiplayer
 let ws;
@@ -383,13 +361,17 @@ function initWebSocket() {
     showNotification("Please log in to join the game chat.");
     return;
   }
-  
+
   ws = new WebSocket(`wss://mathematically.onrender.com/ws?token=${token}`);
 
   ws.onopen = () => {
     console.log("WebSocket connected");
     showNotification("Connected to game chat!");
-    ws.send(JSON.stringify({ type: "join", map: selectedMap, difficulty: selectedDifficulty }));
+    if (gameState.isPartyMode && gameState.partyId) {
+      ws.send(JSON.stringify({ type: "joinParty", partyId: gameState.partyId, map: selectedMap, difficulty: selectedDifficulty }));
+    } else {
+      ws.send(JSON.stringify({ type: "join", map: selectedMap, difficulty: selectedDifficulty }));
+    }
   };
 
   ws.onmessage = (event) => {
@@ -401,11 +383,13 @@ function initWebSocket() {
         break;
       case "playerList":
         gameState.players = data.players;
+        gameState.partyLeader = data.leader || gameState.players[0];
         updatePlayerList();
         break;
       case "placeTower":
         if (data.tower) {
           gameState.towers.push(new Tower(data.tower.x, data.tower.y, data.tower.type));
+          gameState.gameMoney = data.gameMoney;
         }
         break;
       case "wave":
@@ -416,6 +400,37 @@ function initWebSocket() {
         break;
       case "gameOver":
         endGame(data.won);
+        break;
+      case "partyCreated":
+        gameState.partyId = data.partyId;
+        gameState.isPartyMode = true;
+        gameState.partyLeader = data.leader;
+        showNotification(`Party created! ID: ${gameState.partyId}`);
+        break;
+      case "partyJoined":
+        gameState.partyId = data.partyId;
+        gameState.isPartyMode = true;
+        gameState.gameMoney = data.gameMoney;
+        selectedMap = data.map;
+        selectedDifficulty = data.difficulty;
+        mapTheme = mapThemes[selectedMap];
+        scaledPath = paths[selectedMap].map(point => ({ x: point.x * scaleX, y: point.y * scaleY }));
+        scaledSpawnPoint = scaledPath[0];
+        showNotification(`Joined party ${gameState.partyId}`);
+        break;
+      case "moneyUpdate":
+        gameState.gameMoney = data.gameMoney;
+        break;
+      case "mapSelected":
+        if (gameState.partyLeader !== localStorage.getItem("username")) {
+          selectedMap = data.map;
+          selectedDifficulty = data.difficulty;
+          mapTheme = mapThemes[selectedMap];
+          scaledPath = paths[selectedMap].map(point => ({ x: point.x * scaleX, y: point.y * scaleY }));
+          scaledSpawnPoint = scaledPath[0];
+          resetGame();
+          showNotification(`Party leader selected ${selectedMap} (${selectedDifficulty})`);
+        }
         break;
     }
   };
@@ -431,7 +446,7 @@ function initWebSocket() {
   };
 }
 
-// Server communication functions
+// Server Communication
 async function fetchUserData() {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("No token found");
@@ -468,6 +483,7 @@ async function updatePersistentMoney() {
   if (!response.ok) console.error("Failed to update money:", await response.text());
 }
 
+// Classes
 class Enemy {
   constructor(type, wave) {
     this.x = scaledSpawnPoint.x;
@@ -551,6 +567,9 @@ class Tower {
     if (now - this.lastShot < this.fireRate / gameState.gameSpeed) return;
     let target = gameState.enemies.find(enemy => Math.hypot(enemy.x - this.x, enemy.y - this.y) < this.range);
     if (target) {
+      const dx = target.x - this.x;
+      const dy = target.y - this.y;
+      this.angle = Math.atan2(dy, dx);
       switch (this.type) {
         case "laser":
           if (now - this.lastShot >= 10000) {
@@ -566,11 +585,14 @@ class Tower {
                     gameState.persistentMoney += enemy.isBoss ? 10 : 2;
                     updatePersistentMoney();
                     gameState.enemies = gameState.enemies.filter(e => e !== enemy);
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                      ws.send(JSON.stringify({ type: "moneyUpdate", gameMoney: gameState.gameMoney }));
+                    }
                   }
                 }
               });
               if (this.specials.multiBeam) {
-                let extraTarget = gameState.enemies.find(e => Math.hypot(e.x - this.x, e.y - this.y) < this.range && e !== target);
+                let extraTarget = gameState.enemies.find(e => e !== target && Math.hypot(e.x - this.x, e.y - this.y) < this.range);
                 if (extraTarget) {
                   extraTarget.health -= this.damage / 10;
                   if (extraTarget.health <= 0) {
@@ -579,6 +601,9 @@ class Tower {
                     gameState.persistentMoney += extraTarget.isBoss ? 10 : 2;
                     updatePersistentMoney();
                     gameState.enemies = gameState.enemies.filter(e => e !== extraTarget);
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                      ws.send(JSON.stringify({ type: "moneyUpdate", gameMoney: gameState.gameMoney }));
+                    }
                   }
                 }
               }
@@ -597,6 +622,9 @@ class Tower {
               gameState.persistentMoney += enemy.isBoss ? 10 : 2;
               updatePersistentMoney();
               gameState.enemies = gameState.enemies.filter(e => e !== enemy);
+              if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "moneyUpdate", gameMoney: gameState.gameMoney }));
+              }
             }
           });
           this.lastShot = now;
@@ -622,6 +650,16 @@ class Tower {
             });
             this.lastShot = now;
           }
+          break;
+        case "archer":
+          if (this.specials.tripleShot) {
+            gameState.projectiles.push(new Projectile(this.x, this.y, target, this.damage, 5, this.type));
+            let extraTargets = gameState.enemies.filter(e => e !== target && Math.hypot(e.x - this.x, e.y - this.y) < this.range).slice(0, 2);
+            extraTargets.forEach(t => gameState.projectiles.push(new Projectile(this.x, this.y, t, this.damage, 5, this.type)));
+          } else {
+            gameState.projectiles.push(new Projectile(this.x, this.y, target, this.damage, 5, this.type));
+          }
+          this.lastShot = now;
           break;
         default:
           gameState.projectiles.push(new Projectile(this.x, this.y, target, this.damage, 5, this.type));
@@ -918,6 +956,9 @@ class Tower {
     if (path === "power") this.powerLevel++;
     else this.utilityLevel++;
     showNotification(`${this.type} upgraded: ${upgrade.desc}`);
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "moneyUpdate", gameMoney: gameState.gameMoney }));
+    }
     updateTowerInfo();
   }
 }
@@ -960,6 +1001,9 @@ class Projectile {
         gameState.persistentMoney += this.target.isBoss ? 10 : 2;
         updatePersistentMoney();
         gameState.enemies = gameState.enemies.filter(e => e !== this.target);
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: "moneyUpdate", gameMoney: gameState.gameMoney }));
+        }
       }
       const tower = gameState.towers.find(t => t.type === this.type);
       switch (this.type) {
@@ -973,6 +1017,9 @@ class Projectile {
                 gameState.persistentMoney += enemy.isBoss ? 10 : 2;
                 updatePersistentMoney();
                 gameState.enemies = gameState.enemies.filter(e => e !== enemy);
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                  ws.send(JSON.stringify({ type: "moneyUpdate", gameMoney: gameState.gameMoney }));
+                }
               }
             }
           });
@@ -995,6 +1042,9 @@ class Projectile {
                 gameState.persistentMoney += enemy.isBoss ? 10 : 2;
                 updatePersistentMoney();
                 gameState.enemies = gameState.enemies.filter(e => e !== enemy);
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                  ws.send(JSON.stringify({ type: "moneyUpdate", gameMoney: gameState.gameMoney }));
+                }
               }
             }
           });
@@ -1010,6 +1060,9 @@ class Projectile {
                 gameState.persistentMoney += this.target.isBoss ? 10 : 2;
                 updatePersistentMoney();
                 gameState.enemies = gameState.enemies.filter(e => e !== this.target);
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                  ws.send(JSON.stringify({ type: "moneyUpdate", gameMoney: gameState.gameMoney }));
+                }
               }
             } else {
               clearInterval(burnInterval);
@@ -1030,6 +1083,9 @@ class Projectile {
                     gameState.persistentMoney += enemy.isBoss ? 10 : 2;
                     updatePersistentMoney();
                     gameState.enemies = gameState.enemies.filter(e => e !== enemy);
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                      ws.send(JSON.stringify({ type: "moneyUpdate", gameMoney: gameState.gameMoney }));
+                    }
                   }
                 } else {
                   clearInterval(poisonInterval);
@@ -1076,6 +1132,7 @@ class Projectile {
   }
 }
 
+// Game Logic
 function spawnWave() {
   const maxWaves = selectedMap === "map9" ? 60 : 30;
   if (gameState.wave > maxWaves) {
@@ -1136,6 +1193,7 @@ function updateSpawning(dt) {
   }
 }
 
+// UI Functions
 function showNotification(message) {
   const notification = document.getElementById("notification-box");
   notification.textContent = message;
@@ -1185,13 +1243,13 @@ function updateTowerInfo() {
 function updateChat() {
   const chatBox = document.getElementById("chat-messages");
   chatBox.innerHTML = "";
-  gameState.chatMessages.slice(-10).forEach(msg => { // Show last 10 messages
+  gameState.chatMessages.slice(-10).forEach(msg => {
     const div = document.createElement("div");
     div.textContent = `${msg.sender}: ${msg.message}`;
     div.style.color = msg.sender === "You" ? "#3498db" : "#ecf0f1";
     chatBox.appendChild(div);
   });
-  chatBox.scrollTop = chatBox.scrollHeight; // Auto-scroll to bottom
+  chatBox.scrollTop = chatBox.scrollHeight;
 }
 
 function updatePlayerList() {
@@ -1199,7 +1257,7 @@ function updatePlayerList() {
   playerList.innerHTML = "Players:<br>";
   gameState.players.forEach(player => {
     const div = document.createElement("div");
-    div.textContent = player;
+    div.textContent = player + (player === gameState.partyLeader ? " (Leader)" : "");
     playerList.appendChild(div);
   });
 }
@@ -1224,17 +1282,27 @@ function endGame(won) {
   restartButton.onclick = async () => {
     endScreen.style.display = "none";
     resetGame();
+    if (gameState.isPartyMode && ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "partyRestart", partyId: gameState.partyId }));
+    }
     await init();
   };
 
   mainMenuButton.onclick = () => {
     endScreen.style.display = "none";
     resetGame();
+    if (gameState.isPartyMode && ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "leaveParty", partyId: gameState.partyId }));
+      gameState.isPartyMode = false;
+      gameState.partyId = null;
+      gameState.partyLeader = null;
+    }
     if (ws) ws.close();
     window.location.href = "/";
   };
 }
 
+// Reset Game State
 function resetGame() {
   gameState.enemies = [];
   gameState.towers = [];
@@ -1253,9 +1321,10 @@ function resetGame() {
   gameState.isBossWave = false;
   gameState.bossSpawned = false;
   gameState.chatMessages = [];
-  gameState.players = [];
+  if (!gameState.isPartyMode) gameState.players = []; // Preserve players in party mode
 }
 
+// Sidebar Initialization with Party Button
 function initSidebar() {
   const sidebar = document.getElementById("sidebar");
   sidebar.innerHTML = "";
@@ -1270,8 +1339,150 @@ function initSidebar() {
     });
     sidebar.appendChild(div);
   });
+
+  const partyButton = document.createElement("div");
+  partyButton.id = "party-button";
+  partyButton.textContent = "Party";
+  partyButton.addEventListener("click", () => {
+    if (!gameState.isPartyMode) {
+      showPartyModal();
+    } else {
+      showNotification("You are already in a party!");
+    }
+  });
+  sidebar.appendChild(partyButton);
 }
 
+// Party Modal
+function showPartyModal() {
+  const modal = document.createElement("div");
+  modal.id = "party-modal";
+  modal.style.position = "fixed";
+  modal.style.top = "50%";
+  modal.style.left = "50%";
+  modal.style.transform = "translate(-50%, -50%)";
+  modal.style.backgroundColor = "#34495e";
+  modal.style.padding = "20px";
+  modal.style.borderRadius = "10px";
+  modal.style.color = "#ecf0f1";
+  modal.style.zIndex = "1000";
+
+  const title = document.createElement("h2");
+  title.textContent = "Party Options";
+  modal.appendChild(title);
+
+  const createButton = document.createElement("button");
+  createButton.textContent = "Create Party";
+  createButton.style.margin = "10px";
+  createButton.addEventListener("click", () => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "createParty" }));
+      document.body.removeChild(modal);
+    }
+  });
+  modal.appendChild(createButton);
+
+  const joinInput = document.createElement("input");
+  joinInput.type = "text";
+  joinInput.placeholder = "Enter Party ID";
+  joinInput.style.margin = "10px";
+  modal.appendChild(joinInput);
+
+  const joinButton = document.createElement("button");
+  joinButton.textContent = "Join Party";
+  joinButton.style.margin = "10px";
+  joinButton.addEventListener("click", () => {
+    const partyId = joinInput.value.trim();
+    if (partyId && ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "joinParty", partyId }));
+      document.body.removeChild(modal);
+    }
+  });
+  modal.appendChild(joinButton);
+
+  if (gameState.partyLeader === localStorage.getItem("username")) {
+    const mapSelect = document.createElement("select");
+    Object.keys(mapThemes).forEach(map => {
+      const option = document.createElement("option");
+      option.value = map;
+      option.textContent = mapThemes[map];
+      if (map === selectedMap) option.selected = true;
+      mapSelect.appendChild(option);
+    });
+    mapSelect.style.margin = "10px";
+    modal.appendChild(mapSelect);
+
+    const difficultySelect = document.createElement("select");
+    ["easy", "medium", "hard"].forEach(diff => {
+      const option = document.createElement("option");
+      option.value = diff;
+      option.textContent = diff.charAt(0).toUpperCase() + diff.slice(1);
+      if (diff === selectedDifficulty) option.selected = true;
+      difficultySelect.appendChild(option);
+    });
+    difficultySelect.style.margin = "10px";
+    modal.appendChild(difficultySelect);
+
+    const selectButton = document.createElement("button");
+    selectButton.textContent = "Select Map & Difficulty";
+    selectButton.style.margin = "10px";
+    selectButton.addEventListener("click", () => {
+      selectedMap = mapSelect.value;
+      selectedDifficulty = difficultySelect.value;
+      mapTheme = mapThemes[selectedMap];
+      scaledPath = paths[selectedMap].map(point => ({ x: point.x * scaleX, y: point.y * scaleY }));
+      scaledSpawnPoint = scaledPath[0];
+      resetGame();
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "mapSelected", map: selectedMap, difficulty: selectedDifficulty, partyId: gameState.partyId }));
+      }
+      document.body.removeChild(modal);
+    });
+    modal.appendChild(selectButton);
+  }
+
+  const closeButton = document.createElement("button");
+  closeButton.textContent = "Close";
+  closeButton.style.margin = "10px";
+  closeButton.addEventListener("click", () => document.body.removeChild(modal));
+  modal.appendChild(closeButton);
+
+  document.body.appendChild(modal);
+}
+
+// Mouse Handling
+let lastMousePos = null;
+
+canvas.addEventListener("mousemove", (event) => {
+  const rect = canvas.getBoundingClientRect();
+  lastMousePos = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+});
+
+canvas.addEventListener("click", (event) => {
+  const rect = canvas.getBoundingClientRect();
+  const clickX = event.clientX - rect.left;
+  const clickY = event.clientY - rect.top;
+
+  if (gameState.selectedTowerType && gameState.gameMoney >= towerStats[gameState.selectedTowerType].cost) {
+    const tooCloseToPath = scaledPath.some(point => Math.hypot(point.x - clickX, point.y - clickY) < 50 * textScale);
+    if (!tooCloseToPath) {
+      const newTower = new Tower(clickX, clickY, gameState.selectedTowerType);
+      gameState.towers.push(newTower);
+      gameState.gameMoney -= towerStats[gameState.selectedTowerType].cost;
+      gameState.selectedTowerType = null;
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "placeTower", tower: { x: clickX, y: clickY, type: newTower.type }, gameMoney: gameState.gameMoney }));
+      }
+    } else {
+      showNotification("Cannot place tower too close to path!");
+    }
+  } else {
+    gameState.selectedTower = gameState.towers.find(tower => Math.hypot(tower.x - clickX, tower.y - clickY) < tower.radius);
+    updateTowerInfo();
+  }
+});
+
+// Initialization
 async function init() {
   try {
     await fetchUserData();
@@ -1281,7 +1492,7 @@ async function init() {
     showNotification("Failed to load user data. Playing offline.");
   }
   initSidebar();
-  initWebSocket()
+  initWebSocket();
 
   const pauseButton = document.createElement("div");
   pauseButton.id = "pause-button";
@@ -1321,6 +1532,12 @@ async function init() {
   homeButton.textContent = "Main Menu";
   homeButton.addEventListener("click", () => {
     resetGame();
+    if (gameState.isPartyMode && ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "leaveParty", partyId: gameState.partyId }));
+      gameState.isPartyMode = false;
+      gameState.partyId = null;
+      gameState.partyLeader = null;
+    }
     if (ws) ws.close();
     window.location.href = "/";
   });
@@ -1334,7 +1551,6 @@ async function init() {
     if (gameState.selectedTower) gameState.selectedTower.upgrade("utility");
   });
 
-  // Chat input handling
   const chatInput = document.getElementById("chat-input");
   chatInput.addEventListener("keypress", (e) => {
     if (e.key === "Enter" && chatInput.value.trim() && ws && ws.readyState === WebSocket.OPEN) {
@@ -1350,6 +1566,7 @@ async function init() {
   requestAnimationFrame(update);
 }
 
+// Game Loop
 const FPS = 30;
 const FRAME_TIME = 1000 / FPS;
 let lastTime = 0;
