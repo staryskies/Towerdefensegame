@@ -51,8 +51,8 @@ const gameState = {
   chatMessages: [],
   players: [],
   partyLeader: null,
-  isPartyMode: false,
-  partyId: null,
+  isPartyMode: localStorage.getItem("isPartyMode") === "true",
+  partyId: localStorage.getItem("partyId") || null,
 };
 
 // Tower Definitions
@@ -71,6 +71,7 @@ const towerStats = {
   vortex: { damage: 0, range: 150, fireRate: 5000, cost: 300, persistentCost: 750, color: "purple", ability: "Pulls enemies" },
 };
 
+// Tower Upgrade Paths (unchanged)
 const towerUpgradePaths = {
   basic: {
     power: [
@@ -242,7 +243,7 @@ const towerUpgradePaths = {
   },
 };
 
-// Theme Backgrounds (Brighter Colors)
+// Theme Backgrounds
 const themeBackgrounds = {
   map1: "#90ee90", // Bright grassland green
   map2: "#f4a460", // Bright desert sandy
@@ -385,6 +386,7 @@ function initWebSocket() {
         gameState.players = data.players;
         gameState.partyLeader = data.leader || gameState.players[0];
         updatePlayerList();
+        updateStats();
         break;
       case "placeTower":
         if (data.tower) {
@@ -401,12 +403,6 @@ function initWebSocket() {
       case "gameOver":
         endGame(data.won);
         break;
-      case "partyCreated":
-        gameState.partyId = data.partyId;
-        gameState.isPartyMode = true;
-        gameState.partyLeader = data.leader;
-        showNotification(`Party created! ID: ${gameState.partyId}`);
-        break;
       case "partyJoined":
         gameState.partyId = data.partyId;
         gameState.isPartyMode = true;
@@ -417,6 +413,7 @@ function initWebSocket() {
         scaledPath = paths[selectedMap].map(point => ({ x: point.x * scaleX, y: point.y * scaleY }));
         scaledSpawnPoint = scaledPath[0];
         showNotification(`Joined party ${gameState.partyId}`);
+        updateStats();
         break;
       case "moneyUpdate":
         gameState.gameMoney = data.gameMoney;
@@ -1207,6 +1204,9 @@ function updateStats() {
   document.getElementById("health").textContent = `Health: ${gameState.playerHealth}`;
   document.getElementById("wave").textContent = `Wave: ${gameState.wave}`;
   document.getElementById("speed").textContent = `Speed: ${gameState.gameSpeed}x`;
+  if (gameState.isPartyMode && gameState.partyId) {
+    document.getElementById("speed").textContent += ` | Party: ${gameState.partyId}`;
+  }
 }
 
 function updateTowerInfo() {
@@ -1246,7 +1246,7 @@ function updateChat() {
   gameState.chatMessages.slice(-10).forEach(msg => {
     const div = document.createElement("div");
     div.textContent = `${msg.sender}: ${msg.message}`;
-    div.style.color = msg.sender === "You" ? "#3498db" : "#ecf0f1";
+    div.style.color = msg.sender === "You" ? "#00b894" : "#2d3436";
     chatBox.appendChild(div);
   });
   chatBox.scrollTop = chatBox.scrollHeight;
@@ -1296,6 +1296,8 @@ function endGame(won) {
       gameState.isPartyMode = false;
       gameState.partyId = null;
       gameState.partyLeader = null;
+      localStorage.setItem("isPartyMode", "false");
+      localStorage.removeItem("partyId");
     }
     if (ws) ws.close();
     window.location.href = "/";
@@ -1321,10 +1323,10 @@ function resetGame() {
   gameState.isBossWave = false;
   gameState.bossSpawned = false;
   gameState.chatMessages = [];
-  if (!gameState.isPartyMode) gameState.players = []; // Preserve players in party mode
+  if (!gameState.isPartyMode) gameState.players = [];
 }
 
-// Sidebar Initialization with Party Button
+// Sidebar Initialization (No Party Button)
 function initSidebar() {
   const sidebar = document.getElementById("sidebar");
   sidebar.innerHTML = "";
@@ -1339,115 +1341,6 @@ function initSidebar() {
     });
     sidebar.appendChild(div);
   });
-
-  const partyButton = document.createElement("div");
-  partyButton.id = "party-button";
-  partyButton.textContent = "Party";
-  partyButton.addEventListener("click", () => {
-    if (!gameState.isPartyMode) {
-      showPartyModal();
-    } else {
-      showNotification("You are already in a party!");
-    }
-  });
-  sidebar.appendChild(partyButton);
-}
-
-// Party Modal
-function showPartyModal() {
-  const modal = document.createElement("div");
-  modal.id = "party-modal";
-  modal.style.position = "fixed";
-  modal.style.top = "50%";
-  modal.style.left = "50%";
-  modal.style.transform = "translate(-50%, -50%)";
-  modal.style.backgroundColor = "#34495e";
-  modal.style.padding = "20px";
-  modal.style.borderRadius = "10px";
-  modal.style.color = "#ecf0f1";
-  modal.style.zIndex = "1000";
-
-  const title = document.createElement("h2");
-  title.textContent = "Party Options";
-  modal.appendChild(title);
-
-  const createButton = document.createElement("button");
-  createButton.textContent = "Create Party";
-  createButton.style.margin = "10px";
-  createButton.addEventListener("click", () => {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: "createParty" }));
-      document.body.removeChild(modal);
-    }
-  });
-  modal.appendChild(createButton);
-
-  const joinInput = document.createElement("input");
-  joinInput.type = "text";
-  joinInput.placeholder = "Enter Party ID";
-  joinInput.style.margin = "10px";
-  modal.appendChild(joinInput);
-
-  const joinButton = document.createElement("button");
-  joinButton.textContent = "Join Party";
-  joinButton.style.margin = "10px";
-  joinButton.addEventListener("click", () => {
-    const partyId = joinInput.value.trim();
-    if (partyId && ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: "joinParty", partyId }));
-      document.body.removeChild(modal);
-    }
-  });
-  modal.appendChild(joinButton);
-
-  if (gameState.partyLeader === localStorage.getItem("username")) {
-    const mapSelect = document.createElement("select");
-    Object.keys(mapThemes).forEach(map => {
-      const option = document.createElement("option");
-      option.value = map;
-      option.textContent = mapThemes[map];
-      if (map === selectedMap) option.selected = true;
-      mapSelect.appendChild(option);
-    });
-    mapSelect.style.margin = "10px";
-    modal.appendChild(mapSelect);
-
-    const difficultySelect = document.createElement("select");
-    ["easy", "medium", "hard"].forEach(diff => {
-      const option = document.createElement("option");
-      option.value = diff;
-      option.textContent = diff.charAt(0).toUpperCase() + diff.slice(1);
-      if (diff === selectedDifficulty) option.selected = true;
-      difficultySelect.appendChild(option);
-    });
-    difficultySelect.style.margin = "10px";
-    modal.appendChild(difficultySelect);
-
-    const selectButton = document.createElement("button");
-    selectButton.textContent = "Select Map & Difficulty";
-    selectButton.style.margin = "10px";
-    selectButton.addEventListener("click", () => {
-      selectedMap = mapSelect.value;
-      selectedDifficulty = difficultySelect.value;
-      mapTheme = mapThemes[selectedMap];
-      scaledPath = paths[selectedMap].map(point => ({ x: point.x * scaleX, y: point.y * scaleY }));
-      scaledSpawnPoint = scaledPath[0];
-      resetGame();
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: "mapSelected", map: selectedMap, difficulty: selectedDifficulty, partyId: gameState.partyId }));
-      }
-      document.body.removeChild(modal);
-    });
-    modal.appendChild(selectButton);
-  }
-
-  const closeButton = document.createElement("button");
-  closeButton.textContent = "Close";
-  closeButton.style.margin = "10px";
-  closeButton.addEventListener("click", () => document.body.removeChild(modal));
-  modal.appendChild(closeButton);
-
-  document.body.appendChild(modal);
 }
 
 // Mouse Handling
@@ -1469,102 +1362,34 @@ canvas.addEventListener("click", (event) => {
       const newTower = new Tower(clickX, clickY, gameState.selectedTowerType);
       gameState.towers.push(newTower);
       gameState.gameMoney -= towerStats[gameState.selectedTowerType].cost;
-      gameState.selectedTowerType = null;
       if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: "placeTower", tower: { x: clickX, y: clickY, type: newTower.type }, gameMoney: gameState.gameMoney }));
+        ws.send(JSON.stringify({
+          type: "placeTower",
+          tower: { x: clickX, y: clickY, type: gameState.selectedTowerType },
+          gameMoney: gameState.gameMoney,
+          partyId: gameState.isPartyMode ? gameState.partyId : null,
+        }));
       }
+      gameState.selectedTowerType = null;
+      document.querySelectorAll(".tower-option").forEach(el => el.classList.remove("selected"));
+      updateStats();
     } else {
-      showNotification("Cannot place tower too close to path!");
+      showNotification("Cannot place tower too close to the path!");
     }
   } else {
-    gameState.selectedTower = gameState.towers.find(tower => Math.hypot(tower.x - clickX, tower.y - clickY) < tower.radius);
+    let towerSelected = false;
+    gameState.towers.forEach(tower => {
+      if (Math.hypot(tower.x - clickX, tower.y - clickY) < tower.radius) {
+        gameState.selectedTower = tower;
+        towerSelected = true;
+      }
+    });
+    if (!towerSelected) {
+      gameState.selectedTower = null;
+    }
     updateTowerInfo();
   }
 });
-
-// Initialization
-async function init() {
-  try {
-    await fetchUserData();
-    await loadUnlockedTowers();
-  } catch (err) {
-    console.error("Initialization error:", err);
-    showNotification("Failed to load user data. Playing offline.");
-  }
-  initSidebar();
-  initWebSocket();
-
-  const pauseButton = document.createElement("div");
-  pauseButton.id = "pause-button";
-  pauseButton.textContent = "Pause";
-  pauseButton.addEventListener("click", () => {
-    gameState.isPaused = !gameState.isPaused;
-    pauseButton.classList.toggle("active");
-    pauseButton.textContent = gameState.isPaused ? "Resume" : "Pause";
-  });
-  document.getElementById("sidebar").appendChild(pauseButton);
-
-  const fastForwardButton = document.createElement("div");
-  fastForwardButton.id = "fast-forward-button";
-  fastForwardButton.textContent = "Fast Forward (1x)";
-  fastForwardButton.addEventListener("click", () => {
-    if (gameState.gameSpeed === 1) {
-      gameState.gameSpeed = 2;
-      fastForwardButton.textContent = "Fast Forward (2x)";
-      fastForwardButton.classList.add("active");
-    } else if (gameState.gameSpeed === 2) {
-      gameState.gameSpeed = 3;
-      fastForwardButton.textContent = "Fast Forward (3x)";
-    } else if (gameState.gameSpeed === 3) {
-      gameState.gameSpeed = 4;
-      fastForwardButton.textContent = "Fast Forward (4x)";
-    } else {
-      gameState.gameSpeed = 1;
-      fastForwardButton.textContent = "Fast Forward (1x)";
-      fastForwardButton.classList.remove("active");
-    }
-    updateStats();
-  });
-  document.getElementById("sidebar").appendChild(fastForwardButton);
-
-  const homeButton = document.createElement("div");
-  homeButton.id = "home-button";
-  homeButton.textContent = "Main Menu";
-  homeButton.addEventListener("click", () => {
-    resetGame();
-    if (gameState.isPartyMode && ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: "leaveParty", partyId: gameState.partyId }));
-      gameState.isPartyMode = false;
-      gameState.partyId = null;
-      gameState.partyLeader = null;
-    }
-    if (ws) ws.close();
-    window.location.href = "/";
-  });
-  document.getElementById("sidebar").appendChild(homeButton);
-
-  document.getElementById("upgrade-power-button").addEventListener("click", () => {
-    if (gameState.selectedTower) gameState.selectedTower.upgrade("power");
-  });
-
-  document.getElementById("upgrade-utility-button").addEventListener("click", () => {
-    if (gameState.selectedTower) gameState.selectedTower.upgrade("utility");
-  });
-
-  const chatInput = document.getElementById("chat-input");
-  chatInput.addEventListener("keypress", (e) => {
-    if (e.key === "Enter" && chatInput.value.trim() && ws && ws.readyState === WebSocket.OPEN) {
-      const message = chatInput.value.trim();
-      ws.send(JSON.stringify({ type: "chat", message }));
-      gameState.chatMessages.push({ sender: "You", message, timestamp: Date.now() });
-      updateChat();
-      chatInput.value = "";
-    }
-  });
-
-  spawnWave();
-  requestAnimationFrame(update);
-}
 
 // Game Loop
 const FPS = 30;
@@ -1578,75 +1403,99 @@ function update(timestamp) {
   lastTime = timestamp;
   accumulatedTime += elapsed;
 
-  if (gameState.isPaused || gameState.gameOver || gameState.gameWon) {
-    drawChat();
-    requestAnimationFrame(update);
-    return;
+  ctx.fillStyle = themeBackgrounds[selectedMap];
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.beginPath();
+  ctx.moveTo(scaledPath[0].x, scaledPath[0].y);
+  for (let i = 1; i < scaledPath.length; i++) {
+    ctx.lineTo(scaledPath[i].x, scaledPath[i].y);
+  }
+  ctx.strokeStyle = "brown";
+  ctx.lineWidth = 40 * textScale;
+  ctx.stroke();
+
+  gameState.towers.forEach(tower => tower.draw());
+  gameState.enemies.forEach(enemy => enemy.draw());
+  gameState.projectiles.forEach(projectile => projectile.draw());
+
+  if (gameState.selectedTowerType && lastMousePos) {
+    ctx.beginPath();
+    ctx.arc(lastMousePos.x, lastMousePos.y, 20 * textScale, 0, Math.PI * 2);
+    ctx.fillStyle = towerStats[gameState.selectedTowerType].color;
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(lastMousePos.x, lastMousePos.y, towerStats[gameState.selectedTowerType].range * scaleX, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
   }
 
   while (accumulatedTime >= FRAME_TIME) {
-    const dt = FRAME_TIME / 1000;
+    if (!gameState.isPaused && !gameState.gameOver && !gameState.gameWon) {
+      const dt = FRAME_TIME / 1000;
 
-    ctx.fillStyle = themeBackgrounds[selectedMap];
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+      updateSpawning(dt);
 
-    ctx.beginPath();
-    ctx.moveTo(scaledPath[0].x, scaledPath[0].y);
-    for (let i = 1; i < scaledPath.length; i++) {
-      ctx.lineTo(scaledPath[i].x, scaledPath[i].y);
+      gameState.enemies.forEach(enemy => enemy.move(dt));
+      gameState.towers.forEach(tower => tower.shoot());
+      gameState.projectiles.forEach(projectile => projectile.move(dt));
     }
-    ctx.strokeStyle = "brown";
-    ctx.lineWidth = 40 * textScale;
-    ctx.stroke();
-
-    updateSpawning(dt);
-
-    gameState.enemies.forEach(enemy => {
-      enemy.move(dt);
-      enemy.draw();
-    });
-
-    gameState.towers.forEach(tower => {
-      tower.shoot();
-      tower.draw();
-    });
-
-    gameState.projectiles.forEach(projectile => {
-      projectile.move(dt);
-      projectile.draw();
-    });
-
-    if (gameState.selectedTowerType && lastMousePos) {
-      ctx.beginPath();
-      ctx.arc(lastMousePos.x, lastMousePos.y, 20 * textScale, 0, Math.PI * 2);
-      ctx.fillStyle = towerStats[gameState.selectedTowerType].color;
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(lastMousePos.x, lastMousePos.y, towerStats[gameState.selectedTowerType].range * scaleX, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(0, 255, 0, 0.3)";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }
-
-    if (gameState.playerHealth <= 0) {
-      endGame(false);
-    }
-
-    updateStats();
-    updateTowerInfo();
-    drawChat();
-
     accumulatedTime -= FRAME_TIME;
   }
+
+  updateStats();
 
   requestAnimationFrame(update);
 }
 
-function drawChat() {
-  const chatBox = document.getElementById("chat-messages");
-  if (chatBox.style.display === "block") {
-    ctx.fillStyle = "rgba(44, 62, 80, 0.9)";
-    ctx.fillRect(canvas.width - 300 * scaleX, canvas.height - 200 * scaleY, 280 * scaleX, 180 * scaleY);
+// Event Listeners
+document.getElementById("pause-button").addEventListener("click", () => {
+  gameState.isPaused = !gameState.isPaused;
+  document.getElementById("pause-button").textContent = gameState.isPaused ? "Resume" : "Pause";
+});
+
+document.getElementById("speed-button").addEventListener("click", () => {
+  gameState.gameSpeed = gameState.gameSpeed === 1 ? 2 : gameState.gameSpeed === 2 ? 4 : 1;
+  updateStats();
+});
+
+document.getElementById("chat-input").addEventListener("keypress", (e) => {
+  if (e.key === "Enter" && ws && ws.readyState === WebSocket.OPEN) {
+    const message = e.target.value.trim();
+    if (message) {
+      ws.send(JSON.stringify({ type: "chat", message }));
+      e.target.value = "";
+    }
+  }
+});
+
+document.getElementById("upgrade-power-button").addEventListener("click", () => {
+  if (gameState.selectedTower) {
+    gameState.selectedTower.upgrade("power");
+  }
+});
+
+document.getElementById("upgrade-utility-button").addEventListener("click", () => {
+  if (gameState.selectedTower) {
+    gameState.selectedTower.upgrade("utility");
+  }
+});
+
+// Initialization
+async function init() {
+  try {
+    await fetchUserData();
+    await loadUnlockedTowers();
+    initSidebar();
+    initWebSocket();
+    resetGame();
+    updateStats();
+    requestAnimationFrame(update);
+  } catch (error) {
+    console.error("Initialization error:", error);
+    showNotification("Failed to initialize game. Please try again.");
+    setTimeout(() => window.location.href = "/", 2000);
   }
 }
 

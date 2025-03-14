@@ -60,7 +60,7 @@
       border-color: #00b894;
       outline: none;
     }
-    #start-button {
+    #start-button, #back-button {
       margin-top: 20px;
       padding: 10px 20px;
       background: #00b894;
@@ -71,11 +71,11 @@
       font-size: 16px;
       transition: background 0.3s ease, transform 0.3s ease;
     }
-    #start-button:hover {
+    #start-button:hover, #back-button:hover {
       background: #00cec9;
       transform: translateY(-3px);
     }
-    #start-button:active {
+    #start-button:active, #back-button:active {
       transform: translateY(1px);
     }
     @media (max-width: 768px) {
@@ -85,7 +85,7 @@
       h1 {
         font-size: 1.8rem;
       }
-      #start-button {
+      #start-button, #back-button {
         padding: 8px 16px;
         font-size: 14px;
       }
@@ -125,6 +125,7 @@
     </select>
   </div>
   <button id="start-button">Start Game</button>
+  <button id="back-button">Back to Menu</button>
 
   <script>
     let selectedMap = localStorage.getItem("selectedMap") || "map1";
@@ -147,6 +148,10 @@
 
     document.getElementById("start-button").addEventListener("click", () => {
       window.location.href = "/game.html";
+    });
+
+    document.getElementById("back-button").addEventListener("click", () => {
+      window.location.href = "/";
     });
   </script>
 </body>
