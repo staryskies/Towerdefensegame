@@ -8,12 +8,13 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-const SECRET_KEY = "your-secret-key"; // Replace with a secure key in production
-const PORT = process.env.PORT || 3000;
+// Configuration
+const SECRET_KEY = process.env.SECRET_KEY || "your-secret-key"; // Use env var for security
+const PORT = process.env.PORT || 3000; // Render assigns PORT dynamically
 
 // Middleware
 app.use(express.json());
-app.use(express.static(path.join(__dirname))); // Serve static files
+app.use(express.static(path.join(__dirname))); // Serve static files (html, js, etc.)
 
 // In-memory storage (replace with a database in production)
 const users = new Map(); // { username: { password, money, towers } }
@@ -23,22 +24,23 @@ const games = new Map(); // { map_difficulty: { players: [], towers: [], wave } 
 function authenticateToken(req, res, next) {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
-  if (!token) return res.sendStatus(401);
+  if (!token) return res.status(401).json({ error: "No token provided" });
 
   jwt.verify(token, SECRET_KEY, (err, user) => {
-    if (err) return res.sendStatus(403);
+    if (err) return res.status(403).json({ error: "Invalid token" });
     req.user = user;
     next();
   });
 }
 
-// Routes
+// HTTP Routes
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "map.html"));
 });
 
 app.post("/register", (req, res) => {
   const { username, password } = req.body;
+  if (!username || !password) return res.status(400).json({ error: "Username and password required" });
   if (users.has(username)) return res.status(400).json({ error: "User already exists" });
 
   users.set(username, { password, money: 0, towers: ["basic"] });
@@ -48,6 +50,7 @@ app.post("/register", (req, res) => {
 
 app.post("/login", (req, res) => {
   const { username, password } = req.body;
+  if (!username || !password) return res.status(400).json({ error: "Username and password required" });
   const user = users.get(username);
   if (!user || user.password !== password) return res.status(401).json({ error: "Invalid credentials" });
 
@@ -67,12 +70,13 @@ app.get("/towers", authenticateToken, (req, res) => {
 
 app.post("/update-money", authenticateToken, (req, res) => {
   const { money } = req.body;
+  if (typeof money !== "number") return res.status(400).json({ error: "Invalid money value" });
   const user = users.get(req.user.username);
   user.money = money;
   res.sendStatus(200);
 });
 
-// WebSocket handling
+// WebSocket Handling
 wss.on("connection", (ws, req) => {
   const token = new URLSearchParams(req.url.split("?")[1]).get("token");
   let username;
@@ -87,7 +91,16 @@ wss.on("connection", (ws, req) => {
   });
 
   ws.on("message", (message) => {
-    const data = JSON.parse(message);
+    let data;
+    try {
+      data = JSON.parse(message);
+    } catch (err) {
+      ws.send(JSON.stringify({ type: "error", message: "Invalid message format" }));
+      return;
+    }
+
+    if (!data.map || !data.difficulty) return;
+
     const gameKey = `${data.map}_${data.difficulty}`;
     let game = games.get(gameKey);
 
@@ -115,20 +128,24 @@ wss.on("connection", (ws, req) => {
         });
         break;
       case "placeTower":
-        game.towers.push(data.tower);
-        wss.clients.forEach(client => {
-          if (client !== ws && client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify({ type: "placeTower", tower: data.tower }));
-          }
-        });
+        if (data.tower) {
+          game.towers.push(data.tower);
+          wss.clients.forEach(client => {
+            if (client !== ws && client.readyState === WebSocket.OPEN) {
+              client.send(JSON.stringify({ type: "placeTower", tower: data.tower }));
+            }
+          });
+        }
         break;
       case "wave":
-        game.wave = data.wave;
-        wss.clients.forEach(client => {
-          if (client !== ws && client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify({ type: "wave", wave: data.wave }));
-          }
-        });
+        if (data.wave > game.wave) {
+          game.wave = data.wave;
+          wss.clients.forEach(client => {
+            if (client !== ws && client.readyState === WebSocket.OPEN) {
+              client.send(JSON.stringify({ type: "wave", wave: data.wave }));
+            }
+          });
+        }
         break;
       case "gameOver":
         wss.clients.forEach(client => {
@@ -138,6 +155,8 @@ wss.on("connection", (ws, req) => {
         });
         games.delete(gameKey);
         break;
+      default:
+        ws.send(JSON.stringify({ type: "error", message: "Unknown message type" }));
     }
   });
 
@@ -157,8 +176,18 @@ wss.on("connection", (ws, req) => {
       }
     });
   });
+
+  ws.on("error", (error) => {
+    console.error("WebSocket error:", error);
+  });
 });
 
+// Start Server
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+});
+
+// Handle Uncaught Exceptions
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught Exception:", err);
 });
