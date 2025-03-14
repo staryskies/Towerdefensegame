@@ -150,7 +150,7 @@
         return;
       }
 
-      ws = new WebSocket(`wss://mathematically.onrender.com/ws?token=${token}`);
+      ws = new WebSocket(`wss://${window.location.hostname}/ws?token=${token}`);
 
       ws.onopen = () => {
         console.log("WebSocket connected");
