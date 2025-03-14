@@ -24,35 +24,17 @@
     a:hover { color: #2980b9; text-decoration: underline; }
     #main-menu { display: none; flex-direction: column; align-items: center; }
     #user-money { margin: 20px 0; font-size: 1.3rem; color: #ecf0f1; background: rgba(52, 73, 94, 0.8); padding: 8px 15px; border-radius: 8px; }
-    #map-selection, #tower-shop { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(44, 62, 80, 0.98); padding: 35px; border-radius: 20px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5); width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; color: #ecf0f1; z-index: 1000; transition: transform 0.3s ease; }
-    #map-selection.show, #tower-shop.show { transform: translate(-50%, -50%) scale(1.02); }
-    #map-selection h2, #tower-shop h2 { font-size: 1.8rem; margin-bottom: 20px; position: relative; padding-right: 40px; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
+    #tower-shop { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(44, 62, 80, 0.98); padding: 35px; border-radius: 20px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5); width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; color: #ecf0f1; z-index: 1000; transition: transform 0.3s ease; }
+    #tower-shop.show { transform: translate(-50%, -50%) scale(1.02); }
+    #tower-shop h2 { font-size: 1.8rem; margin-bottom: 20px; position: relative; padding-right: 40px; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
     .close-btn { position: absolute; top: 15px; right: 15px; background: #e74c3c; border: none; border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease; }
     .close-btn::before, .close-btn::after { content: ''; position: absolute; width: 20px; height: 3px; background: #fff; }
     .close-btn::before { transform: rotate(45deg); }
     .close-btn::after { transform: rotate(-45deg); }
     .close-btn:hover { background: #c0392b; transform: scale(1.1); }
     .close-btn:active { transform: scale(0.95); }
-    .map-option, .shop-item { background: #34495e; padding: 15px; margin: 12px 0; border-radius: 10px; cursor: pointer; transition: all 0.3s ease; text-align: left; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); position: relative; overflow: visible; }
-    .map-option:hover, .shop-item:hover { background: #3e5c76; transform: translateY(-2px); }
-    .map-option.selected { background: linear-gradient(135deg, #3498db, #2980b9); color: #fff; }
-    .map-option:hover::after { 
-      content: attr(data-preview); 
-      position: absolute; 
-      bottom: 100%; 
-      left: 50%; 
-      transform: translateX(-50%); 
-      background: rgba(52, 73, 94, 0.95); 
-      color: #ecf0f1; 
-      padding: 8px 12px; 
-      border-radius: 8px; 
-      font-size: 0.9em; 
-      z-index: 1001; 
-      white-space: nowrap; 
-      display: block; 
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); 
-      pointer-events: none; 
-    }
+    .shop-item { background: #34495e; padding: 15px; margin: 12px 0; border-radius: 10px; cursor: pointer; transition: all 0.3s ease; text-align: left; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); position: relative; overflow: visible; }
+    .shop-item:hover { background: #3e5c76; transform: translateY(-2px); }
     .shop-item h4 { margin-bottom: 8px; font-size: 1.2rem; color: #ecf0f1; }
     .shop-item p { margin: 5px 0; font-size: 0.95rem; color: #bdc3c7; }
     .unlock-btn { background: linear-gradient(135deg, #27ae60, #219653); padding: 10px 20px; margin-top: 8px; font-size: 0.95rem; border-radius: 8px; }
@@ -62,21 +44,18 @@
     #notification-box { position: fixed; bottom: 30px; right: 30px; background: rgba(39, 174, 96, 0.95); color: #fff; padding: 15px 25px; border-radius: 10px; box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3); z-index: 1000; display: none; font-weight: 500; max-width: 350px; transition: opacity 0.3s ease; }
     #notification-box.show { display: block; opacity: 1; }
     body.shop-open::before { content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); z-index: 999; }
-    select { width: 100%; padding: 10px; margin: 10px 0; border-radius: 8px; background: #3e5c76; color: #ecf0f1; font-size: 1rem; border: 2px solid #34495e; }
     @media (max-width: 768px) {
-      .container, #map-selection, #tower-shop { padding: 25px; max-width: 90%; }
+      .container, #tower-shop { padding: 25px; max-width: 90%; }
       h1 { font-size: 2rem; }
       button { padding: 12px 25px; font-size: 0.95rem; }
       #notification-box { bottom: 20px; right: 20px; max-width: 60vw; }
-      .map-option:hover::after { bottom: auto; top: 100%; }
     }
     @media (max-width: 480px) {
-      .container, #map-selection, #tower-shop { padding: 20px; }
+      .container, #tower-shop { padding: 20px; }
       h1 { font-size: 1.8rem; }
       button { padding: 10px 20px; font-size: 0.9rem; }
-      .map-option, .shop-item { padding: 12px; }
+      .shop-item { padding: 12px; }
       #notification-box { bottom: 15px; right: 15px; max-width: 80vw; font-size: 0.9rem; }
-      .map-option:hover::after { bottom: auto; top: 100%; }
     }
   </style>
 </head>
@@ -116,21 +95,9 @@
   <div class="container" id="main-menu" style="display: none;">
     <h1>Tower Defense</h1>
     <div id="user-money">Persistent Money: $0</div>
-    <button id="start-game" aria-label="Start Game">Start Game</button>
-    <button id="select-map" aria-label="Select Map">Map Selection</button>
+    <button id="play-button" aria-label="Play">Play</button>
     <button id="open-tower-shop" aria-label="Open Tower Shop">Tower Shop</button>
     <button id="logout-button" aria-label="Logout">Logout</button>
-  </div>
-
-  <!-- Map Selection -->
-  <div id="map-selection" style="display: none;">
-    <h2>Select Map <button class="close-btn" id="close-map-selection" aria-label="Close Map Selection"></button></h2>
-    <select id="difficulty-select" aria-label="Select Difficulty">
-      <option value="easy">Easy</option>
-      <option value="medium">Medium</option>
-      <option value="hard">Hard</option>
-    </select>
-    <div id="map-list"></div>
   </div>
 
   <!-- Tower Shop -->
@@ -264,41 +231,9 @@
       document.getElementById("signup-form").style.display = "none";
     });
 
-    // Map Selection
-    document.getElementById("select-map").addEventListener("click", () => {
-      document.getElementById("map-selection").style.display = "block";
-      populateMapList();
-    });
-
-    document.getElementById("close-map-selection").addEventListener("click", () => {
-      document.getElementById("map-selection").style.display = "none";
-    });
-    function populateMapList() {
-      const mapList = document.getElementById("map-list");
-      mapList.innerHTML = "";
-      mapData.forEach(map => {
-        const mapDiv = document.createElement("div");
-        mapDiv.className = "map-option";
-        mapDiv.textContent = map.name;
-        mapDiv.setAttribute("data-preview", map.preview);
-        mapDiv.addEventListener("click", () => {
-          localStorage.setItem("selectedMap", map.id);
-          document.querySelectorAll(".map-option").forEach(el => el.classList.remove("selected"));
-          mapDiv.classList.add("selected");
-        });
-        if (localStorage.getItem("selectedMap") === map.id) mapDiv.classList.add("selected");
-        mapList.appendChild(mapDiv);
-      });
-      // Sync difficulty dropdown with localStorage
-      document.getElementById("difficulty-select").value = localStorage.getItem("selectedDifficulty") || "easy";
-    }
-
-    document.getElementById("difficulty-select").addEventListener("change", (e) => {
-      localStorage.setItem("selectedDifficulty", e.target.value);
-    });
-
-    document.getElementById("start-game").addEventListener("click", () => {
-      window.location.href = "/game.html";
+    // Play Button (Redirects to map.html)
+    document.getElementById("play-button").addEventListener("click", () => {
+      window.location.href = "/map.html";
     });
 
     // Tower Shop

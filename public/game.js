@@ -14,14 +14,14 @@ const mapThemes = {
   map3: "stone",
   map4: "forest",
   map5: "mountain",
-  map6: "desert", // Changed from "river" to match background and path
-  map7: "river",  // Swapped with map6 for consistency
+  map6: "desert",
+  map7: "river",
   map8: "canyon",
   map9: "arctic"
 };
 let selectedDifficulty = localStorage.getItem("selectedDifficulty") || "easy";
 let selectedMap = localStorage.getItem("selectedMap") || "map1";
-let mapTheme = mapThemes[selectedMap]; // Define mapTheme here
+let mapTheme = mapThemes[selectedMap];
 
 const gameState = {
   enemies: [],
@@ -42,9 +42,11 @@ const gameState = {
   unlockedTowers: ["basic"],
   spawnTimer: 0,
   enemiesToSpawn: 0,
-  waveDelay: 0, // New property to track delay between waves
+  waveDelay: 0,
   isBossWave: false,
   bossSpawned: false,
+  chatMessages: [], // New: Store chat messages
+  players: [], // New: Track connected players
 };
 
 const towerStats = {
@@ -295,42 +297,42 @@ const paths = {
 };
 
 const enemyThemes = {
-  grassland: { // map1: Beginner Path
+  grassland: {
     easy: [{ health: 50, speed: 1, radius: 10, color: "red" }],
     medium: [{ health: 75, speed: 1.2, radius: 12, color: "darkred" }],
     hard: [{ health: 100, speed: 1.5, radius: 15, color: "crimson" }],
   },
-  desert: { // map2: Zigzag Path, map6: Desert Maze
+  desert: {
     easy: [{ health: 60, speed: 0.9, radius: 11, color: "sandybrown" }],
     medium: [{ health: 90, speed: 1.1, radius: 13, color: "peru" }],
     hard: [{ health: 120, speed: 1.4, radius: 16, color: "sienna" }],
   },
-  stone: { // map3: Snake Path
+  stone: {
     easy: [{ health: 70, speed: 0.8, radius: 12, color: "gray" }],
     medium: [{ health: 105, speed: 1.0, radius: 14, color: "darkgray" }],
     hard: [{ health: 140, speed: 1.3, radius: 17, color: "slategray" }],
   },
-  forest: { // map4: Forest Trail
+  forest: {
     easy: [{ health: 55, speed: 1.1, radius: 10, color: "forestgreen" }],
     medium: [{ health: 80, speed: 1.3, radius: 12, color: "darkgreen" }],
     hard: [{ health: 110, speed: 1.6, radius: 15, color: "olive" }],
   },
-  mountain: { // map5: Mountain Pass
+  mountain: {
     easy: [{ health: 80, speed: 0.7, radius: 13, color: "brown" }],
     medium: [{ health: 120, speed: 0.9, radius: 15, color: "saddlebrown" }],
     hard: [{ health: 160, speed: 1.2, radius: 18, color: "maroon" }],
   },
-  river: { // map7: River Bend
+  river: {
     easy: [{ health: 50, speed: 1.2, radius: 10, color: "dodgerblue" }],
     medium: [{ health: 75, speed: 1.4, radius: 12, color: "royalblue" }],
     hard: [{ health: 100, speed: 1.7, radius: 15, color: "navy" }],
   },
-  canyon: { // map8: Canyon Run
+  canyon: {
     easy: [{ health: 65, speed: 1.0, radius: 11, color: "chocolate" }],
     medium: [{ health: 95, speed: 1.2, radius: 13, color: "darkorange" }],
     hard: [{ health: 130, speed: 1.5, radius: 16, color: "firebrick" }],
   },
-  arctic: { // map9: Arctic Path
+  arctic: {
     easy: [{ health: 60, speed: 0.9, radius: 12, color: "lightcyan" }],
     medium: [{ health: 90, speed: 1.1, radius: 14, color: "cyan" }],
     hard: [{ health: 120, speed: 1.4, radius: 17, color: "deepskyblue" }],
@@ -355,9 +357,14 @@ canvas.addEventListener("click", (event) => {
   if (gameState.selectedTowerType && gameState.gameMoney >= towerStats[gameState.selectedTowerType].cost) {
     const tooCloseToPath = scaledPath.some(point => Math.hypot(point.x - clickX, point.y - clickY) < 50 * textScale);
     if (!tooCloseToPath) {
-      gameState.towers.push(new Tower(clickX, clickY, gameState.selectedTowerType));
+      const newTower = new Tower(clickX, clickY, gameState.selectedTowerType);
+      gameState.towers.push(newTower);
       gameState.gameMoney -= towerStats[gameState.selectedTowerType].cost;
       gameState.selectedTowerType = null;
+      // Broadcast tower placement to other players
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "placeTower", tower: { x: clickX, y: clickY, type: newTower.type } }));
+      }
     } else {
       showNotification("Cannot place tower too close to path!");
     }
@@ -366,6 +373,57 @@ canvas.addEventListener("click", (event) => {
     updateTowerInfo();
   }
 });
+
+// WebSocket for Chat and Multiplayer
+let ws;
+function initWebSocket() {
+  const token = localStorage.getItem("token");
+  ws = new WebSocket(`ws://${window.location.host}/ws?token=${token}`);
+
+  ws.onopen = () => {
+    console.log("WebSocket connected");
+    showNotification("Connected to game chat!");
+    ws.send(JSON.stringify({ type: "join", map: selectedMap, difficulty: selectedDifficulty }));
+  };
+
+  ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    switch (data.type) {
+      case "chat":
+        gameState.chatMessages.push({ sender: data.sender, message: data.message, timestamp: Date.now() });
+        updateChat();
+        break;
+      case "playerList":
+        gameState.players = data.players;
+        updatePlayerList();
+        break;
+      case "placeTower":
+        if (data.tower) {
+          gameState.towers.push(new Tower(data.tower.x, data.tower.y, data.tower.type));
+        }
+        break;
+      case "wave":
+        if (data.wave > gameState.wave) {
+          gameState.wave = data.wave;
+          spawnWave();
+        }
+        break;
+      case "gameOver":
+        endGame(data.won);
+        break;
+    }
+  };
+
+  ws.onclose = () => {
+    console.log("WebSocket disconnected");
+    showNotification("Disconnected from game chat.");
+  };
+
+  ws.onerror = (error) => {
+    console.error("WebSocket error:", error);
+    showNotification("Chat connection error!");
+  };
+}
 
 // Server communication functions
 async function fetchUserData() {
@@ -404,7 +462,6 @@ async function updatePersistentMoney() {
   if (!response.ok) console.error("Failed to update money:", await response.text());
 }
 
-
 class Enemy {
   constructor(type, wave) {
     this.x = scaledSpawnPoint.x;
@@ -416,13 +473,12 @@ class Enemy {
     this.radius = type.radius * textScale;
     this.color = type.color;
     this.pathIndex = 1;
-    // Boss logic: Only spawn one boss per boss wave
     this.isBoss = gameState.isBossWave && !gameState.bossSpawned;
     if (this.isBoss) {
       this.health *= 5;
       this.maxHealth *= 5;
       this.radius *= 2;
-      gameState.bossSpawned = true; // Mark boss as spawned
+      gameState.bossSpawned = true;
       window.dispatchEvent(new CustomEvent("bossActive", { detail: { wave: gameState.wave } }));
     }
   }
@@ -433,6 +489,9 @@ class Enemy {
         ? (selectedDifficulty === "easy" ? 2.5 : selectedDifficulty === "medium" ? 5 : 7.5)
         : (selectedDifficulty === "easy" ? 0.5 : selectedDifficulty === "medium" ? 1 : 1.5);
       gameState.enemies = gameState.enemies.filter(e => e !== this);
+      if (gameState.playerHealth <= 0 && ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "gameOver", won: false }));
+      }
       return;
     }
     const target = scaledPath[this.pathIndex];
@@ -489,10 +548,9 @@ class Tower {
       switch (this.type) {
         case "laser":
           if (now - this.lastShot >= 10000) {
-            this.lastShot = now; // Mark the start of the beam
-            let beamDuration = 5000 / gameState.gameSpeed; // Duration of beam
+            this.lastShot = now;
+            let beamDuration = 5000 / gameState.gameSpeed;
             let damageInterval = setInterval(() => {
-              // Dynamically find targets each tick
               gameState.enemies.forEach(enemy => {
                 if (Math.hypot(enemy.x - this.x, enemy.y - this.y) < this.range) {
                   enemy.health -= this.damage / 10;
@@ -518,7 +576,7 @@ class Tower {
                   }
                 }
               }
-            }, 500 / gameState.gameSpeed); // Damage every 0.5s
+            }, 500 / gameState.gameSpeed);
             setTimeout(() => clearInterval(damageInterval), beamDuration);
           }
           break;
@@ -674,31 +732,24 @@ class Tower {
         ctx.fillStyle = "darkred";
         ctx.fill();
 
-        // Dynamic beam drawing while active
         if (Date.now() - this.lastShot < 5000 / gameState.gameSpeed) {
           let target = gameState.enemies.find(enemy => Math.hypot(enemy.x - this.x, enemy.y - this.y) < this.range);
           if (target) {
-            // Calculate angle to target dynamically
             const dx = target.x - this.x;
             const dy = target.y - this.y;
-            this.angle = Math.atan2(dy, dx); // Update angle each frame
-
-            // Restore and reapply rotation for beam
+            this.angle = Math.atan2(dy, dx);
             ctx.restore();
             ctx.save();
             ctx.translate(this.x, this.y);
             ctx.rotate(this.angle);
-
-            // Draw beam to target
             ctx.beginPath();
             ctx.moveTo(25 * textScale, 0);
-            const beamLength = Math.min(Math.hypot(dx, dy), this.range); // Limit to range or target distance
+            const beamLength = Math.min(Math.hypot(dx, dy), this.range);
             ctx.lineTo(25 * textScale + beamLength, 0);
             ctx.strokeStyle = `rgba(255, 0, 0, ${0.5 + 0.5 * Math.sin(Date.now() / 100)})`;
             ctx.lineWidth = 4;
             ctx.stroke();
 
-            // Multi-beam if upgraded
             if (this.specials.multiBeam) {
               let extraTarget = gameState.enemies.find(e => e !== target && Math.hypot(e.x - this.x, e.y - this.y) < this.range);
               if (extraTarget) {
@@ -829,6 +880,7 @@ class Tower {
     ctx.textAlign = "center";
     ctx.fillText(this.type.charAt(0).toUpperCase() + this.type.slice(1), this.x, this.y + 25 * textScale);
   }
+
   upgrade(path) {
     const upgrades = towerUpgradePaths[this.type][path];
     const level = path === "power" ? this.powerLevel : this.utilityLevel;
@@ -860,7 +912,7 @@ class Tower {
     if (path === "power") this.powerLevel++;
     else this.utilityLevel++;
     showNotification(`${this.type} upgraded: ${upgrade.desc}`);
-    updateTowerInfo(); // Call immediately to refresh button states
+    updateTowerInfo();
   }
 }
 
@@ -870,7 +922,7 @@ class Projectile {
     this.y = y;
     this.target = target;
     this.damage = damage;
-    this.speed = speed * scaleX * 100; // Doubled speed for faster projectiles
+    this.speed = speed * scaleX * 100;
     this.type = type;
     this.radius = type === "missile" ? 8 * textScale : 5 * textScale;
     this.color = towerStats[type].color || "black";
@@ -1023,6 +1075,9 @@ function spawnWave() {
   if (gameState.wave > maxWaves) {
     gameState.gameWon = true;
     endGame(true);
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "gameOver", won: true }));
+    }
     return;
   }
   gameState.isSpawning = true;
@@ -1030,26 +1085,26 @@ function spawnWave() {
   gameState.enemiesToSpawn = enemiesPerWave;
   gameState.spawnTimer = 0;
   gameState.waveDelay = 0;
-  // Flag for boss wave (only one boss per wave)
   gameState.isBossWave = gameState.wave % 5 === 0 && gameState.wave > 0;
-  gameState.bossSpawned = false; // Track if boss has been spawned
+  gameState.bossSpawned = false;
   console.log(`Starting wave ${gameState.wave} with ${enemiesPerWave} enemies${gameState.isBossWave ? " (Boss Wave)" : ""}`);
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: "wave", wave: gameState.wave }));
+  }
 }
+
 function updateSpawning(dt) {
-  // Handle wave delay
   if (gameState.waveDelay > 0) {
     gameState.waveDelay -= dt * gameState.gameSpeed;
     if (gameState.waveDelay <= 0) {
-      // When delay ends, start the next wave
       spawnWave();
     }
     return;
   }
 
-  // If currently spawning and enemies remain to spawn
   if (gameState.isSpawning && gameState.enemiesToSpawn > 0) {
     gameState.spawnTimer += dt * gameState.gameSpeed;
-    const spawnInterval = 1; // 1 second interval, adjusted by gameSpeed
+    const spawnInterval = 1;
     if (gameState.spawnTimer >= spawnInterval) {
       try {
         const enemyType = enemyThemes[mapTheme][selectedDifficulty][0];
@@ -1058,7 +1113,7 @@ function updateSpawning(dt) {
         gameState.enemiesToSpawn--;
         gameState.spawnTimer -= spawnInterval;
         if (gameState.enemiesToSpawn <= 0) {
-          gameState.isSpawning = false; // Stop spawning when all enemies are spawned
+          gameState.isSpawning = false;
         }
       } catch (error) {
         console.error("Error spawning enemy:", error);
@@ -1069,10 +1124,9 @@ function updateSpawning(dt) {
     return;
   }
 
-  // Check for wave completion and transition
   if (!gameState.isSpawning && gameState.enemies.length === 0 && gameState.playerHealth > 0) {
-    gameState.waveDelay = 2; // Set delay before next wave
-    gameState.wave++; // Increment wave here
+    gameState.waveDelay = 2;
+    gameState.wave++;
   }
 }
 
@@ -1090,6 +1144,7 @@ function updateStats() {
   document.getElementById("wave").textContent = `Wave: ${gameState.wave}`;
   document.getElementById("speed").textContent = `Speed: ${gameState.gameSpeed}x`;
 }
+
 function updateTowerInfo() {
   const panel = document.getElementById("tower-info-panel");
   const powerButton = document.getElementById("upgrade-power-button");
@@ -1112,15 +1167,37 @@ function updateTowerInfo() {
     powerButton.textContent = `Upgrade Power ($${powerCost})`;
     utilityButton.textContent = `Upgrade Utility ($${utilityCost})`;
     
-    // Dynamically enable/disable based on current money
     powerButton.disabled = nextPowerLevel >= 4 || (typeof powerCost === "number" && gameState.gameMoney < powerCost);
     utilityButton.disabled = nextUtilityLevel >= 4 || (typeof utilityCost === "number" && gameState.gameMoney < utilityCost);
   } else {
     panel.style.display = "none";
-    powerButton.disabled = true; // Disable buttons when no tower is selected
+    powerButton.disabled = true;
     utilityButton.disabled = true;
   }
 }
+
+function updateChat() {
+  const chatBox = document.getElementById("chat-messages");
+  chatBox.innerHTML = "";
+  gameState.chatMessages.slice(-10).forEach(msg => { // Show last 10 messages
+    const div = document.createElement("div");
+    div.textContent = `${msg.sender}: ${msg.message}`;
+    div.style.color = msg.sender === "You" ? "#3498db" : "#ecf0f1";
+    chatBox.appendChild(div);
+  });
+  chatBox.scrollTop = chatBox.scrollHeight; // Auto-scroll to bottom
+}
+
+function updatePlayerList() {
+  const playerList = document.getElementById("player-list");
+  playerList.innerHTML = "Players:<br>";
+  gameState.players.forEach(player => {
+    const div = document.createElement("div");
+    div.textContent = player;
+    playerList.appendChild(div);
+  });
+}
+
 function endGame(won) {
   gameState.gameOver = !won;
   gameState.gameWon = won;
@@ -1147,7 +1224,8 @@ function endGame(won) {
   mainMenuButton.onclick = () => {
     endScreen.style.display = "none";
     resetGame();
-    window.location.href = "/"; // Redirect to index.html
+    if (ws) ws.close();
+    window.location.href = "/";
   };
 }
 
@@ -1166,14 +1244,16 @@ function resetGame() {
   gameState.selectedTowerType = null;
   gameState.isSpawning = false;
   gameState.gameSpeed = 1;
-  gameState.isBossWave = false; // Reset boss wave flag
-  gameState.bossSpawned = false; // Reset boss spawned flag
+  gameState.isBossWave = false;
+  gameState.bossSpawned = false;
+  gameState.chatMessages = [];
+  gameState.players = [];
 }
 
 function initSidebar() {
   const sidebar = document.getElementById("sidebar");
-  sidebar.innerHTML = ""; // Clear existing content
-  gameState.unlockedTowers.forEach(type => { // Only show unlocked towers
+  sidebar.innerHTML = "";
+  gameState.unlockedTowers.forEach(type => {
     const div = document.createElement("div");
     div.className = "tower-option";
     div.textContent = `${type.charAt(0).toUpperCase() + type.slice(1)} ($${towerStats[type].cost})`;
@@ -1196,6 +1276,7 @@ async function init() {
   }
 
   initSidebar();
+  initWebSocket();
 
   const pauseButton = document.createElement("div");
   pauseButton.id = "pause-button";
@@ -1209,7 +1290,7 @@ async function init() {
 
   const fastForwardButton = document.createElement("div");
   fastForwardButton.id = "fast-forward-button";
-  fastForwardButton.textContent = "Fast Forward (1x)"; // Initial state
+  fastForwardButton.textContent = "Fast Forward (1x)";
   fastForwardButton.addEventListener("click", () => {
     if (gameState.gameSpeed === 1) {
       gameState.gameSpeed = 2;
@@ -1226,7 +1307,7 @@ async function init() {
       fastForwardButton.textContent = "Fast Forward (1x)";
       fastForwardButton.classList.remove("active");
     }
-    updateStats(); // Reflect new speed in UI
+    updateStats();
   });
   document.getElementById("sidebar").appendChild(fastForwardButton);
 
@@ -1235,6 +1316,7 @@ async function init() {
   homeButton.textContent = "Main Menu";
   homeButton.addEventListener("click", () => {
     resetGame();
+    if (ws) ws.close();
     window.location.href = "/";
   });
   document.getElementById("sidebar").appendChild(homeButton);
@@ -1247,13 +1329,24 @@ async function init() {
     if (gameState.selectedTower) gameState.selectedTower.upgrade("utility");
   });
 
+  // Chat input handling
+  const chatInput = document.getElementById("chat-input");
+  chatInput.addEventListener("keypress", (e) => {
+    if (e.key === "Enter" && chatInput.value.trim() && ws && ws.readyState === WebSocket.OPEN) {
+      const message = chatInput.value.trim();
+      ws.send(JSON.stringify({ type: "chat", message }));
+      gameState.chatMessages.push({ sender: "You", message, timestamp: Date.now() });
+      updateChat();
+      chatInput.value = "";
+    }
+  });
+
   spawnWave();
   requestAnimationFrame(update);
 }
 
-// Fixed FPS at 30
 const FPS = 30;
-const FRAME_TIME = 1000 / FPS; // ~33.33 ms per frame
+const FRAME_TIME = 1000 / FPS;
 let lastTime = 0;
 let accumulatedTime = 0;
 
@@ -1264,6 +1357,7 @@ function update(timestamp) {
   accumulatedTime += elapsed;
 
   if (gameState.isPaused || gameState.gameOver || gameState.gameWon) {
+    drawChat();
     requestAnimationFrame(update);
     return;
   }
@@ -1317,12 +1411,21 @@ function update(timestamp) {
     }
 
     updateStats();
-    updateTowerInfo(); // Add this to refresh tower info every frame
+    updateTowerInfo();
+    drawChat();
 
     accumulatedTime -= FRAME_TIME;
   }
 
   requestAnimationFrame(update);
+}
+
+function drawChat() {
+  const chatBox = document.getElementById("chat-messages");
+  if (chatBox.style.display === "block") {
+    ctx.fillStyle = "rgba(44, 62, 80, 0.9)";
+    ctx.fillRect(canvas.width - 300 * scaleX, canvas.height - 200 * scaleY, 280 * scaleX, 180 * scaleY);
+  }
 }
 
 init();

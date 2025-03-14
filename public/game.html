@@ -5,284 +5,198 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tower Defense Game</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { 
-      width: 100%; 
-      height: 100%; 
-      overflow: hidden; 
-      font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-      background: linear-gradient(135deg, #2c3e50, #34495e); 
-      color: #ecf0f1; 
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      background: #2c3e50;
+      color: #ecf0f1;
     }
-    #gameCanvas { 
-      display: block; 
-      width: 100%; 
-      height: 100%; 
-      background: #ecf0f1; 
+    #gameCanvas {
+      display: block;
     }
-    #sidebar { 
-      position: fixed; 
-      top: 0; 
-      left: 0; 
-      width: 240px; 
-      height: 100%; 
-      background: linear-gradient(to bottom, rgba(44, 62, 80, 0.95), rgba(52, 73, 94, 0.95)); 
-      padding: 20px; 
-      z-index: 10; 
-      box-shadow: 5px 0 20px rgba(0, 0, 0, 0.4); 
-      overflow-y: auto; 
+    #sidebar {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      width: 200px;
+      background: rgba(44, 62, 80, 0.9);
+      padding: 10px;
+      border-radius: 10px;
     }
-    .tower-option { 
-      padding: 14px; 
-      background: #34495e; 
-      margin: 12px 0; 
-      border-radius: 10px; 
-      cursor: pointer; 
-      transition: all 0.3s ease; 
-      font-weight: 600; 
-      border: 1px solid #3e5c76; 
+    .tower-option {
+      padding: 5px;
+      margin: 5px 0;
+      background: #3e5c76;
+      border-radius: 5px;
+      cursor: pointer;
     }
-    .tower-option:hover { 
-      background: linear-gradient(90deg, #3e5c76, #4a6a8a); 
-      transform: translateX(8px); 
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); 
+    .tower-option:hover, .tower-option.selected {
+      background: #3498db;
     }
-    .tower-option.selected { 
-      background: linear-gradient(90deg, #3498db, #2980b9); 
-      transform: translateX(8px); 
-      border-color: #2980b9; 
+    #pause-button, #fast-forward-button, #home-button {
+      padding: 5px;
+      margin: 5px 0;
+      background: #3498db;
+      border-radius: 5px;
+      cursor: pointer;
+      text-align: center;
     }
-    #pause-button, #fast-forward-button, #home-button, #sound-toggle-button { 
-      padding: 14px; 
-      background: #34495e; 
-      margin: 12px 0; 
-      border-radius: 10px; 
-      cursor: pointer; 
-      text-align: center; 
-      transition: all 0.3s ease; 
-      font-weight: 600; 
-      border: 1px solid #3e5c76; 
+    #pause-button.active, #fast-forward-button.active {
+      background: #e74c3c;
     }
-    #pause-button:hover, #fast-forward-button:hover, #home-button:hover, #sound-toggle-button:hover { 
-      background: linear-gradient(90deg, #3e5c76, #4a6a8a); 
-      transform: translateX(8px); 
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); 
+    #stats {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: rgba(44, 62, 80, 0.9);
+      padding: 10px;
+      border-radius: 10px;
     }
-    #pause-button.active, #fast-forward-button.active, #sound-toggle-button.active { 
-      background: linear-gradient(90deg, #3498db, #2980b9); 
-      transform: translateX(8px); 
+    #tower-info-panel {
+      position: fixed;
+      bottom: 10px;
+      left: 230px;
+      width: 250px;
+      background: rgba(44, 62, 80, 0.9);
+      padding: 10px;
+      border-radius: 10px;
+      display: none;
     }
-    #stats-panel { 
-      position: fixed; 
-      top: 0; 
-      right: 0; 
-      width: 240px; 
-      background: linear-gradient(to bottom, rgba(44, 62, 80, 0.95), rgba(52, 73, 94, 0.95)); 
-      padding: 20px; 
-      z-index: 10; 
-      box-shadow: -5px 0 20px rgba(0, 0, 0, 0.4); 
+    #upgrade-power-button, #upgrade-utility-button {
+      padding: 5px;
+      margin: 5px 0;
+      background: #3498db;
+      border-radius: 5px;
+      cursor: pointer;
+      width: 100%;
     }
-    #stats-panel h3, #tower-info-panel h3 { 
-      font-size: 1.5em; 
-      margin-bottom: 18px; 
-      color: #ecf0f1; 
-      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); 
+    #upgrade-power-button:disabled, #upgrade-utility-button:disabled {
+      background: #7f8c8d;
+      cursor: not-allowed;
     }
-    #stats-panel div, #tower-info-panel div { 
-      margin: 10px 0; 
-      font-size: 1.1em; 
-      color: #bdc3c7; 
+    #notification-box {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(231, 76, 60, 0.9);
+      padding: 20px;
+      border-radius: 10px;
+      color: white;
+      display: none;
     }
-    #tower-info-panel { 
-      position: fixed; 
-      bottom: 20px; 
-      left: 260px; 
-      width: 220px; 
-      background: linear-gradient(to bottom, rgba(44, 62, 80, 0.95), rgba(52, 73, 94, 0.95)); 
-      padding: 15px; 
-      border-radius: 12px; 
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3); 
-      display: none; 
-      z-index: 10; 
-      border: 1px solid #3e5c76; 
+    #notification-box.show {
+      display: block;
     }
-    #upgrade-power-button, #upgrade-utility-button { 
-      width: 100%; 
-      padding: 12px; 
-      margin-top: 10px; 
-      background: linear-gradient(90deg, #3498db, #2980b9); 
-      color: white; 
-      border: none; 
-      border-radius: 8px; 
-      cursor: pointer; 
-      font-weight: bold; 
-      transition: all 0.3s ease; 
+    #end-screen {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(44, 62, 80, 0.9);
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      display: none;
     }
-    #upgrade-power-button:hover, #upgrade-utility-button:hover { 
-      background: linear-gradient(90deg, #2980b9, #2471a3); 
-      transform: translateY(-2px); 
-      box-shadow: 0 6px 15px rgba(52, 152, 219, 0.4); 
+    #restart-button, #main-menu-button {
+      padding: 10px 20px;
+      margin: 10px;
+      background: #3498db;
+      border-radius: 5px;
+      cursor: pointer;
+      border: none;
+      color: white;
     }
-    #upgrade-power-button:disabled, #upgrade-utility-button:disabled { 
-      background: #34495e; 
-      cursor: not-allowed; 
-      opacity: 0.6; 
-      transform: none; 
-      box-shadow: none; 
+    #chat-container {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      width: 280px;
+      height: 200px;
+      background: rgba(44, 62, 80, 0.9);
+      border-radius: 10px;
+      padding: 10px;
+      color: #ecf0f1;
+      display: none;
     }
-    #notification-box { 
-      position: fixed; 
-      bottom: 30px; 
-      right: 30px; 
-      background: linear-gradient(90deg, rgba(39, 174, 96, 0.95), rgba(46, 204, 113, 0.95)); 
-      color: #fff; 
-      padding: 15px 25px; 
-      border-radius: 12px; 
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3); 
-      z-index: 1000; 
-      display: none; 
-      font-weight: 600; 
-      max-width: 350px; 
-      transition: opacity 0.3s ease; 
+    #chat-messages {
+      height: 120px;
+      overflow-y: auto;
+      font-size: 12px;
     }
-    #notification-box.show { 
-      display: block; 
-      opacity: 1; 
+    #chat-input {
+      width: 100%;
+      padding: 5px;
+      margin-top: 5px;
+      border: none;
+      border-radius: 5px;
+      background: #3e5c76;
+      color: #ecf0f1;
     }
-    #end-screen { 
-      position: fixed; 
-      top: 50%; 
-      left: 50%; 
-      transform: translate(-50%, -50%); 
-      background: linear-gradient(to bottom, rgba(44, 62, 80, 0.98), rgba(52, 73, 94, 0.98)); 
-      padding: 40px; 
-      border-radius: 20px; 
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5); 
-      width: 90%; 
-      max-width: 480px; 
-      text-align: center; 
-      color: #ecf0f1; 
-      z-index: 1001; 
-      display: none; 
-      border: 1px solid #3e5c76; 
-    }
-    #end-screen h2 { 
-      font-size: 2.2em; 
-      margin-bottom: 25px; 
-      text-shadow: 0 2px 5px rgba(0, 0, 0, 0.3); 
-    }
-    #end-screen p { 
-      margin: 10px 0; 
-      font-size: 1.2em; 
-    }
-    #restart-button, #main-menu-button { 
-      padding: 14px 30px; 
-      background: linear-gradient(90deg, #3498db, #2980b9); 
-      color: white; 
-      border: none; 
-      border-radius: 10px; 
-      cursor: pointer; 
-      font-weight: bold; 
-      transition: all 0.3s ease; 
-      margin: 12px; 
-    }
-    #restart-button:hover, #main-menu-button:hover { 
-      background: linear-gradient(90deg, #2980b9, #2471a3); 
-      transform: translateY(-2px); 
-      box-shadow: 0 6px 15px rgba(52, 152, 219, 0.4); 
-    }
-    #boss-indicator { 
-      position: fixed; 
-      top: 70px; 
-      left: 50%; 
-      transform: translateX(-50%); 
-      background: linear-gradient(90deg, rgba(255, 0, 0, 0.8), rgba(231, 76, 60, 0.8)); 
-      color: white; 
-      padding: 8px 20px; 
-      border-radius: 8px; 
-      z-index: 1000; 
-      display: none; 
-      font-weight: 600; 
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); 
-    }
-    #boss-indicator.show { 
-      display: block; 
-    }
-    @media (max-width: 768px) {
-      #sidebar, #stats-panel { width: 200px; }
-      #tower-info-panel { left: 220px; width: 180px; }
-      #notification-box { bottom: 20px; right: 20px; max-width: 60vw; }
-    }
-    @media (max-width: 480px) {
-      #sidebar, #stats-panel { width: 160px; }
-      #tower-info-panel { left: 180px; width: 140px; bottom: 10px; }
-      #notification-box { bottom: 15px; right: 15px; max-width: 80vw; font-size: 0.9rem; }
-      #restart-button, #main-menu-button { padding: 12px 20px; }
+    #toggle-chat {
+      position: fixed;
+      bottom: 220px;
+      right: 10px;
+      padding: 5px 10px;
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
     }
   </style>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div id="sidebar"></div>
   <canvas id="gameCanvas"></canvas>
-  <div id="stats-panel">
-    <h3>Stats</h3>
+  <div id="sidebar"></div>
+  <div id="stats">
     <div id="score">Score: 0</div>
-    <div id="money">Money: $200</div>
+    <div id="money">Money: $0</div>
     <div id="health">Health: 20</div>
     <div id="wave">Wave: 1</div>
     <div id="speed">Speed: 1x</div>
   </div>
   <div id="tower-info-panel">
-    <h3>Tower Info</h3>
     <div id="tower-type">Type: </div>
     <div id="tower-damage">Damage: </div>
     <div id="tower-range">Range: </div>
     <div id="tower-level">Level: </div>
     <div id="tower-ability">Ability: </div>
-    <button id="upgrade-power-button">Upgrade Power ($0)</button>
-    <button id="upgrade-utility-button">Upgrade Utility ($0)</button>
+    <button id="upgrade-power-button">Upgrade Power</button>
+    <button id="upgrade-utility-button">Upgrade Utility</button>
   </div>
   <div id="notification-box"></div>
-  <div id="boss-indicator"></div>
   <div id="end-screen">
     <h2 id="end-message"></h2>
-    <p id="waves-survived"></p>
-    <p id="persistent-money-earned"></p>
-    <p id="persistent-money-total"></p>
+    <div id="waves-survived"></div>
+    <div id="persistent-money-earned"></div>
+    <div id="persistent-money-total"></div>
     <button id="restart-button">Restart</button>
     <button id="main-menu-button">Main Menu</button>
   </div>
+  <div id="chat-container">
+    <div id="player-list">Players:<br></div>
+    <div id="chat-messages"></div>
+    <input id="chat-input" type="text" placeholder="Type a message...">
+  </div>
+  <button id="toggle-chat">Show Chat</button>
+
+  <script src="game.js"></script>
   <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      // Check if map and difficulty are set from index.html
-      const selectedMap = localStorage.getItem("selectedMap");
-      const selectedDifficulty = localStorage.getItem("selectedDifficulty");
-      if (!selectedMap || !selectedDifficulty) {
-        alert("Please select a map and difficulty from the main menu.");
-        window.location.href = "/"; // Redirect back to index.html if not set
-        return;
-      }
-
-      // Initialize the game immediately with pre-selected values
-      initGame();
-    });
-
-    window.addEventListener("bossActive", (e) => {
-      const bossIndicator = document.getElementById("boss-indicator");
-      bossIndicator.textContent = `Boss Active: Wave ${e.detail.wave}`;
-      bossIndicator.classList.add("show");
-      setTimeout(() => bossIndicator.classList.remove("show"), 5000);
-    });
-
-    function initGame() {
-      if (typeof init === "function") {
-        init(); // Call game.js's init() function
+    document.getElementById("toggle-chat").addEventListener("click", () => {
+      const chatContainer = document.getElementById("chat-container");
+      const toggleButton = document.getElementById("toggle-chat");
+      if (chatContainer.style.display === "none") {
+        chatContainer.style.display = "block";
+        toggleButton.textContent = "Hide Chat";
       } else {
-        console.error("Game initialization function not found. Ensure game.js is loaded.");
+        chatContainer.style.display = "none";
+        toggleButton.textContent = "Show Chat";
       }
-    }
+    });
   </script>
-  <script src="/game.js"></script>
 </body>
 </html>

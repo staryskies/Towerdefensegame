@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Map Selection</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      background: #2c3e50;
+      color: #ecf0f1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    #map-container {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      max-width: 1200px;
+      width: 100%;
+    }
+    .map-option {
+      background: rgba(44, 62, 80, 0.9);
+      padding: 10px;
+      border-radius: 10px;
+      text-align: center;
+      cursor: pointer;
+    }
+    .map-option:hover, .map-option.selected {
+      background: #3498db;
+    }
+    #difficulty-container {
+      margin-top: 20px;
+      text-align: center;
+    }
+    #difficulty-select {
+      padding: 5px;
+      font-size: 16px;
+      background: #3e5c76;
+      color: #ecf0f1;
+      border: none;
+      border-radius: 5px;
+    }
+    #start-button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background: #3498db;
+      border: none;
+      border-radius: 5px;
+      color: white;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    #start-button:hover {
+      background: #2980b9;
+    }
+  </style>
+</head>
+<body>
+  <h1>Select Map and Difficulty</h1>
+  <div id="map-container">
+    <div class="map-option" data-map="map1">Grassland</div>
+    <div class="map-option" data-map="map2">Desert</div>
+    <div class="map-option" data-map="map3">Stone</div>
+    <div class="map-option" data-map="map4">Forest</div>
+    <div class="map-option" data-map="map5">Mountain</div>
+    <div class="map-option" data-map="map6">Desert Maze</div>
+    <div class="map-option" data-map="map7">River Bend</div>
+    <div class="map-option" data-map="map8">Canyon</div>
+    <div class="map-option" data-map="map9">Arctic</div>
+  </div>
+  <div id="difficulty-container">
+    <label for="difficulty-select">Difficulty: </label>
+    <select id="difficulty-select">
+      <option value="easy">Easy</option>
+      <option value="medium">Medium</option>
+      <option value="hard">Hard</option>
+    </select>
+  </div>
+  <button id="start-button">Start Game</button>
+
+  <script>
+    let selectedMap = localStorage.getItem("selectedMap") || "map1";
+    const mapOptions = document.querySelectorAll(".map-option");
+    mapOptions.forEach(option => {
+      if (option.dataset.map === selectedMap) option.classList.add("selected");
+      option.addEventListener("click", () => {
+        selectedMap = option.dataset.map;
+        localStorage.setItem("selectedMap", selectedMap);
+        mapOptions.forEach(opt => opt.classList.remove("selected"));
+        option.classList.add("selected");
+      });
+    });
+
+    const difficultySelect = document.getElementById("difficulty-select");
+    difficultySelect.value = localStorage.getItem("selectedDifficulty") || "easy";
+    difficultySelect.addEventListener("change", () => {
+      localStorage.setItem("selectedDifficulty", difficultySelect.value);
+    });
+
+    document.getElementById("start-button").addEventListener("click", () => {
+      window.location.href = "/game.html";
+    });
+  </script>
+</body>
+</html>
