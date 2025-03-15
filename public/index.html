@@ -150,49 +150,19 @@
       setTimeout(() => notification.classList.remove("show"), 3000);
     }
 
-    function isTokenExpired(token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        const now = Math.floor(Date.now() / 1000); // Current time in seconds
-        return payload.exp < now;
-      } catch (err) {
-        console.error('Error decoding token:', err);
-        return true; // Assume expired if decoding fails
-      }
-    }
-
     function initWebSocket() {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        showNotification("Please log in to use party features.");
-        return;
-      }
-      if (isTokenExpired(token)) {
-        showNotification("Your session has expired. Please log in again.");
-        localStorage.removeItem("token");
-        localStorage.removeItem("username");
-        localStorage.removeItem("partyId");
-        localStorage.removeItem("isPartyMode");
-        document.getElementById("main-menu").style.display = "none";
-        document.getElementById("auth-screen").style.display = "block";
-        return;
-      }
-      if (reconnectAttempts >= maxReconnectAttempts) {
-        showNotification("Max reconnection attempts reached. Please log in again.");
-        return;
-      }
-
-      console.log("Attempting WebSocket connection with token:", token);
-      ws = new WebSocket(`${WS_URL}/ws?token=${token}`);
+      const username = localStorage.getItem("username") || "Guest";
+      console.log("Attempting WebSocket connection with username:", username);
+      ws = new WebSocket(WS_URL); // No token in URL
 
       ws.onopen = () => {
         console.log("WebSocket connected");
         showNotification("Connected to server!");
         reconnectAttempts = 0;
-        if (localStorage.getItem("partyId")) {
-          partyId = localStorage.getItem("partyId");
-          ws.send(JSON.stringify({ type: "joinParty", partyId }));
-        }
+        const joinData = partyId ?
+          { type: "joinParty", partyId, username } :
+          { type: "join", username };
+        ws.send(JSON.stringify(joinData));
       };
 
       ws.onmessage = (event) => {
@@ -210,13 +180,15 @@
             break;
           case "partyJoined":
             partyId = data.partyId;
-            isPartyLeader = data.leader === localStorage.getItem("username");
+            isPartyLeader = data.leader === username;
             localStorage.setItem("partyId", partyId);
             localStorage.setItem("isPartyMode", "true");
             document.getElementById("party-id-display").textContent = `Party ID: ${partyId}`;
             document.getElementById("start-party-button").disabled = !isPartyLeader;
             showNotification(`Joined party ${partyId}`);
             if (data.started) {
+              localStorage.setItem("selectedMap", data.map);
+              localStorage.setItem("selectedDifficulty", data.difficulty);
               window.location.href = "/game.html";
             }
             break;
@@ -233,8 +205,9 @@
             break;
           case "error":
             showNotification(data.message);
-            if (data.message === "Invalid or expired token") {
-              handleTokenInvalidation();
+            if (data.message === "Username required") {
+              showNotification("Please log in again.");
+              logout();
             }
             break;
         }
@@ -246,72 +219,48 @@
       };
 
       ws.onclose = (event) => {
-        console.log(`WebSocket disconnected. Code: ${event.code}, Reason: ${event.reason}`);
+        console.log(`WebSocket disconnected. Code: ${event.code}, Reason: ${event.reason || "No reason provided"}`);
         showNotification("Disconnected from server. Reconnecting...");
         ws = null;
-        if (event.code === 1008 && event.reason === "Invalid token") {
-          handleTokenInvalidation();
-        } else {
+        if (event.code === 1008 && event.reason === "Username required") {
+          logout();
+        } else if (reconnectAttempts < maxReconnectAttempts) {
           reconnectAttempts++;
           setTimeout(initWebSocket, 2000);
+        } else {
+          showNotification("Max reconnection attempts reached. Please log in again.");
         }
       };
     }
 
-    function handleTokenInvalidation() {
-      showNotification("Invalid or expired token. Please log in again.");
-      localStorage.removeItem("token");
+    function logout() {
+      if (partyId && ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "leaveParty", partyId }));
+      }
       localStorage.removeItem("username");
       localStorage.removeItem("partyId");
       localStorage.removeItem("isPartyMode");
+      if (ws) ws.close();
       document.getElementById("main-menu").style.display = "none";
       document.getElementById("auth-screen").style.display = "block";
       document.getElementById("party-id-display").textContent = "";
       document.getElementById("start-party-button").disabled = true;
     }
 
-    // Update login/signup success to ensure fresh token
-    document.getElementById("login-button").addEventListener("click", async () => {
-      const username = document.getElementById("login-username").value.trim();
-      const password = document.getElementById("login-password").value;
-      console.log("Login attempt:", { username, password });
-      if (!username || !password) {
-        showNotification("Please enter both username and password.");
-        return;
-      }
-      try {
-        const response = await fetch("/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, password }),
-        });
-        const data = await response.json();
-        if (response.ok) {
-          console.log("Login successful, token:", data.token);
-          localStorage.setItem("token", data.token);
-          localStorage.setItem("username", username);
-          document.getElementById("auth-screen").style.display = "none";
-          document.getElementById("main-menu").style.display = "flex";
-          await updateUserMoneyDisplay();
-          initWebSocket();
-        } else {
-          showNotification(data.message || "Login failed.");
-        }
-      } catch (err) {
-        console.error("Login error:", err);
-        showNotification("Error during login. Please try again.");
-      }
-    });
-
     async function fetchUserData() {
-      const token = localStorage.getItem("token");
-      if (!token) throw new Error("No token found");
-      const response = await fetch("/user", {
-        headers: { "Authorization": `Bearer ${token}` },
-      });
+      const username = localStorage.getItem("username");
+      if (!username) throw new Error("No username found");
+      const response = await fetch(`/user?username=${encodeURIComponent(username)}`, { method: "GET" });
       if (!response.ok) throw new Error(`Failed to fetch user data: ${response.statusText}`);
-      const data = await response.json();
-      return data;
+      return await response.json();
+    }
+
+    async function fetchTowers() {
+      const username = localStorage.getItem("username");
+      if (!username) throw new Error("No username found");
+      const response = await fetch(`/towers?username=${encodeURIComponent(username)}`, { method: "GET" });
+      if (!response.ok) throw new Error(`Failed to fetch towers: ${response.statusText}`);
+      return await response.json();
     }
 
     async function updateUserMoneyDisplay() {
@@ -320,7 +269,7 @@
         document.getElementById("user-money").textContent = `Persistent Money: $${userData.money}`;
         document.getElementById("global-money").textContent = `Persistent Money: $${userData.money}`;
       } catch (err) {
-        console.error(err);
+        console.error("Error updating money display:", err);
         showNotification("Failed to update money display.");
       }
     }
@@ -348,10 +297,8 @@
         });
         const data = await response.json();
         if (response.ok) {
-          console.log("Login successful, token:", data.token);
-          localStorage.setItem("token", data.token);
-          localStorage.setItem("username", username);
-          console.log("Stored in localStorage:", { token: data.token, username });
+          console.log("Login successful, username:", data.username);
+          localStorage.setItem("username", data.username);
           document.getElementById("auth-screen").style.display = "none";
           document.getElementById("main-menu").style.display = "flex";
           await updateUserMoneyDisplay();
@@ -365,10 +312,11 @@
         showNotification("Error during login. Please try again.");
       }
     });
+
     document.getElementById("signup-button").addEventListener("click", async () => {
       const username = document.getElementById("signup-username").value.trim();
       const password = document.getElementById("signup-password").value;
-      console.log("Signup attempt:", { username, password }); // Debug
+      console.log("Signup attempt:", { username, password });
       if (!username || !password) {
         showNotification("Please enter both username and password.");
         return;
@@ -381,9 +329,8 @@
         });
         const data = await response.json();
         if (response.ok) {
-          console.log("Signup successful, token:", data.token); // Debug
-          localStorage.setItem("token", data.token);
-          localStorage.setItem("username", username);
+          console.log("Signup successful, username:", data.username);
+          localStorage.setItem("username", data.username);
           document.getElementById("auth-screen").style.display = "none";
           document.getElementById("main-menu").style.display = "flex";
           await updateUserMoneyDisplay();
@@ -409,22 +356,7 @@
       document.getElementById("login-form").style.display = "block";
     });
 
-    document.getElementById("logout-button").addEventListener("click", () => {
-      if (partyId && ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: "leaveParty", partyId }));
-      }
-      localStorage.removeItem("token");
-      localStorage.removeItem("username");
-      localStorage.removeItem("partyId");
-      localStorage.removeItem("isPartyMode");
-      if (ws) ws.close();
-      document.getElementById("main-menu").style.display = "none";
-      document.getElementById("auth-screen").style.display = "block";
-      document.getElementById("login-form").style.display = "block";
-      document.getElementById("signup-form").style.display = "none";
-      document.getElementById("party-id-display").textContent = "";
-      document.getElementById("start-party-button").disabled = true;
-    });
+    document.getElementById("logout-button").addEventListener("click", logout);
 
     // Party and Play Options
     document.getElementById("play-solo-button").addEventListener("click", () => {
@@ -451,7 +383,8 @@
         showNotification("Please enter a Party ID to create.");
         return;
       }
-      ws.send(JSON.stringify({ type: "createParty", partyId: createId, map: "map1", difficulty: "easy" }));
+      const username = localStorage.getItem("username") || "Guest";
+      ws.send(JSON.stringify({ type: "createParty", partyId: createId, map: "map1", difficulty: "easy", username }));
     });
 
     document.getElementById("join-party-button").addEventListener("click", () => {
@@ -469,7 +402,8 @@
         showNotification("Please enter a Party ID to join.");
         return;
       }
-      ws.send(JSON.stringify({ type: "joinParty", partyId: joinId }));
+      const username = localStorage.getItem("username") || "Guest";
+      ws.send(JSON.stringify({ type: "joinParty", partyId: joinId, username }));
     });
 
     document.getElementById("start-party-button").addEventListener("click", () => {
@@ -481,7 +415,8 @@
         showNotification("Not in a party or not connected!");
         return;
       }
-      ws.send(JSON.stringify({ type: "startGame", partyId }));
+      const username = localStorage.getItem("username") || "Guest";
+      ws.send(JSON.stringify({ type: "startGame", partyId, username }));
     });
 
     // Tower Shop
@@ -500,14 +435,10 @@
       const towerList = document.getElementById("tower-list");
       towerList.innerHTML = "";
       try {
-        const token = localStorage.getItem("token");
-        const response = await fetch("/towers", {
-          headers: { "Authorization": `Bearer ${token}` },
-        });
-        if (!response.ok) throw new Error("Failed to fetch towers");
-        const data = await response.json();
-        const unlockedTowers = data.towers.length > 0 ? data.towers : ["basic"];
         const userData = await fetchUserData();
+        const towerData = await fetchTowers();
+        const unlockedTowers = towerData.towers.length > 0 ? towerData.towers : ["basic"];
+        const username = localStorage.getItem("username") || "Guest";
 
         Object.keys(towerStats).forEach(type => {
           const towerDiv = document.createElement("div");
@@ -527,11 +458,8 @@
               try {
                 const response = await fetch("/unlock-tower", {
                   method: "POST",
-                  headers: {
-                    "Authorization": `Bearer ${token}`,
-                    "Content-Type": "application/json",
-                  },
-                  body: JSON.stringify({ tower: type }),
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ username, tower: type }),
                 });
                 const result = await response.json();
                 if (response.ok) {
@@ -558,7 +486,7 @@
     }
 
     // Initialize
-    if (localStorage.getItem("token")) {
+    if (localStorage.getItem("username")) {
       document.getElementById("auth-screen").style.display = "none";
       document.getElementById("main-menu").style.display = "flex";
       updateUserMoneyDisplay();
