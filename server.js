@@ -1,6 +1,5 @@
 const express = require('express');
 const { WebSocketServer } = require('ws');
-const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const { Pool } = require('pg');
 require('dotenv').config();
@@ -27,7 +26,6 @@ console.log('SECRET_KEY:', process.env.SECRET_KEY ? 'Set' : 'Not set');
 // Function to initialize database schema and populate if empty
 async function initializeDatabase() {
   try {
-    // Create tables if they don’t exist
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -45,27 +43,22 @@ async function initializeDatabase() {
     `);
     console.log('Database schema ensured (tables created if missing)');
 
-    // Check if the users table is empty
     const userCheck = await pool.query('SELECT COUNT(*) FROM users');
     const userCount = parseInt(userCheck.rows[0].count, 10);
     console.log(`Found ${userCount} users in the database`);
 
     if (userCount === 0) {
       console.log('Database is empty. Repopulating with default user...');
-      
-      // Default user credentials
       const defaultUsername = 'starynightsss';
-      const defaultPassword = 'password123'; // Change this for production
+      const defaultPassword = 'password123';
       const hashedPassword = await bcrypt.hash(defaultPassword, 10);
 
-      // Insert default user
       const userResult = await pool.query(
         'INSERT INTO users (username, password, money) VALUES ($1, $2, 0) RETURNING id, username, money',
         [defaultUsername, hashedPassword]
       );
       const user = userResult.rows[0];
 
-      // Insert default tower for the user
       await pool.query(
         'INSERT INTO user_towers (user_id, tower) VALUES ($1, $2) ON CONFLICT DO NOTHING',
         [user.id, 'basic']
@@ -77,29 +70,10 @@ async function initializeDatabase() {
     }
   } catch (err) {
     console.error('Error initializing database:', err.message);
-    // Optional: Remove process.exit(1) to keep server running despite initialization failure
-    // process.exit(1);
   }
 }
 
-// Middleware to verify JWT
-const authenticateToken = (req, res, next) => {
-  const token = req.headers['authorization']?.split(' ')[1];
-  if (!token) {
-    console.log('No token provided in request');
-    return res.status(401).json({ message: 'No token provided' });
-  }
-  try {
-    const user = jwt.verify(token, process.env.SECRET_KEY);
-    req.user = user;
-    next();
-  } catch (err) {
-    console.error('Token verification failed:', err.message);
-    return res.status(403).json({ message: 'Invalid or expired token' });
-  }
-};
-
-// Routes
+// Routes (Keeping token-based auth for HTTP endpoints)
 app.post('/signup', async (req, res) => {
   const { username, password } = req.body;
   console.log('Signup request:', { username });
@@ -117,11 +91,8 @@ app.post('/signup', async (req, res) => {
       'INSERT INTO user_towers (user_id, tower) VALUES ($1, $2) ON CONFLICT DO NOTHING',
       [user.id, 'basic']
     );
-    const token = jwt.sign({ id: user.id, username: user.username, money: user.money }, process.env.SECRET_KEY, {
-      expiresIn: '1h',
-    });
     console.log('Signup successful for:', username);
-    res.json({ token });
+    res.json({ username: user.username }); // No token returned
   } catch (err) {
     console.error('Signup error:', err.message);
     res.status(400).json({ message: 'Username already exists or error occurred' });
@@ -137,29 +108,25 @@ app.post('/login', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
     const user = result.rows[0];
-    if (!user) {
-      console.log(`No user found for username: ${username}`);
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      console.log(`Invalid credentials for username: ${username}`);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
-    const passwordMatch = await bcrypt.compare(password, user.password);
-    if (!passwordMatch) {
-      console.log(`Password mismatch for username: ${username}`);
-      return res.status(401).json({ message: 'Invalid credentials' });
-    }
-    const token = jwt.sign({ id: user.id, username: user.username, money: user.money }, process.env.SECRET_KEY, {
-      expiresIn: '1h',
-    });
     console.log('Login successful for:', username);
-    res.json({ token });
+    res.json({ username: user.username }); // No token returned
   } catch (err) {
     console.error('Login error:', err.message);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-app.get('/user', authenticateToken, async (req, res) => {
+app.get('/user', async (req, res) => {
+  const { username } = req.query; // Use query param for username
+  if (!username) {
+    return res.status(400).json({ message: 'Username required' });
+  }
   try {
-    const result = await pool.query('SELECT id, username, money FROM users WHERE id = $1', [req.user.id]);
+    const result = await pool.query('SELECT id, username, money FROM users WHERE username = $1', [username]);
     if (!result.rows[0]) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -170,9 +137,18 @@ app.get('/user', authenticateToken, async (req, res) => {
   }
 });
 
-app.get('/towers', authenticateToken, async (req, res) => {
+app.get('/towers', async (req, res) => {
+  const { username } = req.query;
+  if (!username) {
+    return res.status(400).json({ message: 'Username required' });
+  }
   try {
-    const result = await pool.query('SELECT tower FROM user_towers WHERE user_id = $1', [req.user.id]);
+    const userResult = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
+    const user = userResult.rows[0];
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    const result = await pool.query('SELECT tower FROM user_towers WHERE user_id = $1', [user.id]);
     res.json({ towers: result.rows.map(row => row.tower) });
   } catch (err) {
     console.error('Towers fetch error:', err.message);
@@ -180,50 +156,19 @@ app.get('/towers', authenticateToken, async (req, res) => {
   }
 });
 
-app.post('/unlock-tower', authenticateToken, async (req, res) => {
-  const { tower } = req.body;
-  console.log('Unlock tower request:', { tower, userId: req.user.id });
-  try {
-    const userResult = await pool.query('SELECT money FROM users WHERE id = $1', [req.user.id]);
-    const user = userResult.rows[0];
-    const towerCost = {
-      basic: 0,
-      archer: 225,
-      cannon: 300,
-      sniper: 350,
-      freeze: 400,
-      mortar: 450,
-      laser: 500,
-      tesla: 550,
-      flamethrower: 600,
-      missile: 650,
-      poison: 700,
-      vortex: 750,
-    }[tower];
-    if (towerCost === undefined) {
-      return res.status(400).json({ message: 'Invalid tower type' });
-    }
-    if (user.money < towerCost) {
-      return res.status(400).json({ message: 'Insufficient funds' });
-    }
-    await pool.query('UPDATE users SET money = money - $1 WHERE id = $2', [towerCost, req.user.id]);
-    await pool.query(
-      'INSERT INTO user_towers (user_id, tower) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-      [req.user.id, tower]
-    );
-    console.log(`Tower ${tower} unlocked for user ${req.user.username}`);
-    res.json({ message: `Unlocked ${tower}` });
-  } catch (err) {
-    console.error('Unlock tower error:', err.message);
-    res.status(500).json({ message: 'Server error' });
+app.post('/update-money', async (req, res) => {
+  const { username, money } = req.body;
+  console.log('Update money request:', { username, money });
+  if (!username || money === undefined) {
+    return res.status(400).json({ message: 'Username and money required' });
   }
-});
-
-app.post('/update-money', authenticateToken, async (req, res) => {
-  const { money } = req.body;
-  console.log('Update money request:', { userId: req.user.id, money });
   try {
-    await pool.query('UPDATE users SET money = $1 WHERE id = $2', [money, req.user.id]);
+    const userResult = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
+    const user = userResult.rows[0];
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    await pool.query('UPDATE users SET money = $1 WHERE id = $2', [money, user.id]);
     res.json({ message: 'Money updated' });
   } catch (err) {
     console.error('Update money error:', err.message);
@@ -234,30 +179,15 @@ app.post('/update-money', authenticateToken, async (req, res) => {
 // Start Express server and initialize database
 const server = app.listen(port, async () => {
   console.log(`Server running on port ${port}`);
-  await initializeDatabase(); // Run database initialization after server starts
+  await initializeDatabase();
 });
 
-// WebSocket setup
+// WebSocket setup (No token required)
 const wss = new WebSocketServer({ server });
 const parties = new Map();
 
-wss.on('connection', (ws, req) => {
-  const token = new URLSearchParams(req.url.split('?')[1]).get('token');
-  let user;
-
-  try {
-    user = jwt.verify(token, process.env.SECRET_KEY);
-    ws.userId = user.id;
-    ws.username = user.username;
-    ws.gameMoney = 200;
-  } catch (err) {
-    console.error('WebSocket connection rejected:', err.message);
-    ws.send(JSON.stringify({ type: 'error', message: 'Invalid or expired token' }));
-    ws.close(1008, 'Invalid token');
-    return;
-  }
-
-  console.log(`User ${ws.username} connected via WebSocket`);
+wss.on('connection', (ws) => {
+  console.log('New WebSocket connection established');
 
   ws.on('message', async (message) => {
     let data;
@@ -270,26 +200,28 @@ wss.on('connection', (ws, req) => {
       return;
     }
 
+    // Require username in initial join or joinParty message
+    if ((data.type === 'join' || data.type === 'joinParty') && !data.username) {
+      ws.send(JSON.stringify({ type: 'error', message: 'Username required' }));
+      ws.close(1008, 'Username required');
+      return;
+    }
+
+    // Set username and userId from first message
+    if (data.type === 'join' || data.type === 'joinParty') {
+      const userResult = await pool.query('SELECT id FROM users WHERE username = $1', [data.username]);
+      const user = userResult.rows[0];
+      ws.username = data.username;
+      ws.userId = user ? user.id : null; // Allow guests (no userId) if not in DB
+      ws.gameMoney = 200; // Default game money
+      console.log(`User ${ws.username} identified via WebSocket`);
+    }
+
     const party = ws.partyId ? parties.get(ws.partyId) : null;
 
     switch (data.type) {
-      case 'createParty':
-        if (!data.partyId) {
-          ws.send(JSON.stringify({ type: 'partyError', message: 'Party ID required' }));
-        } else if (parties.has(data.partyId)) {
-          ws.send(JSON.stringify({ type: 'partyError', message: 'Party ID already exists' }));
-        } else {
-          parties.set(data.partyId, {
-            leader: ws.username,
-            players: [ws],
-            map: data.map || 'map1',
-            difficulty: data.difficulty || 'easy',
-            gameMoney: data.difficulty === 'easy' ? 200 : data.difficulty === 'medium' ? 400 : 600,
-          });
-          ws.partyId = data.partyId;
-          ws.send(JSON.stringify({ type: 'partyCreated', partyId: data.partyId }));
-          console.log(`Party ${data.partyId} created by ${ws.username}`);
-        }
+      case 'join':
+        ws.send(JSON.stringify({ type: 'playerList', players: [ws.username], leader: ws.username }));
         break;
 
       case 'joinParty':
@@ -318,6 +250,25 @@ wss.on('connection', (ws, req) => {
             }
           });
           console.log(`${ws.username} joined party ${data.partyId}`);
+        }
+        break;
+
+      case 'createParty':
+        if (!data.partyId) {
+          ws.send(JSON.stringify({ type: 'partyError', message: 'Party ID required' }));
+        } else if (parties.has(data.partyId)) {
+          ws.send(JSON.stringify({ type: 'partyError', message: 'Party ID already exists' }));
+        } else {
+          parties.set(data.partyId, {
+            leader: ws.username,
+            players: [ws],
+            map: data.map || 'map1',
+            difficulty: data.difficulty || 'easy',
+            gameMoney: data.difficulty === 'easy' ? 200 : data.difficulty === 'medium' ? 400 : 600,
+          });
+          ws.partyId = data.partyId;
+          ws.send(JSON.stringify({ type: 'partyCreated', partyId: data.partyId }));
+          console.log(`Party ${data.partyId} created by ${ws.username}`);
         }
         break;
 
@@ -424,11 +375,11 @@ wss.on('connection', (ws, req) => {
   });
 
   ws.on('error', (err) => {
-    console.error(`WebSocket error for ${ws.username}:`, err.message);
+    console.error(`WebSocket error for ${ws.username || 'unknown'}:`, err.message);
   });
 
   ws.on('close', (code, reason) => {
-    console.log(`User ${ws.username} disconnected. Code: ${code}, Reason: ${reason}`);
+    console.log(`User ${ws.username || 'unknown'} disconnected. Code: ${code}, Reason: ${reason}`);
     if (ws.partyId) {
       const party = parties.get(ws.partyId);
       if (party) {
