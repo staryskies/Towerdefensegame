@@ -7,28 +7,27 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
     body { overflow: hidden; background: #dfe6e9; color: #2d3436; position: relative; }
-    #gameCanvas { display: block; width: 100vw; height: 100vh; }
+    #game-image { display: block; width: 100%; max-width: 1920px; height: auto; margin: 0 auto; }
+    #game-container { position: relative; text-align: center; }
     #sidebar { position: fixed; top: 10px; left: 10px; width: 200px; background: rgba(236, 240, 241, 0.95); padding: 15px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); z-index: 10; }
     .tower-option { padding: 8px; margin: 5px 0; background: #b2bec3; border-radius: 5px; cursor: pointer; transition: background 0.3s ease, transform 0.2s ease; text-align: center; }
     .tower-option:hover, .tower-option.selected { background: #00b894; color: #fff; transform: translateY(-2px); }
-    #stats { position: fixed; top: 10px; right: 10px; background: rgba(236, 240, 241, 0.95); padding: 15px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); z-index: 10; min-width: 150px; white-space: nowrap; } /* Added min-width and nowrap for better text fit */
-    #speed { font-weight: bold; } /* Emphasize speed for visibility */
-    #tower-info-panel { position: fixed; bottom: 10px; left: 230px; width: 250px; background: rgba(236, 240, 241, 0.95); padding: 15px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); display: none; z-index: 10; }
+    #stats { position: fixed; top: 10px; right: 10px; background: rgba(236, 240, 241, 0.95); padding: 15px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); z-index: 10; min-width: 150px; white-space: nowrap; }
     #notification-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0, 184, 148, 0.95); padding: 20px 30px; border-radius: 10px; color: white; display: none; box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2); z-index: 1000; }
     #notification-box.show { display: block; }
-    #end-screen { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(236, 240, 241, 0.95); padding: 25px; border-radius: 10px; text-align: center; display: none; box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2); z-index: 1000; width: 90%; max-width: 400px; }
-    #chat-container { position: fixed; bottom: 10px; right: 10px; width: 280px; background: rgba(236, 240, 241, 0.95); border-radius: 10px; padding: 15px; color: #2d3436; display: block; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); z-index: 10; }
-    #chat-messages { height: 120px; overflow-y: auto; font-size: 12px; margin-bottom: 10px; }
-    #chat-input { width: 100%; padding: 8px; border: 2px solid #b2bec3; border-radius: 5px; background: #dfe6e9; color: #2d3436; }
     button { padding: 8px; margin: 5px 0; background: linear-gradient(135deg, #00b894, #00cec9); border-radius: 5px; cursor: pointer; text-align: center; color: #fff; border: none; transition: background 0.3s ease, transform 0.2s ease; width: 100%; }
     button:hover { background: linear-gradient(135deg, #00cec9, #0984e3); transform: translateY(-2px); }
     button:disabled { background: #b2bec3; cursor: not-allowed; }
+    #tower-info-panel { position: fixed; bottom: 10px; left: 230px; width: 250px; background: rgba(236, 240, 241, 0.95); padding: 15px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); display: none; z-index: 10; }
+    #end-screen { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(236, 240, 241, 0.95); padding: 25px; border-radius: 10px; text-align: center; display: none; box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2); z-index: 1000; width: 90%; max-width: 400px; }
   </style>
 </head>
 <body>
-  <canvas id="gameCanvas" aria-label="Game Canvas"></canvas>
+  <div id="game-container">
+    <img id="game-image" src="/game/state?partyId=" alt="Game State" aria-label="Game State Image">
+  </div>
   <div id="sidebar" aria-label="Tower Selection and Controls">
-    <!-- Buttons added statically for clarity, will be overwritten by initSidebar() -->
+    <div id="tower-options"></div>
     <button id="pause-button">Pause</button>
     <button id="speed-button">Speed</button>
   </div>
@@ -38,6 +37,7 @@
     <div id="health">Health: 20</div>
     <div id="wave">Wave: 1</div>
     <div id="speed">Speed: 1x</div>
+    <div id="players">Players: </div>
   </div>
   <div id="tower-info-panel" aria-label="Tower Information">
     <div id="tower-type">Type: </div>
@@ -45,6 +45,7 @@
     <div id="tower-range">Range: </div>
     <div id="tower-level">Level: </div>
     <div id="tower-ability">Ability: </div>
+    <div id="tower-placed-by">Placed By: </div>
     <button id="upgrade-power-button" disabled>Upgrade Power</button>
     <button id="upgrade-utility-button" disabled>Upgrade Utility</button>
   </div>
@@ -52,16 +53,278 @@
   <div id="end-screen" aria-label="Game Over Screen">
     <h2 id="end-message"></h2>
     <div id="waves-survived"></div>
-    <div id="persistent-money-earned"></div>
-    <div id="persistent-money-total"></div>
-    <button id="restart-button">Restart</button>
     <button id="main-menu-button">Main Menu</button>
   </div>
-  <div id="chat-container" aria-label="Chat Window">
-    <div id="player-list">Players:<br></div>
-    <div id="chat-messages"></div>
-    <input id="chat-input" type="text" placeholder="Type a message..." aria-label="Chat Input">
-  </div>
-  <script src="/game.js"></script>
+
+  <script>
+    const towerStats = {
+      basic: { cost: 50 },
+      archer: { cost: 75 },
+      cannon: { cost: 100 },
+      sniper: { cost: 150 },
+      freeze: { cost: 120 },
+      mortar: { cost: 200 },
+      laser: { cost: 350 },
+      tesla: { cost: 250 },
+      flamethrower: { cost: 180 },
+      missile: { cost: 200 },
+      poison: { cost: 250 },
+      vortex: { cost: 300 },
+    };
+    const partyId = localStorage.getItem('partyId') || `${localStorage.getItem('username')}-${Date.now()}`;
+    const username = localStorage.getItem('username') || 'Guest';
+    const isPartyMode = localStorage.getItem('isPartyMode') === 'true';
+    let selectedTower = null;
+    let selectedTowerIndex = null;
+
+    function showNotification(message) {
+      const notification = document.getElementById('notification-box');
+      notification.textContent = message;
+      notification.classList.add('show');
+      setTimeout(() => notification.classList.remove('show'), 3000);
+    }
+
+    async function joinGame() {
+      try {
+        const response = await fetch('/game/join', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            username, 
+            partyId, 
+            difficulty: localStorage.getItem('selectedDifficulty') || 'easy', 
+            map: localStorage.getItem('selectedMap') || 'map1',
+            isPartyMode 
+          }),
+        });
+        const data = await response.json();
+        if (response.ok) {
+          showNotification(data.message);
+          localStorage.setItem('partyId', data.partyId); // Update partyId for solo mode
+          updateGameState();
+        } else {
+          showNotification(data.message);
+        }
+      } catch (err) {
+        showNotification('Error joining game');
+      }
+    }
+
+    async function updateGameState() {
+      try {
+        const image = document.getElementById('game-image');
+        image.src = `/game/state?partyId=${partyId}&t=${Date.now()}`;
+
+        const statsResponse = await fetch(`/game/stats?partyId=${partyId}`);
+        const stats = await statsResponse.json();
+        document.getElementById('score').textContent = `Score: ${stats.score}`;
+        document.getElementById('money').textContent = `Money: $${stats.money}`;
+        document.getElementById('health').textContent = `Health: ${stats.health}`;
+        document.getElementById('wave').textContent = `Wave: ${stats.wave}`;
+        document.getElementById('speed').textContent = `Speed: ${stats.gameSpeed}x${stats.isPaused ? " (Paused)" : ""}`;
+        document.getElementById('players').textContent = `Players: ${stats.players.join(', ')}`;
+
+        if (stats.gameOver || stats.gameWon) {
+          const endScreen = document.getElementById('end-screen');
+          document.getElementById('end-message').textContent = stats.gameWon ? 'Victory!' : 'Game Over';
+          document.getElementById('waves-survived').textContent = `Waves Survived: ${stats.wave - 1}`;
+          endScreen.style.display = 'block';
+        } else {
+          document.getElementById('end-screen').style.display = 'none';
+        }
+
+        updateTowerInfo(stats);
+      } catch (err) {
+        showNotification('Error updating game state');
+      }
+    }
+
+    async function initSidebar() {
+      const towerOptions = document.getElementById('tower-options');
+      try {
+        const response = await fetch(`/towers?username=${encodeURIComponent(username)}`);
+        const { towers } = await response.json();
+        Object.keys(towerStats).forEach(type => {
+          if (towers.includes(type)) {
+            const option = document.createElement('div');
+            option.className = 'tower-option';
+            option.textContent = `${type.charAt(0).toUpperCase() + type.slice(1)} ($${towerStats[type].cost})`;
+            option.addEventListener('click', () => {
+              selectedTower = type;
+              selectedTowerIndex = null;
+              document.querySelectorAll('.tower-option').forEach(opt => opt.classList.remove('selected'));
+              option.classList.add('selected');
+            });
+            towerOptions.appendChild(option);
+          }
+        });
+      } catch (err) {
+        showNotification('Error loading towers');
+      }
+    }
+
+    function updateTowerInfo(stats) {
+      const panel = document.getElementById('tower-info-panel');
+      if (selectedTowerIndex !== null && stats.towers && stats.towers[selectedTowerIndex]) {
+        const tower = stats.towers[selectedTowerIndex];
+        panel.style.display = 'block';
+        document.getElementById('tower-type').textContent = `Type: ${tower.type}`;
+        document.getElementById('tower-damage').textContent = `Damage: ${tower.damage.toFixed(1)}`;
+        document.getElementById('tower-range').textContent = `Range: ${Math.round(tower.range)}`;
+        document.getElementById('tower-level').textContent = `Power: ${tower.powerLevel}/4 | Utility: ${tower.utilityLevel}/4`;
+        document.getElementById('tower-ability').textContent = `Ability: ${towerStats[tower.type].ability}`;
+        document.getElementById('tower-placed-by').textContent = `Placed By: ${tower.placedBy}`;
+
+        const powerUpgrades = towerUpgradePaths[tower.type]?.power || [];
+        const utilityUpgrades = towerUpgradePaths[tower.type]?.utility || [];
+        const nextPowerLevel = tower.powerLevel;
+        const nextUtilityLevel = tower.utilityLevel;
+        const powerCost = nextPowerLevel < 4 ? powerUpgrades[nextPowerLevel]?.cost : 'Max';
+        const utilityCost = nextUtilityLevel < 4 ? utilityUpgrades[nextUtilityLevel]?.cost : 'Max';
+
+        const powerButton = document.getElementById('upgrade-power-button');
+        const utilityButton = document.getElementById('upgrade-utility-button');
+        powerButton.textContent = `Upgrade Power ($${powerCost})`;
+        powerButton.disabled = nextPowerLevel >= 4 || (typeof powerCost === 'number' && stats.money < powerCost);
+        utilityButton.textContent = `Upgrade Utility ($${utilityCost})`;
+        utilityButton.disabled = nextUtilityLevel >= 4 || (typeof utilityCost === 'number' && stats.money < utilityCost);
+      } else {
+        panel.style.display = 'none';
+      }
+    }
+
+    document.getElementById('game-image').addEventListener('click', async (e) => {
+      const rect = e.target.getBoundingClientRect();
+      const scaleX = CANVAS_WIDTH / rect.width;
+      const scaleY = CANVAS_HEIGHT / rect.height;
+      const x = (e.clientX - rect.left) * scaleX;
+      const y = (e.clientY - rect.top) * scaleY;
+
+      if (selectedTower) {
+        try {
+          const response = await fetch('/game/place-tower', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, partyId, type: selectedTower, x, y }),
+          });
+          const data = await response.json();
+          if (response.ok) {
+            showNotification(data.message);
+            selectedTower = null;
+            document.querySelectorAll('.tower-option').forEach(opt => opt.classList.remove('selected'));
+          } else {
+            showNotification(data.message);
+          }
+        } catch (err) {
+          showNotification('Error placing tower');
+        }
+      } else {
+        const statsResponse = await fetch(`/game/stats?partyId=${partyId}`);
+        const stats = await statsResponse.json();
+        stats.towers.forEach((tower, index) => {
+          if (Math.hypot(tower.x - x, tower.y - y) < tower.radius) {
+            selectedTowerIndex = index;
+          }
+        });
+        if (!stats.towers.some(tower => Math.hypot(tower.x - x, tower.y - y) < tower.radius)) {
+          selectedTowerIndex = null;
+        }
+      }
+      updateGameState();
+    });
+
+    document.getElementById('pause-button').addEventListener('click', async () => {
+      try {
+        const response = await fetch('/game/toggle-pause', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, partyId }),
+        });
+        const data = await response.json();
+        if (response.ok) {
+          showNotification(data.message);
+        } else {
+          showNotification(data.message);
+        }
+      } catch (err) {
+        showNotification('Error toggling pause');
+      }
+    });
+
+    document.getElementById('speed-button').addEventListener('click', async () => {
+      const statsResponse = await fetch(`/game/stats?partyId=${partyId}`);
+      const stats = await statsResponse.json();
+      const newSpeed = stats.gameSpeed === 1 ? 2 : stats.gameSpeed === 2 ? 4 : 1;
+      try {
+        const response = await fetch('/game/set-speed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, partyId, speed: newSpeed }),
+        });
+        const data = await response.json();
+        if (response.ok) {
+          showNotification(data.message);
+        } else {
+          showNotification(data.message);
+        }
+      } catch (err) {
+        showNotification('Error setting speed');
+      }
+    });
+
+    document.getElementById('upgrade-power-button').addEventListener('click', async () => {
+      if (selectedTowerIndex !== null) {
+        try {
+          const response = await fetch('/game/upgrade-tower', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, partyId, towerIndex: selectedTowerIndex, path: 'power' }),
+          });
+          const data = await response.json();
+          if (response.ok) {
+            showNotification(data.message);
+          } else {
+            showNotification(data.message);
+          }
+          updateGameState();
+        } catch (err) {
+          showNotification('Error upgrading tower');
+        }
+      }
+    });
+
+    document.getElementById('upgrade-utility-button').addEventListener('click', async () => {
+      if (selectedTowerIndex !== null) {
+        try {
+          const response = await fetch('/game/upgrade-tower', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, partyId, towerIndex: selectedTowerIndex, path: 'utility' }),
+          });
+          const data = await response.json();
+          if (response.ok) {
+            showNotification(data.message);
+          } else {
+            showNotification(data.message);
+          }
+          updateGameState();
+        } catch (err) {
+          showNotification('Error upgrading tower');
+        }
+      }
+    });
+
+    document.getElementById('main-menu-button').addEventListener('click', () => {
+      window.location.href = '/';
+    });
+
+    function startPolling() {
+      setInterval(updateGameState, 1000); // Update every 1 second
+    }
+
+    joinGame();
+    initSidebar();
+    startPolling();
+  </script>
 </body>
 </html>

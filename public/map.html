@@ -147,12 +147,21 @@
     });
 
     document.getElementById("start-button").addEventListener("click", () => {
+      // Ensure mode and partyId are carried over
+      if (!localStorage.getItem('isPartyMode')) {
+        localStorage.setItem('isPartyMode', 'false');
+      }
       window.location.href = "/game.html";
     });
 
     document.getElementById("back-button").addEventListener("click", () => {
       window.location.href = "/";
     });
+
+    // Ensure username is set, redirect to login if not
+    if (!localStorage.getItem('username')) {
+      window.location.href = '/';
+    }
   </script>
 </body>
 </html>
