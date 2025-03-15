@@ -24,6 +24,45 @@ if (!process.env.SECRET_KEY) {
 }
 console.log('SECRET_KEY:', process.env.SECRET_KEY ? 'Set' : 'Not set');
 
+// Function to check and repopulate database if empty
+async function initializeDatabase() {
+  try {
+    // Check if the users table is empty
+    const userCheck = await pool.query('SELECT COUNT(*) FROM users');
+    const userCount = parseInt(userCheck.rows[0].count, 10);
+    console.log(`Found ${userCount} users in the database`);
+
+    if (userCount === 0) {
+      console.log('Database is empty. Repopulating with default user...');
+      
+      // Default user credentials
+      const defaultUsername = 'starynightsss';
+      const defaultPassword = 'password123'; // Change this for production
+      const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+
+      // Insert default user
+      const userResult = await pool.query(
+        'INSERT INTO users (username, password, money) VALUES ($1, $2, 0) RETURNING id, username, money',
+        [defaultUsername, hashedPassword]
+      );
+      const user = userResult.rows[0];
+
+      // Insert default tower for the user
+      await pool.query(
+        'INSERT INTO user_towers (user_id, tower) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+        [user.id, 'basic']
+      );
+
+      console.log(`Default user '${defaultUsername}' created with 'basic' tower`);
+    } else {
+      console.log('Database already populated. Skipping initialization.');
+    }
+  } catch (err) {
+    console.error('Error initializing database:', err.message);
+    process.exit(1); // Exit if initialization fails
+  }
+}
+
 // Middleware to verify JWT
 const authenticateToken = (req, res, next) => {
   const token = req.headers['authorization']?.split(' ')[1];
@@ -173,16 +212,16 @@ app.post('/update-money', authenticateToken, async (req, res) => {
   }
 });
 
-// Start Express server
-const server = app.listen(port, () => {
+// Start Express server and initialize database
+const server = app.listen(port, async () => {
   console.log(`Server running on port ${port}`);
+  await initializeDatabase(); // Run database initialization after server starts
 });
 
-// WebSocket setup (unchanged for brevity, but ensure it matches previous fixes)
+// WebSocket setup
 const wss = new WebSocketServer({ server });
 const parties = new Map();
 
-// WebSocket logic remains the same as previously fixed version
 wss.on('connection', (ws, req) => {
   const token = new URLSearchParams(req.url.split('?')[1]).get('token');
   let user;
@@ -351,7 +390,7 @@ wss.on('connection', (ws, req) => {
 
       case 'partyRestart':
         if (party && party.leader === ws.username) {
-          party.gameMoney = party.difficulty === 'easy' ? 200 : party.difficulty === 'medium' ? 400 : 600;
+          party.gameMoney = party.difficulty === 'easy' ? 200 : data.difficulty === 'medium' ? 400 : 600;
           party.players.forEach(client => {
             client.gameMoney = party.gameMoney;
             client.send(JSON.stringify({ type: 'partyRestart', gameMoney: party.gameMoney }));
