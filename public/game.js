@@ -505,8 +505,356 @@ async function updatePersistentMoney() {
   if (!response.ok) console.error("Failed to update money:", await response.text());
 }
 
-// Classes (unchanged Enemy, Tower, Projectile definitions omitted for brevity)
-// Assume they remain as in your original code.
+// Classes
+class Enemy {
+  constructor(type, wave) {
+    this.x = scaledSpawnPoint.x;
+    this.y = scaledSpawnPoint.y;
+    const healthMultiplier = selectedDifficulty === "easy" ? 0.25 : selectedDifficulty === "medium" ? 0.50 : 1;
+    this.health = Math.floor(type.health * healthMultiplier * (1 + ((wave - 1) * 14) / 59));
+    this.maxHealth = this.health;
+    this.speed = type.speed * scaleX * 70;
+    this.radius = type.radius * textScale;
+    this.color = type.color;
+    this.pathIndex = 1;
+    this.isBoss = gameState.isBossWave && !gameState.bossSpawned;
+    if (this.isBoss) {
+      this.health *= 5;
+      this.maxHealth *= 5;
+      this.radius *= 2;
+      gameState.bossSpawned = true;
+    }
+  }
+
+  move(dt) {
+    if (this.pathIndex >= scaledPath.length) {
+      gameState.playerHealth -= this.isBoss
+        ? (selectedDifficulty === "easy" ? 2.5 : selectedDifficulty === "medium" ? 5 : 7.5)
+        : (selectedDifficulty === "easy" ? 0.5 : selectedDifficulty === "medium" ? 1 : 1.5);
+      gameState.enemies = gameState.enemies.filter(e => e !== this);
+      if (gameState.playerHealth <= 0 && ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "gameOver", won: false }));
+      }
+      return;
+    }
+    const target = scaledPath[this.pathIndex];
+    const dx = target.x - this.x;
+    const dy = target.y - this.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const moveSpeed = this.speed * gameState.gameSpeed * dt;
+    if (distance < moveSpeed) {
+      this.x = target.x;
+      this.y = target.y;
+      this.pathIndex++;
+    } else {
+      this.x += (dx / distance) * moveSpeed;
+      this.y += (dy / distance) * moveSpeed;
+    }
+  }
+
+  draw() {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.fillStyle = this.isBoss ? "darkred" : this.color;
+    ctx.fill();
+    ctx.fillStyle = "white";
+    ctx.font = `${12 * textScale}px Arial`;
+    ctx.textAlign = "center";
+    ctx.fillText(`${Math.floor(this.health)}/${this.maxHealth}`, this.x, this.y - this.radius - 5 * textScale);
+  }
+}
+
+class Tower {
+  constructor(x, y, type) {
+    this.x = x;
+    this.y = y;
+    this.type = type;
+    this.damage = towerStats[type].damage;
+    this.range = towerStats[type].range * scaleX;
+    this.fireRate = towerStats[type].fireRate;
+    this.lastShot = 0;
+    this.radius = 20 * textScale;
+    this.color = towerStats[type].color;
+    this.angle = 0;
+    this.powerLevel = 0;
+    this.utilityLevel = 0;
+    this.specials = { tripleShot: false, crit: 0.2, splash: 1, slow: 0.5, multiBeam: false, chain: 2, burn: 1, pull: 100 };
+  }
+
+  shoot() {
+    const now = Date.now();
+    if (now - this.lastShot < this.fireRate / gameState.gameSpeed) return;
+    let target = gameState.enemies.find(enemy => Math.hypot(enemy.x - this.x, enemy.y - this.y) < this.range);
+    if (target) {
+      const dx = target.x - this.x;
+      const dy = target.y - this.y;
+      this.angle = Math.atan2(dy, dx);
+      switch (this.type) {
+        case "laser":
+          if (now - this.lastShot >= 10000) {
+            this.lastShot = now;
+            let beamDuration = 5000 / gameState.gameSpeed;
+            let damageInterval = setInterval(() => {
+              gameState.enemies.forEach(enemy => {
+                if (Math.hypot(enemy.x - this.x, enemy.y - this.y) < this.range) {
+                  enemy.health -= this.damage / 10;
+                  if (enemy.health <= 0) {
+                    gameState.score += enemy.isBoss ? 50 : 10;
+                    gameState.gameMoney += enemy.isBoss ? 100 : 20;
+                    gameState.persistentMoney += enemy.isBoss ? 10 : 2;
+                    updatePersistentMoney();
+                    gameState.enemies = gameState.enemies.filter(e => e !== enemy);
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                      ws.send(JSON.stringify({ type: "moneyUpdate", gameMoney: gameState.gameMoney }));
+                    }
+                  }
+                }
+              });
+              if (this.specials.multiBeam) {
+                let extraTarget = gameState.enemies.find(e => e !== target && Math.hypot(e.x - this.x, e.y - this.y) < this.range);
+                if (extraTarget) {
+                  extraTarget.health -= this.damage / 10;
+                  if (extraTarget.health <= 0) {
+                    gameState.score += extraTarget.isBoss ? 50 : 10;
+                    gameState.gameMoney += extraTarget.isBoss ? 100 : 20;
+                    gameState.persistentMoney += extraTarget.isBoss ? 10 : 2;
+                    updatePersistentMoney();
+                    gameState.enemies = gameState.enemies.filter(e => e !== extraTarget);
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                      ws.send(JSON.stringify({ type: "moneyUpdate", gameMoney: gameState.gameMoney }));
+                    }
+                  }
+                }
+              }
+            }, 500 / gameState.gameSpeed);
+            setTimeout(() => clearInterval(damageInterval), beamDuration);
+          }
+          break;
+        case "tesla":
+          gameState.projectiles.push(new Projectile(this.x, this.y, target, this.damage, 5, this.type));
+          let chainTargets = gameState.enemies.filter(e => e !== target && Math.hypot(e.x - this.x, e.y - this.y) < this.range * 1.5).slice(0, this.specials.chain);
+          chainTargets.forEach(enemy => {
+            enemy.health -= this.damage * 0.5;
+            if (enemy.health <= 0) {
+              gameState.score += enemy.isBoss ? 50 : 10;
+              gameState.gameMoney += enemy.isBoss ? 100 : 20;
+              gameState.persistentMoney += enemy.isBoss ? 10 : 2;
+              updatePersistentMoney();
+              gameState.enemies = gameState.enemies.filter(e => e !== enemy);
+              if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "moneyUpdate", gameMoney: gameState.gameMoney }));
+              }
+            }
+          });
+          this.lastShot = now;
+          break;
+        case "vortex":
+          if (now - this.lastShot >= 5000) {
+            gameState.enemies.forEach(enemy => {
+              if (Math.hypot(enemy.x - this.x, enemy.y - this.y) < this.range) {
+                const dx = this.x - enemy.x;
+                const dy = this.y - enemy.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance > 20 * scaleX) {
+                  const pullStrength = this.specials.pull * scaleX;
+                  enemy.x += (dx / distance) * pullStrength * (gameState.gameSpeed / 60);
+                  enemy.y += (dy / distance) * pullStrength * (gameState.gameSpeed / 60);
+                  const nearestPoint = scaledPath.reduce((closest, point) =>
+                    Math.hypot(point.x - enemy.x, point.y - enemy.y) < Math.hypot(closest.x - enemy.x, closest.y - enemy.y) ? point : closest
+                  );
+                  enemy.x = nearestPoint.x;
+                  enemy.y = nearestPoint.y;
+                }
+              }
+            });
+            this.lastShot = now;
+          }
+          break;
+        case "archer":
+          if (this.specials.tripleShot) {
+            gameState.projectiles.push(new Projectile(this.x, this.y, target, this.damage, 5, this.type));
+            let extraTargets = gameState.enemies.filter(e => e !== target && Math.hypot(e.x - this.x, e.y - this.y) < this.range).slice(0, 2);
+            extraTargets.forEach(t => gameState.projectiles.push(new Projectile(this.x, this.y, t, this.damage, 5, this.type)));
+          } else {
+            gameState.projectiles.push(new Projectile(this.x, this.y, target, this.damage, 5, this.type));
+          }
+          this.lastShot = now;
+          break;
+        default:
+          gameState.projectiles.push(new Projectile(this.x, this.y, target, this.damage, 5, this.type));
+          this.lastShot = now;
+      }
+    }
+  }
+
+  draw() {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.angle);
+    ctx.beginPath();
+
+    switch (this.type) {
+      case "basic":
+        ctx.moveTo(-12 * textScale, -12 * textScale);
+        for (let i = 0; i < 6; i++) {
+          ctx.lineTo(12 * textScale * Math.cos((i * Math.PI) / 3), 12 * textScale * Math.sin((i * Math.PI) / 3));
+        }
+        ctx.closePath();
+        ctx.fillStyle = this.color;
+        ctx.fill();
+        break;
+      case "archer":
+        ctx.arc(0, 0, 15 * textScale, Math.PI / 4, 3 * Math.PI / 4);
+        ctx.lineTo(0, -15 * textScale);
+        ctx.closePath();
+        ctx.fillStyle = this.color;
+        ctx.fill();
+        break;
+      case "cannon":
+        ctx.arc(0, 0, 15 * textScale, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.rect(0, -10 * textScale, 25 * textScale, 20 * textScale);
+        ctx.fillStyle = "darkgray";
+        ctx.fill();
+        break;
+      // Add more tower drawings as needed
+    }
+    ctx.restore();
+
+    if (gameState.selectedTower === this) {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(0, 255, 0, 0.3)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = "white";
+    ctx.font = `${12 * textScale}px Arial`;
+    ctx.textAlign = "center";
+    ctx.fillText(this.type.charAt(0).toUpperCase() + this.type.slice(1), this.x, this.y + 25 * textScale);
+  }
+
+  upgrade(path) {
+    const upgrades = towerUpgradePaths[this.type][path];
+    const level = path === "power" ? this.powerLevel : this.utilityLevel;
+    if (level >= 4) {
+      showNotification(`Max upgrades reached for ${path} path!`);
+      return;
+    }
+    const upgrade = upgrades[level];
+    if (gameState.gameMoney < upgrade.cost) {
+      showNotification("Not enough money!");
+      return;
+    }
+    gameState.gameMoney -= upgrade.cost;
+    if (upgrade.damage) this.damage *= upgrade.damage;
+    if (upgrade.range) this.range *= upgrade.range;
+    if (upgrade.fireRate) this.fireRate *= upgrade.fireRate;
+    if (upgrade.special) {
+      switch (upgrade.special) {
+        case "tripleShot": this.specials.tripleShot = true; break;
+        case "crit": this.specials.crit += 0.2; break;
+        case "splash": this.specials.splash *= 1.5; break;
+        case "slow": this.specials.slow *= 1.5; break;
+        case "multiBeam": this.specials.multiBeam = true; break;
+        case "chain": this.specials.chain += 2; break;
+        case "burn": this.specials.burn *= 1.5; break;
+        case "pull": this.specials.pull *= 1.5; break;
+      }
+    }
+    if (path === "power") this.powerLevel++;
+    else this.utilityLevel++;
+    showNotification(`${this.type} upgraded: ${upgrade.desc}`);
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "moneyUpdate", gameMoney: gameState.gameMoney }));
+    }
+    updateTowerInfo();
+  }
+}
+
+class Projectile {
+  constructor(x, y, target, damage, speed, type) {
+    this.x = x;
+    this.y = y;
+    this.target = target;
+    this.damage = damage;
+    this.speed = speed * scaleX * 100;
+    this.type = type;
+    this.radius = type === "missile" ? 8 * textScale : 5 * textScale;
+    this.color = towerStats[type].color || "black";
+  }
+
+  move(dt) {
+    if (!this.target || !gameState.enemies.includes(this.target)) {
+      gameState.projectiles = gameState.projectiles.filter(p => p !== this);
+      return;
+    }
+    const dx = this.target.x - this.x;
+    const dy = this.target.y - this.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const moveSpeed = this.speed * dt;
+    if (distance < moveSpeed) {
+      this.hit();
+    } else {
+      this.x += (dx / distance) * moveSpeed;
+      this.y += (dy / distance) * moveSpeed;
+    }
+  }
+
+  hit() {
+    if (this.target) {
+      this.target.health -= this.damage;
+      if (this.target.health <= 0) {
+        gameState.score += this.target.isBoss ? 50 : 10;
+        gameState.gameMoney += this.target.isBoss ? 100 : 20;
+        gameState.persistentMoney += this.target.isBoss ? 10 : 2;
+        updatePersistentMoney();
+        gameState.enemies = gameState.enemies.filter(e => e !== this.target);
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: "moneyUpdate", gameMoney: gameState.gameMoney }));
+        }
+      }
+      const tower = gameState.towers.find(t => t.type === this.type);
+      switch (this.type) {
+        case "cannon":
+          gameState.enemies.forEach(enemy => {
+            if (enemy !== this.target && Math.hypot(enemy.x - this.x, enemy.y - this.y) < 50 * scaleX * tower.specials.splash) {
+              enemy.health -= this.damage * 0.5;
+              if (enemy.health <= 0) {
+                gameState.score += enemy.isBoss ? 50 : 10;
+                gameState.gameMoney += enemy.isBoss ? 100 : 20;
+                gameState.persistentMoney += enemy.isBoss ? 10 : 2;
+                updatePersistentMoney();
+                gameState.enemies = gameState.enemies.filter(e => e !== enemy);
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                  ws.send(JSON.stringify({ type: "moneyUpdate", gameMoney: gameState.gameMoney }));
+                }
+              }
+            }
+          });
+          break;
+        case "sniper":
+          if (Math.random() < tower.specials.crit) this.target.health -= this.damage;
+          break;
+        case "freeze":
+          this.target.speed *= tower.specials.slow;
+          setTimeout(() => { if (this.target) this.target.speed /= tower.specials.slow; }, 2000);
+          break;
+      }
+      gameState.projectiles = gameState.projectiles.filter(p => p !== this);
+    }
+  }
+
+  draw() {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.fillStyle = this.color;
+    ctx.fill();
+  }
+}
 
 // Game Logic
 function spawnWave() {
@@ -569,8 +917,119 @@ function updateSpawning(dt) {
   }
 }
 
-// UI Functions (unchanged showNotification, updateStats, updateTowerInfo, updateChat, updatePlayerList, endGame omitted for brevity)
-// Assume they remain as in your original code.
+// UI Functions
+function showNotification(message) {
+  const notification = document.getElementById("notification-box");
+  notification.textContent = message;
+  notification.classList.add("show");
+  setTimeout(() => notification.classList.remove("show"), 2000);
+}
+
+function updateStats() {
+  document.getElementById("score").textContent = `Score: ${gameState.score}`;
+  document.getElementById("money").textContent = `Money: $${gameState.gameMoney}`;
+  document.getElementById("health").textContent = `Health: ${gameState.playerHealth}`;
+  document.getElementById("wave").textContent = `Wave: ${gameState.wave}`;
+  document.getElementById("speed").textContent = `Speed: ${gameState.gameSpeed}x`;
+  if (gameState.isPartyMode && gameState.partyId) {
+    document.getElementById("speed").textContent += ` | Party: ${gameState.partyId}`;
+  }
+}
+
+function updateTowerInfo() {
+  const panel = document.getElementById("tower-info-panel");
+  const powerButton = document.getElementById("upgrade-power-button");
+  const utilityButton = document.getElementById("upgrade-utility-button");
+  if (gameState.selectedTower) {
+    panel.style.display = "block";
+    document.getElementById("tower-type").textContent = `Type: ${gameState.selectedTower.type}`;
+    document.getElementById("tower-damage").textContent = `Damage: ${gameState.selectedTower.damage.toFixed(1)}`;
+    document.getElementById("tower-range").textContent = `Range: ${Math.round(gameState.selectedTower.range / scaleX)}`;
+    document.getElementById("tower-level").textContent = `Power: ${gameState.selectedTower.powerLevel}/4 | Utility: ${gameState.selectedTower.utilityLevel}/4`;
+    document.getElementById("tower-ability").textContent = `Ability: ${towerStats[gameState.selectedTower.type].ability}`;
+
+    const powerUpgrades = towerUpgradePaths[gameState.selectedTower.type].power;
+    const utilityUpgrades = towerUpgradePaths[gameState.selectedTower.type].utility;
+    const nextPowerLevel = gameState.selectedTower.powerLevel;
+    const nextUtilityLevel = gameState.selectedTower.utilityLevel;
+    const powerCost = nextPowerLevel < 4 ? powerUpgrades[nextPowerLevel].cost : "Max";
+    const utilityCost = nextUtilityLevel < 4 ? utilityUpgrades[nextUtilityLevel].cost : "Max";
+
+    powerButton.textContent = `Upgrade Power ($${powerCost})`;
+    utilityButton.textContent = `Upgrade Utility ($${utilityCost})`;
+    
+    powerButton.disabled = nextPowerLevel >= 4 || (typeof powerCost === "number" && gameState.gameMoney < powerCost);
+    utilityButton.disabled = nextUtilityLevel >= 4 || (typeof utilityCost === "number" && gameState.gameMoney < utilityCost);
+  } else {
+    panel.style.display = "none";
+    powerButton.disabled = true;
+    utilityButton.disabled = true;
+  }
+}
+
+function updateChat() {
+  const chatBox = document.getElementById("chat-messages");
+  chatBox.innerHTML = "";
+  gameState.chatMessages.slice(-10).forEach(msg => {
+    const div = document.createElement("div");
+    div.textContent = `${msg.sender}: ${msg.message}`;
+    div.style.color = msg.sender === "You" ? "#00b894" : "#2d3436";
+    chatBox.appendChild(div);
+  });
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function updatePlayerList() {
+  const playerList = document.getElementById("player-list");
+  playerList.innerHTML = "Players:<br>";
+  gameState.players.forEach(player => {
+    const div = document.createElement("div");
+    div.textContent = player + (player === gameState.partyLeader ? " (Leader)" : "");
+    playerList.appendChild(div);
+  });
+}
+
+function endGame(won) {
+  gameState.gameOver = !won;
+  gameState.gameWon = won;
+  const endScreen = document.getElementById("end-screen");
+  const persistentMoneyEarned = Math.floor(gameState.score / 10);
+  gameState.persistentMoney += persistentMoneyEarned;
+  updatePersistentMoney();
+
+  document.getElementById("end-message").textContent = won ? "Victory!" : "Game Over";
+  document.getElementById("waves-survived").textContent = `Waves Survived: ${gameState.wave - 1}`;
+  document.getElementById("persistent-money-earned").textContent = `Persistent Money Earned: $${persistentMoneyEarned}`;
+  document.getElementById("persistent-money-total").textContent = `Total Persistent Money: $${gameState.persistentMoney}`;
+  endScreen.style.display = "block";
+
+  const restartButton = document.getElementById("restart-button");
+  const mainMenuButton = document.getElementById("main-menu-button");
+
+  restartButton.onclick = async () => {
+    endScreen.style.display = "none";
+    resetGame();
+    if (gameState.isPartyMode && ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "partyRestart", partyId: gameState.partyId }));
+    }
+    await init();
+  };
+
+  mainMenuButton.onclick = () => {
+    endScreen.style.display = "none";
+    resetGame();
+    if (gameState.isPartyMode && ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "leaveParty", partyId: gameState.partyId }));
+      gameState.isPartyMode = false;
+      gameState.partyId = null;
+      gameState.partyLeader = null;
+      localStorage.setItem("isPartyMode", "false");
+      localStorage.removeItem("partyId");
+    }
+    if (ws) ws.close();
+    window.location.href = "/";
+  };
+}
 
 // Reset Game State
 function resetGame() {
@@ -621,8 +1080,53 @@ function initSidebar() {
   }
 }
 
-// Mouse Handling (unchanged canvas event listeners omitted for brevity)
-// Assume they remain as in your original code.
+// Mouse Handling
+let lastMousePos = null;
+
+canvas.addEventListener("mousemove", (event) => {
+  const rect = canvas.getBoundingClientRect();
+  lastMousePos = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+});
+
+canvas.addEventListener("click", (event) => {
+  const rect = canvas.getBoundingClientRect();
+  const clickX = event.clientX - rect.left;
+  const clickY = event.clientY - rect.top;
+
+  if (gameState.selectedTowerType && gameState.gameMoney >= towerStats[gameState.selectedTowerType].cost) {
+    const tooCloseToPath = scaledPath.some(point => Math.hypot(point.x - clickX, point.y - clickY) < 50 * textScale);
+    if (!tooCloseToPath) {
+      const newTower = new Tower(clickX, clickY, gameState.selectedTowerType);
+      gameState.towers.push(newTower);
+      gameState.gameMoney -= towerStats[gameState.selectedTowerType].cost;
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          type: "placeTower",
+          tower: { x: clickX, y: clickY, type: gameState.selectedTowerType },
+          gameMoney: gameState.gameMoney,
+          partyId: gameState.isPartyMode ? gameState.partyId : null,
+        }));
+      }
+      gameState.selectedTowerType = null;
+      document.querySelectorAll(".tower-option").forEach(el => el.classList.remove("selected"));
+      updateStats();
+    } else {
+      showNotification("Cannot place tower too close to the path!");
+    }
+  } else {
+    let towerSelected = false;
+    gameState.towers.forEach(tower => {
+      if (Math.hypot(tower.x - clickX, tower.y - clickY) < tower.radius) {
+        gameState.selectedTower = tower;
+        towerSelected = true;
+      }
+    });
+    if (!towerSelected) {
+      gameState.selectedTower = null;
+    }
+    updateTowerInfo();
+  }
+});
 
 // Game Loop
 const FPS = 30;
@@ -643,7 +1147,6 @@ function update(timestamp) {
   ctx.moveTo(scaledPath[0].x, scaledPath[0].y);
   for (let i = 1; i < scaledPath.length; i++) {
     ctx.lineTo(scaledPath[i].x, scaledPath[i].y);
-  }
   ctx.strokeStyle = "brown";
   ctx.lineWidth = 40 * textScale;
   ctx.stroke();
@@ -678,9 +1181,40 @@ function update(timestamp) {
   updateStats();
   requestAnimationFrame(update);
 }
+}
 
-// Event Listeners (unchanged button event listeners omitted for brevity)
-// Assume they remain as in your original code.
+// Event Listeners
+document.getElementById("pause-button").addEventListener("click", () => {
+  gameState.isPaused = !gameState.isPaused;
+  document.getElementById("pause-button").textContent = gameState.isPaused ? "Resume" : "Pause";
+});
+
+document.getElementById("speed-button").addEventListener("click", () => {
+  gameState.gameSpeed = gameState.gameSpeed === 1 ? 2 : gameState.gameSpeed === 2 ? 4 : 1;
+  updateStats();
+});
+
+document.getElementById("chat-input").addEventListener("keypress", (e) => {
+  if (e.key === "Enter" && ws && ws.readyState === WebSocket.OPEN) {
+    const message = e.target.value.trim();
+    if (message) {
+      ws.send(JSON.stringify({ type: "chat", message }));
+      e.target.value = "";
+    }
+  }
+});
+
+document.getElementById("upgrade-power-button").addEventListener("click", () => {
+  if (gameState.selectedTower) {
+    gameState.selectedTower.upgrade("power");
+  }
+});
+
+document.getElementById("upgrade-utility-button").addEventListener("click", () => {
+  if (gameState.selectedTower) {
+    gameState.selectedTower.upgrade("utility");
+  }
+});
 
 // Initialization
 async function init() {

@@ -259,11 +259,15 @@
       #toggle-chat { bottom: 190px; padding: 5px 10px; }
       #party-modal, #end-screen { padding: 15px; max-width: 90%; }
     }
-  </style>
+</style>
 </head>
 <body>
   <canvas id="gameCanvas" aria-label="Game Canvas"></canvas>
-  <div id="sidebar" aria-label="Tower Selection and Controls"></div>
+  <div id="sidebar" aria-label="Tower Selection and Controls">
+    <!-- Towers will be populated by JS -->
+    <button id="pause-button" aria-label="Pause/Resume Game" title="Pause or resume the game">Pause</button>
+    <button id="speed-button" aria-label="Change Game Speed" title="Toggle game speed">Speed</button>
+  </div>
   <div id="stats" aria-live="polite">
     <div id="score">Score: 0</div>
     <div id="money">Money: $0</div>
@@ -277,8 +281,8 @@
     <div id="tower-range">Range: </div>
     <div id="tower-level">Level: </div>
     <div id="tower-ability">Ability: </div>
-    <button id="upgrade-power-button" aria-label="Upgrade Tower Power" title="Upgrade tower power">Upgrade Power</button>
-    <button id="upgrade-utility-button" aria-label="Upgrade Tower Utility" title="Upgrade tower utility">Upgrade Utility</button>
+    <button id="upgrade-power-button" aria-label="Upgrade Tower Power" title="Upgrade tower power" disabled>Upgrade Power</button>
+    <button id="upgrade-utility-button" aria-label="Upgrade Tower Utility" title="Upgrade tower utility" disabled>Upgrade Utility</button>
   </div>
   <div id="notification-box" aria-live="assertive"></div>
   <div id="end-screen" aria-label="Game Over Screen">
@@ -305,7 +309,7 @@
         <option value="map3">Stone</option>
         <option value="map4">Forest</option>
         <option value="map5">Mountain</option>
-        <option value="map6">Desert Extended</option>
+        <option value="map6">Desert</option>
         <option value="map7">River</option>
         <option value="map8">Canyon</option>
         <option value="map9">Arctic</option>
@@ -327,7 +331,6 @@
   <script>
     const toggleChatButton = document.getElementById("toggle-chat");
     const chatContainer = document.getElementById("chat-container");
-    const partyButton = document.getElementById("party-button");
     const partyModal = document.getElementById("party-modal");
     const startPartyGameButton = document.getElementById("start-party-game");
     const closePartyModalButton = document.getElementById("close-party-modal");
@@ -344,15 +347,26 @@
       }
     });
 
-    if (partyButton) {
-      partyButton.addEventListener("click", () => {
-        if (localStorage.getItem("username") === gameState.partyLeader) {
-          partyModal.classList.add("show");
-        } else {
-          showNotification("Only the party leader can configure settings!");
+    window.addEventListener("load", () => {
+      // Ensure party settings button exists for leader in party mode
+      if (localStorage.getItem("isPartyMode") === "true" && localStorage.getItem("username") === gameState.partyLeader) {
+        const sidebar = document.getElementById("sidebar");
+        const existingPartyButton = document.getElementById("party-button");
+        if (!existingPartyButton) {
+          const partyBtn = document.createElement("button");
+          partyBtn.id = "party-button";
+          partyBtn.textContent = "Party Settings";
+          partyBtn.addEventListener("click", () => {
+            if (localStorage.getItem("username") === gameState.partyLeader) {
+              partyModal.classList.add("show");
+            } else {
+              showNotification("Only the party leader can configure settings!");
+            }
+          });
+          sidebar.appendChild(partyBtn);
         }
-      });
-    }
+      }
+    });
 
     startPartyGameButton.addEventListener("click", () => {
       const map = partyMapSelect.value;
@@ -372,20 +386,6 @@
 
     closePartyModalButton.addEventListener("click", () => {
       partyModal.classList.remove("show");
-    });
-
-    // Ensure game.js has access to these elements
-    window.addEventListener("load", () => {
-      if (localStorage.getItem("isPartyMode") === "true" && localStorage.getItem("username") === gameState.partyLeader) {
-        const sidebar = document.getElementById("sidebar");
-        const existingPartyButton = document.getElementById("party-button");
-        if (!existingPartyButton) {
-          const partyBtn = document.createElement("div");
-          partyBtn.id = "party-button";
-          partyBtn.textContent = "Party Settings";
-          sidebar.appendChild(partyBtn);
-        }
-      }
     });
   </script>
 </body>

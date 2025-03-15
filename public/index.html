@@ -139,6 +139,8 @@
     let ws;
     let partyId = null;
     let isPartyLeader = false;
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 5;
     const WS_URL = window.location.hostname === 'localhost' ? 'ws://localhost:3000' : 'wss://mathematically.onrender.com';
 
     function showNotification(message) {
@@ -154,12 +156,18 @@
         showNotification("Please log in to use party features.");
         return;
       }
+      if (reconnectAttempts >= maxReconnectAttempts) {
+        showNotification("Max reconnection attempts reached. Please log in again.");
+        return;
+      }
 
+      console.log("Attempting WebSocket connection with token:", token); // Debug
       ws = new WebSocket(`${WS_URL}/ws?token=${token}`);
 
       ws.onopen = () => {
         console.log("WebSocket connected");
         showNotification("Connected to server!");
+        reconnectAttempts = 0; // Reset on success
         if (localStorage.getItem("partyId")) {
           partyId = localStorage.getItem("partyId");
           ws.send(JSON.stringify({ type: "joinParty", partyId }));
@@ -168,6 +176,7 @@
 
       ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
+        console.log("WebSocket message received:", data); // Debug
         switch (data.type) {
           case "partyCreated":
             partyId = data.partyId;
@@ -201,6 +210,9 @@
           case "playerList":
             console.log("Party players:", data.players);
             break;
+          case "error":
+            showNotification(data.message);
+            break;
         }
       };
 
@@ -209,11 +221,12 @@
         showNotification("WebSocket connection failed. Reconnecting...");
       };
 
-      ws.onclose = () => {
-        console.log("WebSocket disconnected");
+      ws.onclose = (event) => {
+        console.log(`WebSocket disconnected. Code: ${event.code}, Reason: ${event.reason}`);
         showNotification("Disconnected from server. Reconnecting...");
         ws = null;
-        setTimeout(initWebSocket, 2000); // Attempt to reconnect after 2 seconds
+        reconnectAttempts++;
+        setTimeout(initWebSocket, 2000);
       };
     }
 
@@ -243,6 +256,7 @@
     document.getElementById("login-button").addEventListener("click", async () => {
       const username = document.getElementById("login-username").value.trim();
       const password = document.getElementById("login-password").value;
+      console.log("Login attempt:", { username, password }); // Debug
       if (!username || !password) {
         showNotification("Please enter both username and password.");
         return;
@@ -255,6 +269,7 @@
         });
         const data = await response.json();
         if (response.ok) {
+          console.log("Login successful, token:", data.token); // Debug
           localStorage.setItem("token", data.token);
           localStorage.setItem("username", username);
           document.getElementById("auth-screen").style.display = "none";
@@ -265,6 +280,7 @@
           showNotification(data.message || "Login failed.");
         }
       } catch (err) {
+        console.error("Login error:", err);
         showNotification("Error during login. Please try again.");
       }
     });
@@ -272,6 +288,7 @@
     document.getElementById("signup-button").addEventListener("click", async () => {
       const username = document.getElementById("signup-username").value.trim();
       const password = document.getElementById("signup-password").value;
+      console.log("Signup attempt:", { username, password }); // Debug
       if (!username || !password) {
         showNotification("Please enter both username and password.");
         return;
@@ -284,6 +301,7 @@
         });
         const data = await response.json();
         if (response.ok) {
+          console.log("Signup successful, token:", data.token); // Debug
           localStorage.setItem("token", data.token);
           localStorage.setItem("username", username);
           document.getElementById("auth-screen").style.display = "none";
@@ -294,6 +312,7 @@
           showNotification(data.message || "Signup failed.");
         }
       } catch (err) {
+        console.error("Signup error:", err);
         showNotification("Error during signup. Please try again.");
       }
     });
@@ -453,6 +472,7 @@
           towerList.appendChild(towerDiv);
         });
       } catch (err) {
+        console.error("Tower shop error:", err);
         showNotification("Failed to load tower shop.");
       }
     }

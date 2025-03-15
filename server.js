@@ -20,18 +20,27 @@ const pool = new Pool({
 // Middleware to verify JWT
 const authenticateToken = (req, res, next) => {
   const token = req.headers['authorization']?.split(' ')[1];
-  if (!token) return res.status(401).json({ message: 'No token provided' });
-
-  jwt.verify(token, process.env.SECRET_KEY, (err, user) => {
-    if (err) return res.status(403).json({ message: 'Invalid token' });
+  if (!token) {
+    console.log('No token provided in request');
+    return res.status(401).json({ message: 'No token provided' });
+  }
+  try {
+    const user = jwt.verify(token, process.env.SECRET_KEY);
     req.user = user;
     next();
-  });
+  } catch (err) {
+    console.error('Token verification failed:', err.message);
+    return res.status(403).json({ message: 'Invalid or expired token' });
+  }
 };
 
 // Routes
 app.post('/signup', async (req, res) => {
   const { username, password } = req.body;
+  console.log('Signup request:', { username }); // Debug
+  if (!username || !password) {
+    return res.status(400).json({ message: 'Username and password are required' });
+  }
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
     const result = await pool.query(
@@ -39,27 +48,39 @@ app.post('/signup', async (req, res) => {
       [username, hashedPassword]
     );
     const user = result.rows[0];
-    await pool.query('INSERT INTO user_towers (user_id, tower) VALUES ($1, $2)', [user.id, 'basic']);
+    await pool.query('INSERT INTO user_towers (user_id, tower) VALUES ($1, $2) ON CONFLICT DO NOTHING', [user.id, 'basic']);
     const token = jwt.sign(user, process.env.SECRET_KEY, { expiresIn: '1h' });
+    console.log('Signup successful for:', username); // Debug
     res.json({ token });
   } catch (err) {
-    console.error(err);
+    console.error('Signup error:', err.message);
     res.status(400).json({ message: 'Username already exists or error occurred' });
   }
 });
 
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
+  console.log('Login request:', { username }); // Debug
+  if (!username || !password) {
+    return res.status(400).json({ message: 'Username and password are required' });
+  }
   try {
-    const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+    const result = await pool.query('SELECT * FROM users WHERE username = $1', [username81]);
     const user = result.rows[0];
-    if (!user || !(await bcrypt.compare(password, user.password))) {
+    if (!user) {
+      console.log(`No user found for username: ${username}`);
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) {
+      console.log(`Password mismatch for username: ${username}`);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
     const token = jwt.sign({ id: user.id, username: user.username, money: user.money }, process.env.SECRET_KEY, { expiresIn: '1h' });
+    console.log('Login successful for:', username); // Debug
     res.json({ token });
   } catch (err) {
-    console.error(err);
+    console.error('Login error:', err.message);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -67,9 +88,12 @@ app.post('/login', async (req, res) => {
 app.get('/user', authenticateToken, async (req, res) => {
   try {
     const result = await pool.query('SELECT id, username, money FROM users WHERE id = $1', [req.user.id]);
+    if (!result.rows[0]) {
+      return res.status(404).json({ message: 'User not found' });
+    }
     res.json(result.rows[0]);
   } catch (err) {
-    console.error(err);
+    console.error('User fetch error:', err.message);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -79,23 +103,30 @@ app.get('/towers', authenticateToken, async (req, res) => {
     const result = await pool.query('SELECT tower FROM user_towers WHERE user_id = $1', [req.user.id]);
     res.json({ towers: result.rows.map(row => row.tower) });
   } catch (err) {
-    console.error(err);
+    console.error('Towers fetch error:', err.message);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
 app.post('/unlock-tower', authenticateToken, async (req, res) => {
   const { tower } = req.body;
+  console.log('Unlock tower request:', { tower, userId: req.user.id }); // Debug
   try {
     const userResult = await pool.query('SELECT money FROM users WHERE id = $1', [req.user.id]);
     const user = userResult.rows[0];
     const towerCost = { basic: 0, archer: 225, cannon: 300, sniper: 350, freeze: 400, mortar: 450, laser: 500, tesla: 550, flamethrower: 600, missile: 650, poison: 700, vortex: 750 }[tower];
-    if (user.money < towerCost) return res.status(400).json({ message: 'Insufficient funds' });
+    if (!towerCost && towerCost !== 0) {
+      return res.status(400).json({ message: 'Invalid tower type' });
+    }
+    if (user.money < towerCost) {
+      return res.status(400).json({ message: 'Insufficient funds' });
+    }
     await pool.query('UPDATE users SET money = money - $1 WHERE id = $2', [towerCost, req.user.id]);
     await pool.query('INSERT INTO user_towers (user_id, tower) VALUES ($1, $2) ON CONFLICT DO NOTHING', [req.user.id, tower]);
+    console.log(`Tower ${tower} unlocked for user ${req.user.username}`);
     res.json({ message: `Unlocked ${tower}` });
   } catch (err) {
-    console.error(err);
+    console.error('Unlock tower error:', err.message);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -118,22 +149,35 @@ wss.on('connection', (ws, req) => {
     ws.userId = user.id;
     ws.username = user.username;
   } catch (err) {
-    ws.close();
+    console.error('WebSocket connection rejected:', err.message);
+    ws.send(JSON.stringify({ type: 'error', message: 'Invalid or expired token' }));
+    ws.close(1008, 'Invalid token');
     return;
   }
 
-  console.log(`User ${ws.username} connected`);
+  console.log(`User ${ws.username} connected via WebSocket`);
 
   ws.on('message', async (message) => {
-    const data = JSON.parse(message);
+    let data;
+    try {
+      data = JSON.parse(message);
+      console.log('WebSocket message received:', data); // Debug
+    } catch (err) {
+      console.error('Invalid WebSocket message:', err.message);
+      ws.send(JSON.stringify({ type: 'error', message: 'Invalid message format' }));
+      return;
+    }
 
     switch (data.type) {
       case 'createParty':
-        if (parties.has(data.partyId)) {
+        if (!data.partyId) {
+          ws.send(JSON.stringify({ type: 'partyError', message: 'Party ID required' }));
+        } else if (parties.has(data.partyId)) {
           ws.send(JSON.stringify({ type: 'partyError', message: 'Party ID already exists' }));
         } else {
-          parties.set(data.partyId, { leader: ws.username, players: [ws], map: data.map, difficulty: data.difficulty });
+          parties.set(data.partyId, { leader: ws.username, players: [ws], map: data.map || 'map1', difficulty: data.difficulty || 'easy' });
           ws.send(JSON.stringify({ type: 'partyCreated', partyId: data.partyId }));
+          console.log(`Party ${data.partyId} created by ${ws.username}`);
         }
         break;
 
@@ -150,6 +194,7 @@ wss.on('connection', (ws, req) => {
               client.send(JSON.stringify({ type: 'playerList', players: party.players.map(p => p.username) }));
             }
           });
+          console.log(`${ws.username} joined party ${data.partyId}`);
         }
         break;
 
@@ -159,10 +204,13 @@ wss.on('connection', (ws, req) => {
           leavingParty.players = leavingParty.players.filter(client => client !== ws);
           if (leavingParty.players.length === 0) {
             parties.delete(data.partyId);
+            console.log(`Party ${data.partyId} deleted (no players)`);
           } else if (leavingParty.leader === ws.username) {
-            leavingParty.leader = leavingParty.players[0].username;
+            leavingParty.leader = leavingParty.players[0]?.username || null;
+            console.log(`New leader for party ${data.partyId}: ${leavingParty.leader}`);
           }
           ws.partyId = null;
+          console.log(`${ws.username} left party ${data.partyId}`);
         }
         break;
 
@@ -172,6 +220,9 @@ wss.on('connection', (ws, req) => {
           startParty.players.forEach(client => {
             client.send(JSON.stringify({ type: 'startGame', partyId: data.partyId, map: data.map || startParty.map, difficulty: data.difficulty || startParty.difficulty }));
           });
+          console.log(`Party ${data.partyId} game started by ${ws.username}`);
+        } else {
+          ws.send(JSON.stringify({ type: 'partyError', message: 'Only the leader can start the game' }));
         }
         break;
 
@@ -183,19 +234,28 @@ wss.on('connection', (ws, req) => {
           });
         }
         break;
+
+      default:
+        ws.send(JSON.stringify({ type: 'error', message: 'Unknown message type' }));
     }
   });
 
-  ws.on('close', () => {
-    console.log(`User ${ws.username} disconnected`);
+  ws.on('error', (err) => {
+    console.error(`WebSocket error for ${ws.username}:`, err.message);
+  });
+
+  ws.on('close', (code, reason) => {
+    console.log(`User ${ws.username} disconnected. Code: ${code}, Reason: ${reason}`);
     if (ws.partyId) {
       const party = parties.get(ws.partyId);
       if (party) {
         party.players = party.players.filter(client => client !== ws);
         if (party.players.length === 0) {
           parties.delete(ws.partyId);
+          console.log(`Party ${ws.partyId} deleted (no players)`);
         } else if (party.leader === ws.username) {
-          party.leader = party.players[0].username;
+          party.leader = party.players[0]?.username || null;
+          console.log(`New leader for party ${ws.partyId}: ${party.leader}`);
         }
       }
     }
