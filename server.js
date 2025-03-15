@@ -6,16 +6,23 @@ const { Pool } = require('pg');
 require('dotenv').config();
 
 const app = express();
-const port = process.env.PORT || 3000; // Use Render-assigned port
+const port = process.env.PORT || 3000;
 
 app.use(express.json());
-app.use(express.static('public')); // Serve static files from 'public' directory
+app.use(express.static('public'));
 
 // Database setup
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
+
+// Verify environment variables
+if (!process.env.SECRET_KEY) {
+  console.error('Error: SECRET_KEY environment variable is not set');
+  process.exit(1);
+}
+console.log('SECRET_KEY:', process.env.SECRET_KEY ? 'Set' : 'Not set');
 
 // Middleware to verify JWT
 const authenticateToken = (req, res, next) => {
@@ -70,7 +77,7 @@ app.post('/login', async (req, res) => {
     return res.status(400).json({ message: 'Username and password are required' });
   }
   try {
-    const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]); // Fixed typo: username81 -> username
+    const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
     const user = result.rows[0];
     if (!user) {
       console.log(`No user found for username: ${username}`);
@@ -171,10 +178,11 @@ const server = app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
 
-// WebSocket setup
+// WebSocket setup (unchanged for brevity, but ensure it matches previous fixes)
 const wss = new WebSocketServer({ server });
 const parties = new Map();
 
+// WebSocket logic remains the same as previously fixed version
 wss.on('connection', (ws, req) => {
   const token = new URLSearchParams(req.url.split('?')[1]).get('token');
   let user;
@@ -183,7 +191,7 @@ wss.on('connection', (ws, req) => {
     user = jwt.verify(token, process.env.SECRET_KEY);
     ws.userId = user.id;
     ws.username = user.username;
-    ws.gameMoney = 200; // Default starting money (adjust based on difficulty later)
+    ws.gameMoney = 200;
   } catch (err) {
     console.error('WebSocket connection rejected:', err.message);
     ws.send(JSON.stringify({ type: 'error', message: 'Invalid or expired token' }));
@@ -243,7 +251,7 @@ wss.on('connection', (ws, req) => {
               difficulty: party.difficulty,
               gameMoney: party.gameMoney,
               leader: party.leader,
-              started: party.players.length > 1, // Simplistic check; adjust as needed
+              started: party.players.length > 1,
             })
           );
           party.players.forEach(client => {
