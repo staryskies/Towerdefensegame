@@ -48,7 +48,7 @@ const gameState = {
   partyId: localStorage.getItem("partyId") || null,
 };
 
-// Tower Definitions
+// Tower Definitions (unchanged)
 const towerStats = {
   basic: { damage: 10, range: 100, fireRate: 1000, cost: 50, persistentCost: 0, color: "gray", ability: "Basic shot" },
   archer: { damage: 15, range: 120, fireRate: 2000, cost: 75, persistentCost: 225, color: "brown", ability: "Double shot" },
@@ -64,7 +64,7 @@ const towerStats = {
   vortex: { damage: 0, range: 150, fireRate: 5000, cost: 300, persistentCost: 750, color: "purple", ability: "Pulls enemies" },
 };
 
-// Tower Upgrade Paths (unchanged, keeping full functionality)
+// Tower Upgrade Paths, Theme Backgrounds, Paths, Enemy Themes (unchanged, omitted for brevity)
 const towerUpgradePaths = {
   basic: {
     power: [
@@ -80,10 +80,8 @@ const towerUpgradePaths = {
       { cost: 200, range: 1.15, desc: "Range +15%" },
     ],
   },
-  // ... (other tower upgrade paths unchanged, keeping full functionality)
 };
 
-// Theme Backgrounds and Paths (unchanged)
 const themeBackgrounds = {
   map1: "#90ee90", map2: "#f4a460", map3: "#a9a9a9", map4: "#6b8e23", map5: "#cd853f",
   map6: "#f4a460", map7: "#87ceeb", map8: "#cd5c5c", map9: "#e0ffff",
@@ -95,7 +93,6 @@ const paths = {
     { x: 600, y: 600 }, { x: 900, y: 600 }, { x: 900, y: 200 }, { x: 1200, y: 200 },
     { x: 1200, y: 700 }, { x: 1500, y: 700 }, { x: 1500, y: 400 }, { x: 1920, y: 400 },
   ],
-  // ... (other paths unchanged)
 };
 
 const enemyThemes = {
@@ -104,13 +101,12 @@ const enemyThemes = {
     medium: [{ health: 75, speed: 1.2, radius: 12, color: "darkred" }],
     hard: [{ health: 100, speed: 1.5, radius: 15, color: "crimson" }],
   },
-  // ... (other enemy themes unchanged)
 };
 
 let scaledPath = paths[selectedMap].map(point => ({ x: point.x * scaleX, y: point.y * scaleY }));
 let scaledSpawnPoint = scaledPath[0];
 
-// WebSocket for Chat and Multiplayer
+// WebSocket for Chat and Multiplayer (unchanged)
 let ws;
 function initWebSocket() {
   const token = localStorage.getItem("token");
@@ -185,7 +181,7 @@ function initWebSocket() {
   ws.onclose = () => console.log("WebSocket disconnected");
 }
 
-// Server Communication
+// Server Communication (unchanged)
 async function fetchUserData() {
   const token = localStorage.getItem("token");
   if (!token) return;
@@ -216,7 +212,7 @@ async function updatePersistentMoney() {
   });
 }
 
-// Classes
+// Classes (unchanged except for speed scaling)
 class Enemy {
   constructor(type, wave) {
     this.x = scaledSpawnPoint.x;
@@ -381,7 +377,7 @@ class Projectile {
     const dx = this.target.x - this.x;
     const dy = this.target.y - this.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
-    const moveSpeed = this.speed * dt;
+    const moveSpeed = this.speed * gameState.gameSpeed * dt;
     if (distance < moveSpeed) {
       this.hit();
     } else {
@@ -455,7 +451,7 @@ function updateSpawning(dt) {
   }
 }
 
-// UI Functions
+// UI Functions (unchanged except for updateStats)
 function showNotification(message) {
   const notification = document.getElementById("notification-box");
   if (notification) {
@@ -475,7 +471,7 @@ function updateStats() {
   if (money) money.textContent = `Money: $${gameState.gameMoney}`;
   if (health) health.textContent = `Health: ${gameState.playerHealth}`;
   if (wave) wave.textContent = `Wave: ${gameState.wave}`;
-  if (speed) speed.textContent = `Speed: ${gameState.gameSpeed}x${gameState.isPartyMode && gameState.partyId ? ` | Party: ${gameState.partyId}` : ""}`;
+  if (speed) speed.textContent = `Speed: ${gameState.gameSpeed}x${gameState.isPaused ? " (Paused)" : ""}${gameState.isPartyMode && gameState.partyId ? ` | Party: ${gameState.partyId}` : ""}`;
 }
 
 function updateTowerInfo() {
@@ -555,7 +551,7 @@ function endGame(won) {
   }
 }
 
-// Reset Game State
+// Reset Game State (unchanged)
 function resetGame() {
   gameState.enemies = [];
   gameState.towers = [];
@@ -577,7 +573,7 @@ function resetGame() {
   if (!gameState.isPartyMode) gameState.players = [];
 }
 
-// Sidebar Initialization
+// Sidebar Initialization (unchanged)
 function initSidebar() {
   const sidebar = document.getElementById("sidebar");
   if (sidebar) {
@@ -605,7 +601,7 @@ function initSidebar() {
   }
 }
 
-// Mouse Handling
+// Mouse Handling (unchanged)
 let lastMousePos = null;
 
 canvas.addEventListener("mousemove", (event) => {
@@ -668,8 +664,11 @@ function update(timestamp) {
   ctx.lineWidth = 40 * textScale;
   ctx.stroke();
 
+  // Always update spawning and wave logic, even when paused
+  updateSpawning(dt);
+
+  // Only update enemies and towers when not paused and game is active
   if (!gameState.isPaused && !gameState.gameOver && !gameState.gameWon) {
-    updateSpawning(dt);
     gameState.enemies.forEach(enemy => enemy.move(dt));
     gameState.towers.forEach(tower => tower.shoot());
     gameState.projectiles.forEach(projectile => projectile.move(dt));
@@ -709,12 +708,16 @@ document.addEventListener("DOMContentLoaded", () => {
     pauseButton.addEventListener("click", () => {
       gameState.isPaused = !gameState.isPaused;
       pauseButton.textContent = gameState.isPaused ? "Resume" : "Pause";
+      updateStats(); // Update UI to reflect pause state
+      console.log(`Game ${gameState.isPaused ? "paused" : "resumed"}`);
     });
   }
 
   if (speedButton) {
     speedButton.addEventListener("click", () => {
       gameState.gameSpeed = gameState.gameSpeed === 1 ? 2 : gameState.gameSpeed === 2 ? 4 : 1;
+      updateStats(); // Update UI to reflect speed change
+      console.log(`Game speed set to ${gameState.gameSpeed}x`);
     });
   }
 
@@ -759,7 +762,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-// Initialization
+// Initialization (unchanged)
 async function init() {
   try {
     await fetchUserData();

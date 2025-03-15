@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tower Defense Game</title>
   <style>
-    /* Your existing CSS */
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
     body { overflow: hidden; background: #dfe6e9; color: #2d3436; position: relative; }
     #gameCanvas { display: block; width: 100vw; height: 100vh; }
     #sidebar { position: fixed; top: 10px; left: 10px; width: 200px; background: rgba(236, 240, 241, 0.95); padding: 15px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); z-index: 10; }
     .tower-option { padding: 8px; margin: 5px 0; background: #b2bec3; border-radius: 5px; cursor: pointer; transition: background 0.3s ease, transform 0.2s ease; text-align: center; }
     .tower-option:hover, .tower-option.selected { background: #00b894; color: #fff; transform: translateY(-2px); }
-    #stats { position: fixed; top: 10px; right: 10px; background: rgba(236, 240, 241, 0.95); padding: 15px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); z-index: 10; }
+    #stats { position: fixed; top: 10px; right: 10px; background: rgba(236, 240, 241, 0.95); padding: 15px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); z-index: 10; min-width: 150px; white-space: nowrap; } /* Added min-width and nowrap for better text fit */
+    #speed { font-weight: bold; } /* Emphasize speed for visibility */
     #tower-info-panel { position: fixed; bottom: 10px; left: 230px; width: 250px; background: rgba(236, 240, 241, 0.95); padding: 15px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); display: none; z-index: 10; }
     #notification-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0, 184, 148, 0.95); padding: 20px 30px; border-radius: 10px; color: white; display: none; box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2); z-index: 1000; }
     #notification-box.show { display: block; }
@@ -27,7 +27,11 @@
 </head>
 <body>
   <canvas id="gameCanvas" aria-label="Game Canvas"></canvas>
-  <div id="sidebar" aria-label="Tower Selection and Controls"></div>
+  <div id="sidebar" aria-label="Tower Selection and Controls">
+    <!-- Buttons added statically for clarity, will be overwritten by initSidebar() -->
+    <button id="pause-button">Pause</button>
+    <button id="speed-button">Speed</button>
+  </div>
   <div id="stats" aria-live="polite">
     <div id="score">Score: 0</div>
     <div id="money">Money: $0</div>
