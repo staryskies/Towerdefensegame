@@ -150,10 +150,31 @@
       setTimeout(() => notification.classList.remove("show"), 3000);
     }
 
+    function isTokenExpired(token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const now = Math.floor(Date.now() / 1000); // Current time in seconds
+        return payload.exp < now;
+      } catch (err) {
+        console.error('Error decoding token:', err);
+        return true; // Assume expired if decoding fails
+      }
+    }
+
     function initWebSocket() {
       const token = localStorage.getItem("token");
       if (!token) {
         showNotification("Please log in to use party features.");
+        return;
+      }
+      if (isTokenExpired(token)) {
+        showNotification("Your session has expired. Please log in again.");
+        localStorage.removeItem("token");
+        localStorage.removeItem("username");
+        localStorage.removeItem("partyId");
+        localStorage.removeItem("isPartyMode");
+        document.getElementById("main-menu").style.display = "none";
+        document.getElementById("auth-screen").style.display = "block";
         return;
       }
       if (reconnectAttempts >= maxReconnectAttempts) {
@@ -161,13 +182,13 @@
         return;
       }
 
-      console.log("Attempting WebSocket connection with token:", token); // Debug
+      console.log("Attempting WebSocket connection with token:", token);
       ws = new WebSocket(`${WS_URL}/ws?token=${token}`);
 
       ws.onopen = () => {
         console.log("WebSocket connected");
         showNotification("Connected to server!");
-        reconnectAttempts = 0; // Reset on success
+        reconnectAttempts = 0;
         if (localStorage.getItem("partyId")) {
           partyId = localStorage.getItem("partyId");
           ws.send(JSON.stringify({ type: "joinParty", partyId }));
@@ -176,7 +197,7 @@
 
       ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        console.log("WebSocket message received:", data); // Debug
+        console.log("WebSocket message received:", data);
         switch (data.type) {
           case "partyCreated":
             partyId = data.partyId;
@@ -212,6 +233,9 @@
             break;
           case "error":
             showNotification(data.message);
+            if (data.message === "Invalid or expired token") {
+              handleTokenInvalidation();
+            }
             break;
         }
       };
@@ -225,10 +249,59 @@
         console.log(`WebSocket disconnected. Code: ${event.code}, Reason: ${event.reason}`);
         showNotification("Disconnected from server. Reconnecting...");
         ws = null;
-        reconnectAttempts++;
-        setTimeout(initWebSocket, 2000);
+        if (event.code === 1008 && event.reason === "Invalid token") {
+          handleTokenInvalidation();
+        } else {
+          reconnectAttempts++;
+          setTimeout(initWebSocket, 2000);
+        }
       };
     }
+
+    function handleTokenInvalidation() {
+      showNotification("Invalid or expired token. Please log in again.");
+      localStorage.removeItem("token");
+      localStorage.removeItem("username");
+      localStorage.removeItem("partyId");
+      localStorage.removeItem("isPartyMode");
+      document.getElementById("main-menu").style.display = "none";
+      document.getElementById("auth-screen").style.display = "block";
+      document.getElementById("party-id-display").textContent = "";
+      document.getElementById("start-party-button").disabled = true;
+    }
+
+    // Update login/signup success to ensure fresh token
+    document.getElementById("login-button").addEventListener("click", async () => {
+      const username = document.getElementById("login-username").value.trim();
+      const password = document.getElementById("login-password").value;
+      console.log("Login attempt:", { username, password });
+      if (!username || !password) {
+        showNotification("Please enter both username and password.");
+        return;
+      }
+      try {
+        const response = await fetch("/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password }),
+        });
+        const data = await response.json();
+        if (response.ok) {
+          console.log("Login successful, token:", data.token);
+          localStorage.setItem("token", data.token);
+          localStorage.setItem("username", username);
+          document.getElementById("auth-screen").style.display = "none";
+          document.getElementById("main-menu").style.display = "flex";
+          await updateUserMoneyDisplay();
+          initWebSocket();
+        } else {
+          showNotification(data.message || "Login failed.");
+        }
+      } catch (err) {
+        console.error("Login error:", err);
+        showNotification("Error during login. Please try again.");
+      }
+    });
 
     async function fetchUserData() {
       const token = localStorage.getItem("token");
