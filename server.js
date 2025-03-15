@@ -73,7 +73,7 @@ async function initializeDatabase() {
   }
 }
 
-// Routes (Keeping token-based auth for HTTP endpoints)
+// Routes
 app.post('/signup', async (req, res) => {
   const { username, password } = req.body;
   console.log('Signup request:', { username });
@@ -92,7 +92,7 @@ app.post('/signup', async (req, res) => {
       [user.id, 'basic']
     );
     console.log('Signup successful for:', username);
-    res.json({ username: user.username }); // No token returned
+    res.json({ username: user.username });
   } catch (err) {
     console.error('Signup error:', err.message);
     res.status(400).json({ message: 'Username already exists or error occurred' });
@@ -113,7 +113,7 @@ app.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
     console.log('Login successful for:', username);
-    res.json({ username: user.username }); // No token returned
+    res.json({ username: user.username });
   } catch (err) {
     console.error('Login error:', err.message);
     res.status(500).json({ message: 'Server error' });
@@ -121,7 +121,7 @@ app.post('/login', async (req, res) => {
 });
 
 app.get('/user', async (req, res) => {
-  const { username } = req.query; // Use query param for username
+  const { username } = req.query;
   if (!username) {
     return res.status(400).json({ message: 'Username required' });
   }
@@ -156,6 +156,36 @@ app.get('/towers', async (req, res) => {
   }
 });
 
+app.post('/unlock-tower', async (req, res) => {
+  const { username, tower } = req.body;
+  console.log('Unlock tower request:', { username, tower });
+  if (!username || !tower) {
+    return res.status(400).json({ message: 'Username and tower required' });
+  }
+  try {
+    const userResult = await pool.query('SELECT id, money FROM users WHERE username = $1', [username]);
+    const user = userResult.rows[0];
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    const towerCost = {
+      basic: 0, archer: 225, cannon: 300, sniper: 350, freeze: 400,
+      mortar: 450, laser: 500, tesla: 550, flamethrower: 600, missile: 650,
+      poison: 700, vortex: 750,
+    }[tower];
+    if (towerCost === undefined) return res.status(400).json({ message: 'Invalid tower type' });
+    if (user.money < towerCost) return res.status(400).json({ message: 'Insufficient funds' });
+    await pool.query('UPDATE users SET money = money - $1 WHERE id = $2', [towerCost, user.id]);
+    await pool.query(
+      'INSERT INTO user_towers (user_id, tower) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+      [user.id, tower]
+    );
+    console.log(`Tower ${tower} unlocked for ${username}`);
+    res.json({ message: `Unlocked ${tower}` });
+  } catch (err) {
+    console.error('Unlock tower error:', err.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 app.post('/update-money', async (req, res) => {
   const { username, money } = req.body;
   console.log('Update money request:', { username, money });
@@ -182,7 +212,7 @@ const server = app.listen(port, async () => {
   await initializeDatabase();
 });
 
-// WebSocket setup (No token required)
+// WebSocket setup
 const wss = new WebSocketServer({ server });
 const parties = new Map();
 
@@ -210,9 +240,8 @@ wss.on('connection', (ws) => {
     // Set username and userId from first message
     if (data.type === 'join' || data.type === 'joinParty') {
       const userResult = await pool.query('SELECT id FROM users WHERE username = $1', [data.username]);
-      const user = userResult.rows[0];
       ws.username = data.username;
-      ws.userId = user ? user.id : null; // Allow guests (no userId) if not in DB
+      ws.userId = userResult.rows[0]?.id || null; // Allow guests if not in DB
       ws.gameMoney = 200; // Default game money
       console.log(`User ${ws.username} identified via WebSocket`);
     }
@@ -222,6 +251,25 @@ wss.on('connection', (ws) => {
     switch (data.type) {
       case 'join':
         ws.send(JSON.stringify({ type: 'playerList', players: [ws.username], leader: ws.username }));
+        break;
+
+      case 'createParty':
+        if (!data.partyId) {
+          ws.send(JSON.stringify({ type: 'partyError', message: 'Party ID required' }));
+        } else if (parties.has(data.partyId)) {
+          ws.send(JSON.stringify({ type: 'partyError', message: 'Party ID already exists' }));
+        } else {
+          parties.set(data.partyId, {
+            leader: ws.username,
+            players: [ws],
+            map: data.map || 'map1',
+            difficulty: data.difficulty || 'easy',
+            gameMoney: data.difficulty === 'easy' ? 200 : data.difficulty === 'medium' ? 400 : 600,
+          });
+          ws.partyId = data.partyId;
+          ws.send(JSON.stringify({ type: 'partyCreated', partyId: data.partyId }));
+          console.log(`Party ${data.partyId} created by ${ws.username}`);
+        }
         break;
 
       case 'joinParty':
@@ -250,25 +298,6 @@ wss.on('connection', (ws) => {
             }
           });
           console.log(`${ws.username} joined party ${data.partyId}`);
-        }
-        break;
-
-      case 'createParty':
-        if (!data.partyId) {
-          ws.send(JSON.stringify({ type: 'partyError', message: 'Party ID required' }));
-        } else if (parties.has(data.partyId)) {
-          ws.send(JSON.stringify({ type: 'partyError', message: 'Party ID already exists' }));
-        } else {
-          parties.set(data.partyId, {
-            leader: ws.username,
-            players: [ws],
-            map: data.map || 'map1',
-            difficulty: data.difficulty || 'easy',
-            gameMoney: data.difficulty === 'easy' ? 200 : data.difficulty === 'medium' ? 400 : 600,
-          });
-          ws.partyId = data.partyId;
-          ws.send(JSON.stringify({ type: 'partyCreated', partyId: data.partyId }));
-          console.log(`Party ${data.partyId} created by ${ws.username}`);
         }
         break;
 
@@ -379,7 +408,7 @@ wss.on('connection', (ws) => {
   });
 
   ws.on('close', (code, reason) => {
-    console.log(`User ${ws.username || 'unknown'} disconnected. Code: ${code}, Reason: ${reason}`);
+    console.log(`User ${ws.username || 'unknown'} disconnected. Code: ${code}, Reason: ${reason || 'No reason provided'}`);
     if (ws.partyId) {
       const party = parties.get(ws.partyId);
       if (party) {
