@@ -97,18 +97,6 @@
     <h1>Tower Defense</h1>
     <div id="user-money">Persistent Money: $0</div>
     <button id="play-solo-button" aria-label="Play Solo" title="Start a solo game">Play Solo</button>
-    <div class="form-group">
-      <label for="create-party-id">Create Party ID</label>
-      <input type="text" id="create-party-id" placeholder="Enter Party ID (e.g., ABC123)" title="Enter a unique party ID">
-    </div>
-    <button id="create-party-button" aria-label="Create Party" title="Create a new party with the entered ID">Create Party</button>
-    <div class="form-group">
-      <label for="join-party-id">Join Party ID</label>
-      <input type="text" id="join-party-id" placeholder="Enter Party ID" title="Join an existing party by ID">
-    </div>
-    <button id="join-party-button" aria-label="Join Party" title="Join a party with the entered ID">Join Party</button>
-    <div id="party-id-display" aria-live="polite"></div>
-    <button id="start-party-button" aria-label="Start Party Game" title="Start the game for all party members" disabled>Start Party Game</button>
     <button id="open-tower-shop" aria-label="Open Tower Shop" title="Browse and unlock towers">Tower Shop</button>
     <button id="logout-button" aria-label="Logout" title="Log out of your account">Logout</button>
   </div>
@@ -136,13 +124,6 @@
       vortex: { persistentCost: 750, ability: "Pulls enemies" },
     };
 
-    let ws;
-    let partyId = null;
-    let isPartyLeader = false;
-    let reconnectAttempts = 0;
-    const maxReconnectAttempts = 5;
-    const WS_URL = window.location.hostname === 'localhost' ? 'ws://localhost:3000' : 'wss://mathematically.onrender.com';
-
     function showNotification(message) {
       const notification = document.getElementById("notification-box");
       notification.textContent = message;
@@ -150,101 +131,10 @@
       setTimeout(() => notification.classList.remove("show"), 3000);
     }
 
-    function initWebSocket() {
-      const username = localStorage.getItem("username") || "Guest";
-      console.log("Attempting WebSocket connection with username:", username);
-      ws = new WebSocket(WS_URL);
-
-      ws.onopen = () => {
-        console.log("WebSocket connected");
-        showNotification("Connected to server!");
-        reconnectAttempts = 0;
-        const joinData = partyId ?
-          { type: "joinParty", partyId, username } :
-          { type: "join", username };
-        ws.send(JSON.stringify(joinData));
-      };
-
-      ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        console.log("WebSocket message received:", data);
-        switch (data.type) {
-          case "partyCreated":
-            partyId = data.partyId;
-            isPartyLeader = true;
-            localStorage.setItem("partyId", partyId);
-            localStorage.setItem("isPartyMode", "true");
-            document.getElementById("party-id-display").textContent = `Party ID: ${partyId}`;
-            document.getElementById("start-party-button").disabled = false;
-            showNotification(`Party created! ID: ${partyId}`);
-            break;
-          case "partyJoined":
-            partyId = data.partyId;
-            isPartyLeader = data.leader === username;
-            localStorage.setItem("partyId", partyId);
-            localStorage.setItem("isPartyMode", "true");
-            document.getElementById("party-id-display").textContent = `Party ID: ${partyId}`;
-            document.getElementById("start-party-button").disabled = !isPartyLeader;
-            showNotification(`Joined party ${partyId}`);
-            if (data.started) {
-              localStorage.setItem("selectedMap", data.map);
-              localStorage.setItem("selectedDifficulty", data.difficulty);
-              window.location.href = "/game.html";
-            }
-            break;
-          case "partyError":
-            showNotification(data.message);
-            break;
-          case "startGame":
-            localStorage.setItem("selectedMap", data.map);
-            localStorage.setItem("selectedDifficulty", data.difficulty);
-            window.location.href = "/game.html";
-            break;
-          case "playerList":
-            console.log("Party players:", data.players);
-            break;
-          case "error":
-            showNotification(data.message);
-            if (data.message === "Username required") {
-              showNotification("Please log in again.");
-              logout();
-            }
-            break;
-        }
-      };
-
-      ws.onerror = (error) => {
-        console.error("WebSocket error:", error);
-        showNotification("WebSocket connection failed. Reconnecting...");
-      };
-
-      ws.onclose = (event) => {
-        console.log(`WebSocket disconnected. Code: ${event.code}, Reason: ${event.reason || "No reason provided"}`);
-        showNotification("Disconnected from server. Reconnecting...");
-        ws = null;
-        if (event.code === 1008 && event.reason === "Username required") {
-          logout();
-        } else if (reconnectAttempts < maxReconnectAttempts) {
-          reconnectAttempts++;
-          setTimeout(initWebSocket, 2000);
-        } else {
-          showNotification("Max reconnection attempts reached. Please log in again.");
-        }
-      };
-    }
-
     function logout() {
-      if (partyId && ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: "leaveParty", partyId }));
-      }
       localStorage.removeItem("username");
-      localStorage.removeItem("partyId");
-      localStorage.removeItem("isPartyMode");
-      if (ws) ws.close();
       document.getElementById("main-menu").style.display = "none";
       document.getElementById("auth-screen").style.display = "block";
-      document.getElementById("party-id-display").textContent = "";
-      document.getElementById("start-party-button").disabled = true;
     }
 
     async function fetchUserData() {
@@ -302,7 +192,6 @@
           document.getElementById("auth-screen").style.display = "none";
           document.getElementById("main-menu").style.display = "flex";
           await updateUserMoneyDisplay();
-          initWebSocket();
         } else {
           console.log("Login failed with status:", response.status, "Message:", data.message);
           showNotification(data.message || "Login failed.");
@@ -334,7 +223,6 @@
           document.getElementById("auth-screen").style.display = "none";
           document.getElementById("main-menu").style.display = "flex";
           await updateUserMoneyDisplay();
-          initWebSocket();
         } else {
           showNotification(data.message || "Signup failed.");
         }
@@ -358,65 +246,11 @@
 
     document.getElementById("logout-button").addEventListener("click", logout);
 
-    // Party and Play Options
+    // Play Solo
     document.getElementById("play-solo-button").addEventListener("click", () => {
-      if (partyId && ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: "leaveParty", partyId }));
-      }
       localStorage.removeItem("partyId");
       localStorage.removeItem("isPartyMode");
       window.location.href = "/map.html";
-    });
-
-    document.getElementById("create-party-button").addEventListener("click", () => {
-      if (!ws || ws.readyState !== WebSocket.OPEN) {
-        showNotification("Not connected to server. Reconnecting...");
-        initWebSocket();
-        return;
-      }
-      if (partyId) {
-        showNotification("You are already in a party! Leave it first.");
-        return;
-      }
-      const createId = document.getElementById("create-party-id").value.trim().toUpperCase();
-      if (!createId) {
-        showNotification("Please enter a Party ID to create.");
-        return;
-      }
-      const username = localStorage.getItem("username") || "Guest";
-      ws.send(JSON.stringify({ type: "createParty", partyId: createId, map: "map1", difficulty: "easy", username }));
-    });
-
-    document.getElementById("join-party-button").addEventListener("click", () => {
-      if (!ws || ws.readyState !== WebSocket.OPEN) {
-        showNotification("Not connected to server. Reconnecting...");
-        initWebSocket();
-        return;
-      }
-      if (partyId) {
-        showNotification("You are already in a party! Leave it first.");
-        return;
-      }
-      const joinId = document.getElementById("join-party-id").value.trim().toUpperCase();
-      if (!joinId) {
-        showNotification("Please enter a Party ID to join.");
-        return;
-      }
-      const username = localStorage.getItem("username") || "Guest";
-      ws.send(JSON.stringify({ type: "joinParty", partyId: joinId, username }));
-    });
-
-    document.getElementById("start-party-button").addEventListener("click", () => {
-      if (!isPartyLeader) {
-        showNotification("Only the party leader can start the game!");
-        return;
-      }
-      if (!partyId || !ws || ws.readyState !== WebSocket.OPEN) {
-        showNotification("Not in a party or not connected!");
-        return;
-      }
-      const username = localStorage.getItem("username") || "Guest";
-      ws.send(JSON.stringify({ type: "startGame", partyId, username }));
     });
 
     // Tower Shop
@@ -490,7 +324,6 @@
       document.getElementById("auth-screen").style.display = "none";
       document.getElementById("main-menu").style.display = "flex";
       updateUserMoneyDisplay();
-      initWebSocket();
     }
   </script>
 </body>
