@@ -153,7 +153,7 @@
     function initWebSocket() {
       const username = localStorage.getItem("username") || "Guest";
       console.log("Attempting WebSocket connection with username:", username);
-      ws = new WebSocket(WS_URL); // No token in URL
+      ws = new WebSocket(WS_URL);
 
       ws.onopen = () => {
         console.log("WebSocket connected");
