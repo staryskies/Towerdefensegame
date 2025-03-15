@@ -46,6 +46,7 @@ const gameState = {
   partyLeader: null,
   isPartyMode: localStorage.getItem("isPartyMode") === "true",
   partyId: localStorage.getItem("partyId") || null,
+  username: localStorage.getItem("username") || "Guest", // Default to "Guest" if no username
 };
 
 // Tower Definitions (unchanged)
@@ -106,27 +107,27 @@ const enemyThemes = {
 let scaledPath = paths[selectedMap].map(point => ({ x: point.x * scaleX, y: point.y * scaleY }));
 let scaledSpawnPoint = scaledPath[0];
 
-// WebSocket for Chat and Multiplayer (unchanged)
+// WebSocket for Chat and Multiplayer (No Token)
 let ws;
 function initWebSocket() {
-  const token = localStorage.getItem("token");
-  if (!token) {
-    console.warn("No token found for WebSocket connection");
-    showNotification("Please log in to join the game chat.");
-    return;
-  }
-  ws = new WebSocket(`wss://mathematically.onrender.com/ws?token=${token}`);
+  console.log("Attempting WebSocket connection...");
+  ws = new WebSocket("wss://mathematically.onrender.com/ws"); // No token required
+
   ws.onopen = () => {
-    console.log("WebSocket connected");
+    console.log("WebSocket connected successfully");
     showNotification("Connected to game chat!");
-    if (gameState.isPartyMode && gameState.partyId) {
-      ws.send(JSON.stringify({ type: "joinParty", partyId: gameState.partyId }));
-    } else {
-      ws.send(JSON.stringify({ type: "join", map: selectedMap, difficulty: selectedDifficulty }));
-    }
+    // Send initial join message with username
+    const joinData = {
+      type: gameState.isPartyMode && gameState.partyId ? "joinParty" : "join",
+      username: gameState.username,
+      ...(gameState.isPartyMode && gameState.partyId ? { partyId: gameState.partyId } : { map: selectedMap, difficulty: selectedDifficulty })
+    };
+    ws.send(JSON.stringify(joinData));
   };
+
   ws.onmessage = (event) => {
     const data = JSON.parse(event.data);
+    console.log("Received WebSocket message:", data);
     switch (data.type) {
       case "chat":
         gameState.chatMessages.push({ sender: data.sender, message: data.message, timestamp: Date.now() });
@@ -175,27 +176,38 @@ function initWebSocket() {
         spawnWave();
         showNotification("Party game restarted!");
         break;
+      default:
+        console.warn("Unhandled message type:", data.type);
     }
   };
-  ws.onerror = (error) => console.error("WebSocket error:", error);
-  ws.onclose = () => console.log("WebSocket disconnected");
+
+  ws.onerror = (error) => {
+    console.error("WebSocket error:", error);
+    showNotification("WebSocket connection failed.");
+  };
+
+  ws.onclose = (event) => {
+    console.log(`WebSocket disconnected. Code: ${event.code}, Reason: ${event.reason || "No reason provided"}`);
+    showNotification("Disconnected from game chat. Reconnecting...");
+    setTimeout(() => {
+      console.log("Reattempting WebSocket connection...");
+      initWebSocket();
+    }, 2000);
+  };
 }
 
-// Server Communication (unchanged)
+// Server Communication (No Token)
 async function fetchUserData() {
-  const token = localStorage.getItem("token");
-  if (!token) return;
-  const response = await fetch("/user", { headers: { "Authorization": `Bearer ${token}` } });
+  const response = await fetch("/user", { method: "GET" }); // Assume no auth needed
   if (response.ok) {
     const data = await response.json();
-    gameState.persistentMoney = data.money;
+    gameState.persistentMoney = data.money || 0;
+    gameState.username = data.username || gameState.username;
   }
 }
 
 async function loadUnlockedTowers() {
-  const token = localStorage.getItem("token");
-  if (!token) return;
-  const response = await fetch("/towers", { headers: { "Authorization": `Bearer ${token}` } });
+  const response = await fetch("/towers", { method: "GET" });
   if (response.ok) {
     const data = await response.json();
     gameState.unlockedTowers = data.towers.length > 0 ? data.towers : ["basic"];
@@ -203,16 +215,14 @@ async function loadUnlockedTowers() {
 }
 
 async function updatePersistentMoney() {
-  const token = localStorage.getItem("token");
-  if (!token) return;
   await fetch("/update-money", {
     method: "POST",
-    headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ money: gameState.persistentMoney }),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ money: gameState.persistentMoney, username: gameState.username }),
   });
 }
 
-// Classes (unchanged except for speed scaling)
+// Classes (unchanged except for username in chat)
 class Enemy {
   constructor(type, wave) {
     this.x = scaledSpawnPoint.x;
@@ -451,7 +461,7 @@ function updateSpawning(dt) {
   }
 }
 
-// UI Functions (unchanged except for updateStats)
+// UI Functions
 function showNotification(message) {
   const notification = document.getElementById("notification-box");
   if (notification) {
@@ -469,9 +479,9 @@ function updateStats() {
   const speed = document.getElementById("speed");
   if (score) score.textContent = `Score: ${gameState.score}`;
   if (money) money.textContent = `Money: $${gameState.gameMoney}`;
-  if (health) health.textContent = `Health: ${gameState.playerHealth}`;
+  if (health) money.textContent = `Health: ${gameState.playerHealth}`;
   if (wave) wave.textContent = `Wave: ${gameState.wave}`;
-  if (speed) speed.textContent = `Speed: ${gameState.gameSpeed}x${gameState.isPaused ? " (Paused)" : ""}${gameState.isPartyMode && gameState.partyId ? ` | Party: ${gameState.partyId}` : ""}`;
+  if (speed) speed.textContent = `Speed: ${gameState.gameSpeed}x${gameState.isPaused ? " (Paused)" : ""}${gameState.isPartyMode && gameState.partyId ? ` | Party: ${gameState.partyId}` : ""}${gameState.username ? ` | ${gameState.username}` : ""}`;
 }
 
 function updateTowerInfo() {
@@ -515,7 +525,7 @@ function updateChat() {
     gameState.chatMessages.slice(-10).forEach(msg => {
       const div = document.createElement("div");
       div.textContent = `${msg.sender}: ${msg.message}`;
-      div.style.color = msg.sender === "You" ? "#00b894" : "#2d3436";
+      div.style.color = msg.sender === gameState.username ? "#00b894" : "#2d3436";
       chatBox.appendChild(div);
     });
     chatBox.scrollTop = chatBox.scrollHeight;
@@ -551,7 +561,7 @@ function endGame(won) {
   }
 }
 
-// Reset Game State (unchanged)
+// Reset Game State
 function resetGame() {
   gameState.enemies = [];
   gameState.towers = [];
@@ -573,11 +583,11 @@ function resetGame() {
   if (!gameState.isPartyMode) gameState.players = [];
 }
 
-// Sidebar Initialization (unchanged)
+// Sidebar Initialization
 function initSidebar() {
   const sidebar = document.getElementById("sidebar");
   if (sidebar) {
-    sidebar.innerHTML = "";
+    sidebar.innerHTML = ""; // Clear existing content
     gameState.unlockedTowers.forEach(type => {
       const div = document.createElement("div");
       div.className = "tower-option";
@@ -601,7 +611,7 @@ function initSidebar() {
   }
 }
 
-// Mouse Handling (unchanged)
+// Mouse Handling
 let lastMousePos = null;
 
 canvas.addEventListener("mousemove", (event) => {
@@ -664,10 +674,8 @@ function update(timestamp) {
   ctx.lineWidth = 40 * textScale;
   ctx.stroke();
 
-  // Always update spawning and wave logic, even when paused
   updateSpawning(dt);
 
-  // Only update enemies and towers when not paused and game is active
   if (!gameState.isPaused && !gameState.gameOver && !gameState.gameWon) {
     gameState.enemies.forEach(enemy => enemy.move(dt));
     gameState.towers.forEach(tower => tower.shoot());
@@ -708,7 +716,7 @@ document.addEventListener("DOMContentLoaded", () => {
     pauseButton.addEventListener("click", () => {
       gameState.isPaused = !gameState.isPaused;
       pauseButton.textContent = gameState.isPaused ? "Resume" : "Pause";
-      updateStats(); // Update UI to reflect pause state
+      updateStats();
       console.log(`Game ${gameState.isPaused ? "paused" : "resumed"}`);
     });
   }
@@ -716,7 +724,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (speedButton) {
     speedButton.addEventListener("click", () => {
       gameState.gameSpeed = gameState.gameSpeed === 1 ? 2 : gameState.gameSpeed === 2 ? 4 : 1;
-      updateStats(); // Update UI to reflect speed change
+      updateStats();
       console.log(`Game speed set to ${gameState.gameSpeed}x`);
     });
   }
@@ -726,7 +734,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (e.key === "Enter" && ws && ws.readyState === WebSocket.OPEN) {
         const message = e.target.value.trim();
         if (message) {
-          ws.send(JSON.stringify({ type: "chat", message }));
+          ws.send(JSON.stringify({ type: "chat", message, sender: gameState.username }));
           e.target.value = "";
         }
       }
@@ -762,7 +770,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-// Initialization (unchanged)
+// Initialization
 async function init() {
   try {
     await fetchUserData();
