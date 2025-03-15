@@ -272,19 +272,13 @@
 
     // Update login/signup success to ensure fresh token
     document.getElementById("login-button").addEventListener("click", async () => {
-      const usernameInput = document.getElementById("login-username");
-      const passwordInput = document.getElementById("login-password");
-      const username = usernameInput.value.trim();
-      const password = passwordInput.value;
+      const username = document.getElementById("login-username").value.trim();
+      const password = document.getElementById("login-password").value;
       console.log("Login attempt:", { username, password });
       if (!username || !password) {
         showNotification("Please enter both username and password.");
-        usernameInput.classList.toggle("error", !username);
-        passwordInput.classList.toggle("error", !password);
         return;
       }
-      usernameInput.classList.remove("error");
-      passwordInput.classList.remove("error");
       try {
         const response = await fetch("/login", {
           method: "POST",
@@ -296,13 +290,11 @@
           console.log("Login successful, token:", data.token);
           localStorage.setItem("token", data.token);
           localStorage.setItem("username", username);
-          console.log("Stored in localStorage:", { token: data.token, username });
           document.getElementById("auth-screen").style.display = "none";
           document.getElementById("main-menu").style.display = "flex";
           await updateUserMoneyDisplay();
           initWebSocket();
         } else {
-          console.log("Login failed with status:", response.status, "Message:", data.message);
           showNotification(data.message || "Login failed.");
         }
       } catch (err) {
@@ -310,6 +302,7 @@
         showNotification("Error during login. Please try again.");
       }
     });
+
     async function fetchUserData() {
       const token = localStorage.getItem("token");
       if (!token) throw new Error("No token found");
@@ -375,13 +368,9 @@
     document.getElementById("signup-button").addEventListener("click", async () => {
       const username = document.getElementById("signup-username").value.trim();
       const password = document.getElementById("signup-password").value;
-      console.log("Signup attempt:", { username, password });
+      console.log("Signup attempt:", { username, password }); // Debug
       if (!username || !password) {
         showNotification("Please enter both username and password.");
-        return;
-      }
-      if (username === 'starynightssss') {
-        showNotification("Username 'starynightssss' is reserved. Please choose another.");
         return;
       }
       try {
@@ -392,7 +381,7 @@
         });
         const data = await response.json();
         if (response.ok) {
-          console.log("Signup successful, token:", data.token);
+          console.log("Signup successful, token:", data.token); // Debug
           localStorage.setItem("token", data.token);
           localStorage.setItem("username", username);
           document.getElementById("auth-screen").style.display = "none";
@@ -400,7 +389,6 @@
           await updateUserMoneyDisplay();
           initWebSocket();
         } else {
-          console.log("Signup failed with status:", response.status, "Message:", data.message);
           showNotification(data.message || "Signup failed.");
         }
       } catch (err) {
