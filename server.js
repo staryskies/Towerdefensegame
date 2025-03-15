@@ -24,9 +24,27 @@ if (!process.env.SECRET_KEY) {
 }
 console.log('SECRET_KEY:', process.env.SECRET_KEY ? 'Set' : 'Not set');
 
-// Function to check and repopulate database if empty
+// Function to initialize database schema and populate if empty
 async function initializeDatabase() {
   try {
+    // Create tables if they don’t exist
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        username VARCHAR(255) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        money INTEGER DEFAULT 0
+      );
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS user_towers (
+        user_id INTEGER REFERENCES users(id),
+        tower VARCHAR(50),
+        PRIMARY KEY (user_id, tower)
+      );
+    `);
+    console.log('Database schema ensured (tables created if missing)');
+
     // Check if the users table is empty
     const userCheck = await pool.query('SELECT COUNT(*) FROM users');
     const userCount = parseInt(userCheck.rows[0].count, 10);
@@ -59,7 +77,8 @@ async function initializeDatabase() {
     }
   } catch (err) {
     console.error('Error initializing database:', err.message);
-    process.exit(1); // Exit if initialization fails
+    // Optional: Remove process.exit(1) to keep server running despite initialization failure
+    // process.exit(1);
   }
 }
 
