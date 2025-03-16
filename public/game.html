@@ -74,6 +74,7 @@
     const username = localStorage.getItem('username') || 'Guest';
     const isPartyMode = localStorage.getItem('isPartyMode') === 'true';
     const partyId = isPartyMode ? localStorage.getItem('partyId') : `${username}-${Date.now()}`;
+    const selectedDifficulty = localStorage.getItem('selectedDifficulty') || 'easy';
     let selectedTower = null;
     let selectedTowerIndex = null;
 
@@ -85,7 +86,7 @@
     }
 
     async function joinGame() {
-      console.log('Joining game with:', { username, partyId, difficulty: localStorage.getItem('selectedDifficulty'), map: localStorage.getItem('selectedMap'), isPartyMode });
+      console.log('Joining game with:', { username, partyId, difficulty: selectedDifficulty, map: localStorage.getItem('selectedMap'), isPartyMode });
       try {
         const response = await fetch('/game/join', {
           method: 'POST',
@@ -93,7 +94,7 @@
           body: JSON.stringify({ 
             username, 
             partyId, 
-            difficulty: localStorage.getItem('selectedDifficulty') || 'easy', 
+            difficulty: selectedDifficulty, 
             map: localStorage.getItem('selectedMap') || 'map1',
             isPartyMode 
           }),
