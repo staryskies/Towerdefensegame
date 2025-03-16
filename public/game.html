@@ -33,9 +33,11 @@
     const username = localStorage.getItem('username');
     let partyId = new URLSearchParams(window.location.search).get('partyId');
     let ws = null;
-    let gameState = null;
 
-    // Initialize game on page load
+    // Determine WebSocket protocol based on environment
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+    const wsHost = window.location.host;
+
     (async () => {
       if (!username || !partyId) {
         alert("Please select a map and log in first!");
@@ -59,7 +61,8 @@
       });
       const data = await response.json();
       partyId = data.partyId;
-      gameState = {
+      // Initialize gameState with basic structure and let game.js handle the rest
+      window.initializeGameState({
         ...data.gameState,
         enemies: [],
         projectiles: [],
@@ -69,14 +72,14 @@
         waveDelay: 0,
         isBossWave: false,
         bossSpawned: false,
-      };
+      });
       spawnWave();
       connectWebSocket();
       startGameLoop();
     })();
 
     function connectWebSocket() {
-      ws = new WebSocket(`ws://${window.location.host}/?partyId=${partyId}&username=${username}`);
+      ws = new WebSocket(`${wsProtocol}${wsHost}/?partyId=${partyId}&username=${username}`);
       ws.onopen = () => console.log('WebSocket connected');
       ws.onmessage = (event) => {
         const update = JSON.parse(event.data);
@@ -92,26 +95,26 @@
     function handleServerUpdate(update) {
       switch (update.type) {
         case 'INITIAL_STATE':
-          gameState = { ...gameState, ...update.gameState };
+          window.initializeGameState(update.gameState);
           break;
         case 'UPDATE_STATE':
-          if ('isPaused' in update) gameState.isPaused = update.isPaused;
-          if ('gameSpeed' in update) gameState.gameSpeed = update.gameSpeed;
-          if ('gameMoney' in update) gameState.gameMoney = update.gameMoney;
-          if ('playerHealth' in update) gameState.playerHealth = update.playerHealth;
-          if ('score' in update) gameState.score = update.score;
-          if ('wave' in update) gameState.wave = update.wave;
-          if ('gameOver' in update) gameState.gameOver = update.gameOver;
-          if ('gameWon' in update) gameState.gameWon = update.gameWon;
-          if ('enemies' in update) gameState.enemies = update.enemies;
-          if ('towers' in update) gameState.towers = update.towers;
-          if ('projectiles' in update) gameState.projectiles = update.projectiles;
+          if ('isPaused' in update) window.updateGameState('isPaused', update.isPaused);
+          if ('gameSpeed' in update) window.updateGameState('gameSpeed', update.gameSpeed);
+          if ('gameMoney' in update) window.updateGameState('gameMoney', update.gameMoney);
+          if ('playerHealth' in update) window.updateGameState('playerHealth', update.playerHealth);
+          if ('score' in update) window.updateGameState('score', update.score);
+          if ('wave' in update) window.updateGameState('wave', update.wave);
+          if ('gameOver' in update) window.updateGameState('gameOver', update.gameOver);
+          if ('gameWon' in update) window.updateGameState('gameWon', update.gameWon);
+          if ('enemies' in update) window.updateGameState('enemies', update.enemies);
+          if ('towers' in update) window.updateGameState('towers', update.towers);
+          if ('projectiles' in update) window.updateGameState('projectiles', update.projectiles);
           break;
         case 'TOWER_PLACED':
-          gameState.towers[update.index] = update.tower;
+          window.updateGameState('towers', [...window.gameState.towers.slice(0, update.index), update.tower, ...window.gameState.towers.slice(update.index + 1)]);
           break;
         case 'TOWER_UPGRADED':
-          gameState.towers[update.towerIndex] = update.tower;
+          window.updateGameState('towers', [...window.gameState.towers.slice(0, update.towerIndex), update.tower, ...window.gameState.towers.slice(update.towerIndex + 1)]);
           break;
       }
       updateStatsUI();
@@ -134,7 +137,6 @@
     function togglePartyMode() {
       const isPartyMode = document.getElementById('partyMode').checked;
       localStorage.setItem('isPartyMode', isPartyMode);
-      // Rejoin game with updated mode if needed
       window.location.reload();
     }
 

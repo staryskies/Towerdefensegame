@@ -5,6 +5,29 @@ const healthSpan = document.getElementById('health');
 const waveSpan = document.getElementById('wave');
 const scoreSpan = document.getElementById('score');
 
+// Expose gameState and related functions globally
+window.gameState = null;
+window.initializeGameState = function(initialState) {
+  window.gameState = {
+    ...initialState,
+    enemies: initialState.enemies || [],
+    projectiles: initialState.projectiles || [],
+    isSpawning: initialState.isSpawning || false,
+    spawnTimer: initialState.spawnTimer || 0,
+    enemiesToSpawn: initialState.enemiesToSpawn || 0,
+    waveDelay: initialState.waveDelay || 0,
+    isBossWave: initialState.isBossWave || false,
+    bossSpawned: initialState.bossSpawned || false,
+  };
+  spawnWave();
+};
+
+window.updateGameState = function(key, value) {
+  if (window.gameState) {
+    window.gameState[key] = value;
+  }
+};
+
 // Game constants
 const CANVAS_WIDTH = 1920;
 const CANVAS_HEIGHT = 1080;
@@ -81,16 +104,13 @@ const towerStats = {
   vortex: { damage: 0, range: 150, fireRate: 5000, cost: 300, persistentCost: 750, color: "purple", ability: "Pulls enemies", image: "tower_vortex.png" },
 };
 
-// Game state (set after joining)
-let gameState = null;
-
 // Game Classes
 class Enemy {
   constructor(type, wave, pathKey) {
     this.pathKey = pathKey;
-    this.x = gameState.paths[pathKey][0].x;
-    this.y = gameState.paths[pathKey][0].y;
-    const healthMultiplier = gameState.difficulty === "easy" ? 0.25 : gameState.difficulty === "medium" ? 0.5 : 1;
+    this.x = window.gameState.paths[pathKey][0].x;
+    this.y = window.gameState.paths[pathKey][0].y;
+    const healthMultiplier = window.gameState.difficulty === "easy" ? 0.25 : window.gameState.difficulty === "medium" ? 0.5 : 1;
     this.health = Math.floor(type.health * healthMultiplier * (1 + (wave - 1) * 0.25));
     this.maxHealth = this.health;
     this.speed = type.speed;
@@ -99,29 +119,29 @@ class Enemy {
     this.image = new Image();
     this.image.src = type.image || `images/${type.color}_enemy.png`; // Fallback to color-based images
     this.pathIndex = 1;
-    this.isBoss = gameState.isBossWave && !gameState.bossSpawned;
+    this.isBoss = window.gameState.isBossWave && !window.gameState.bossSpawned;
     if (this.isBoss) {
       this.health *= 5;
       this.maxHealth *= 5;
       this.radius *= 2;
       this.speed *= 0.8; // Slower but tankier
-      gameState.bossSpawned = true;
+      window.gameState.bossSpawned = true;
     }
   }
 
   move(dt) {
-    const path = gameState.paths[this.pathKey];
+    const path = window.gameState.paths[this.pathKey];
     if (this.pathIndex >= path.length) {
-      gameState.playerHealth -= this.isBoss ? 5 : 1;
-      gameState.enemies = gameState.enemies.filter(e => e !== this);
-      if (gameState.playerHealth <= 0) endGame(false);
+      window.gameState.playerHealth -= this.isBoss ? 5 : 1;
+      window.gameState.enemies = window.gameState.enemies.filter(e => e !== this);
+      if (window.gameState.playerHealth <= 0) endGame(false);
       return;
     }
     const target = path[this.pathIndex];
     const dx = target.x - this.x;
     const dy = target.y - this.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
-    const moveSpeed = this.speed * gameState.gameSpeed * dt;
+    const moveSpeed = this.speed * window.gameState.gameSpeed * dt;
     if (distance < moveSpeed) {
       this.x = target.x;
       this.y = target.y;
@@ -154,13 +174,13 @@ class Tower {
 
   shoot() {
     const now = Date.now();
-    if (now - this.lastShot < this.fireRate / gameState.gameSpeed) return;
-    let target = gameState.enemies.find(enemy => Math.hypot(enemy.x - this.x, enemy.y - this.y) < this.range);
+    if (now - this.lastShot < this.fireRate / window.gameState.gameSpeed) return;
+    let target = window.gameState.enemies.find(enemy => Math.hypot(enemy.x - this.x, enemy.y - this.y) < this.range);
     if (target) {
       const dx = target.x - this.x;
       const dy = target.y - this.y;
       this.angle = Math.atan2(dy, dx);
-      gameState.projectiles.push(new Projectile(this.x, this.y, target, this.damage, 5, this.type));
+      window.gameState.projectiles.push(new Projectile(this.x, this.y, target, this.damage, 5, this.type));
       this.lastShot = now;
     }
   }
@@ -179,14 +199,14 @@ class Projectile {
   }
 
   move(dt) {
-    if (!this.target || !gameState.enemies.includes(this.target)) {
-      gameState.projectiles = gameState.projectiles.filter(p => p !== this);
+    if (!this.target || !window.gameState.enemies.includes(this.target)) {
+      window.gameState.projectiles = window.gameState.projectiles.filter(p => p !== this);
       return;
     }
     const dx = this.target.x - this.x;
     const dy = this.target.y - this.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
-    const moveSpeed = this.speed * gameState.gameSpeed * dt;
+    const moveSpeed = this.speed * window.gameState.gameSpeed * dt;
     if (distance < moveSpeed) {
       this.hit();
     } else {
@@ -199,87 +219,93 @@ class Projectile {
     if (this.target) {
       this.target.health -= this.damage;
       if (this.target.health <= 0) {
-        gameState.score += this.target.isBoss ? 50 : 10;
-        gameState.gameMoney += this.target.isBoss ? 20 : 5;
-        gameState.enemies = gameState.enemies.filter(e => e !== this.target);
+        window.gameState.score += this.target.isBoss ? 50 : 10;
+        window.gameState.gameMoney += this.target.isBoss ? 20 : 5;
+        window.gameState.enemies = window.gameState.enemies.filter(e => e !== this.target);
       }
-      gameState.projectiles = gameState.projectiles.filter(p => p !== this);
+      window.gameState.projectiles = window.gameState.projectiles.filter(p => p !== this);
     }
   }
 }
 
 // Game Functions
 function spawnWave() {
-  if (gameState.isSpawning || gameState.waveDelay > 0) return;
-  gameState.isSpawning = true;
-  gameState.isBossWave = gameState.wave % 5 === 0;
-  gameState.bossSpawned = false;
-  gameState.enemiesToSpawn = gameState.isBossWave ? 5 : Math.min(10 + gameState.wave * 2, MAX_ENEMIES);
-  gameState.spawnTimer = 0;
+  if (!window.gameState || window.gameState.isSpawning || window.gameState.waveDelay > 0) return;
+  window.gameState.isSpawning = true;
+  window.gameState.isBossWave = window.gameState.wave % 5 === 0;
+  window.gameState.bossSpawned = false;
+  window.gameState.enemiesToSpawn = window.gameState.isBossWave ? 5 : Math.min(10 + window.gameState.wave * 2, MAX_ENEMIES);
+  window.gameState.spawnTimer = 0;
 }
 
 function updateEnemies(dt) {
-  if (!gameState.isSpawning && gameState.enemies.length === 0 && gameState.waveDelay <= 0) {
-    gameState.wave++;
-    if (gameState.wave > 20) {
+  if (!window.gameState) return;
+
+  if (!window.gameState.isSpawning && window.gameState.enemies.length === 0 && window.gameState.waveDelay <= 0) {
+    window.gameState.wave++;
+    if (window.gameState.wave > 20) {
       endGame(true);
       return;
     }
-    gameState.waveDelay = 5; // 5-second delay between waves
+    window.gameState.waveDelay = 5; // 5-second delay between waves
     return;
   }
 
-  if (gameState.waveDelay > 0) {
-    gameState.waveDelay -= dt;
+  if (window.gameState.waveDelay > 0) {
+    window.gameState.waveDelay -= dt;
     return;
   }
 
-  if (gameState.isSpawning) {
-    gameState.spawnTimer -= dt;
-    if (gameState.spawnTimer <= 0 && gameState.enemiesToSpawn > 0) {
-      const theme = mapThemes[gameState.map];
-      const difficulty = gameState.difficulty;
+  if (window.gameState.isSpawning) {
+    window.gameState.spawnTimer -= dt;
+    if (window.gameState.spawnTimer <= 0 && window.gameState.enemiesToSpawn > 0) {
+      const theme = mapThemes[window.gameState.map];
+      const difficulty = window.gameState.difficulty;
       const enemyType = enemyThemes[theme][difficulty][0];
       const pathKey = Math.random() < 0.5 ? 'path1' : 'path2';
-      gameState.enemies.push(new Enemy(enemyType, gameState.wave, pathKey));
-      gameState.enemiesToSpawn--;
-      gameState.spawnTimer = gameState.isBossWave ? 2 : 1; // Slower spawn for bosses
+      window.gameState.enemies.push(new Enemy(enemyType, window.gameState.wave, pathKey));
+      window.gameState.enemiesToSpawn--;
+      window.gameState.spawnTimer = window.gameState.isBossWave ? 2 : 1; // Slower spawn for bosses
     }
-    if (gameState.enemiesToSpawn === 0) gameState.isSpawning = false;
+    if (window.gameState.enemiesToSpawn === 0) window.gameState.isSpawning = false;
   }
 
-  gameState.enemies.forEach(enemy => enemy.move(dt));
+  window.gameState.enemies.forEach(enemy => enemy.move(dt));
 }
 
 function updateTowers() {
-  gameState.towers.forEach(tower => tower.shoot());
+  if (!window.gameState) return;
+  window.gameState.towers.forEach(tower => tower.shoot());
 }
 
 function updateProjectiles(dt) {
-  gameState.projectiles.forEach(projectile => projectile.move(dt));
+  if (!window.gameState) return;
+  window.gameState.projectiles.forEach(projectile => projectile.move(dt));
 }
 
 function endGame(won) {
-  gameState.gameOver = !won;
-  gameState.gameWon = won;
+  if (!window.gameState) return;
+  window.gameState.gameOver = !won;
+  window.gameState.gameWon = won;
   alert(won ? "You Won!" : "Game Over!");
   sendAction({
     type: 'UPDATE_STATE',
-    gameMoney: gameState.gameMoney,
-    playerHealth: gameState.playerHealth,
-    score: gameState.score,
-    wave: gameState.wave,
-    gameOver: gameState.gameOver,
-    gameWon: gameState.gameWon,
-    enemies: gameState.enemies,
-    towers: gameState.towers,
-    projectiles: gameState.projectiles,
+    gameMoney: window.gameState.gameMoney,
+    playerHealth: window.gameState.playerHealth,
+    score: window.gameState.score,
+    wave: window.gameState.wave,
+    gameOver: window.gameState.gameOver,
+    gameWon: window.gameState.gameWon,
+    enemies: window.gameState.enemies,
+    towers: window.gameState.towers,
+    projectiles: window.gameState.projectiles,
   });
   window.location.href = '/map.html';
 }
 
 // Rendering Functions
 function drawPath(path) {
+  if (!window.gameState) return;
   ctx.beginPath();
   ctx.moveTo(path[0].x, path[0].y);
   for (let i = 1; i < path.length; i++) {
@@ -332,18 +358,19 @@ function drawProjectile(projectile) {
 }
 
 function render() {
+  if (!window.gameState) return;
   ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-  ctx.fillStyle = themeBackgrounds[gameState.map];
+  ctx.fillStyle = themeBackgrounds[window.gameState.map];
   ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
   // Draw paths
-  drawPath(gameState.paths.path1);
-  drawPath(gameState.paths.path2);
+  drawPath(window.gameState.paths.path1);
+  drawPath(window.gameState.paths.path2);
 
   // Draw game objects
-  gameState.enemies.forEach(drawEnemy);
-  gameState.towers.forEach(drawTower);
-  gameState.projectiles.forEach(drawProjectile);
+  window.gameState.enemies.forEach(drawEnemy);
+  window.gameState.towers.forEach(drawTower);
+  window.gameState.projectiles.forEach(drawProjectile);
 }
 
 // Game Loop
@@ -353,21 +380,21 @@ function gameLoop(timestamp) {
   const dt = (timestamp - lastTime) / 1000;
   lastTime = timestamp;
 
-  if (!gameState.isPaused && !gameState.gameOver && !gameState.gameWon) {
+  if (window.gameState && !window.gameState.isPaused && !window.gameState.gameOver && !window.gameState.gameWon) {
     updateEnemies(dt);
     updateTowers();
     updateProjectiles(dt);
     sendAction({
       type: 'UPDATE_STATE',
-      gameMoney: gameState.gameMoney,
-      playerHealth: gameState.playerHealth,
-      score: gameState.score,
-      wave: gameState.wave,
-      gameOver: gameState.gameOver,
-      gameWon: gameState.gameWon,
-      enemies: gameState.enemies,
-      towers: gameState.towers,
-      projectiles: gameState.projectiles,
+      gameMoney: window.gameState.gameMoney,
+      playerHealth: window.gameState.playerHealth,
+      score: window.gameState.score,
+      wave: window.gameState.wave,
+      gameOver: window.gameState.gameOver,
+      gameWon: window.gameState.gameWon,
+      enemies: window.gameState.enemies,
+      towers: window.gameState.towers,
+      projectiles: window.gameState.projectiles,
     });
   }
 
@@ -377,12 +404,16 @@ function gameLoop(timestamp) {
 }
 
 function startGameLoop() {
-  requestAnimationFrame(gameLoop);
+  if (window.gameState) {
+    requestAnimationFrame(gameLoop);
+  }
 }
 
 function updateStatsUI() {
-  moneySpan.textContent = gameState.gameMoney;
-  healthSpan.textContent = gameState.playerHealth;
-  waveSpan.textContent = gameState.wave;
-  scoreSpan.textContent = gameState.score;
+  if (window.gameState) {
+    moneySpan.textContent = window.gameState.gameMoney;
+    healthSpan.textContent = window.gameState.playerHealth;
+    waveSpan.textContent = window.gameState.wave;
+    scoreSpan.textContent = window.gameState.score;
+  }
 }
