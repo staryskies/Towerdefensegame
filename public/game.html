@@ -85,13 +85,7 @@
     }
 
     async function joinGame() {
-      console.log('Joining game with:', { 
-        username, 
-        partyId, 
-        difficulty: localStorage.getItem('selectedDifficulty'), 
-        map: localStorage.getItem('selectedMap'), 
-        isPartyMode 
-      });
+      console.log('Joining game with:', { username, partyId, difficulty: localStorage.getItem('selectedDifficulty'), map: localStorage.getItem('selectedMap'), isPartyMode });
       try {
         const response = await fetch('/game/join', {
           method: 'POST',
@@ -104,14 +98,16 @@
             isPartyMode 
           }),
         });
-        console.log('Join response status:', response.status);
         const data = await response.json();
-        console.log('Join response data:', data);
         if (response.ok) {
           showNotification(data.message);
           localStorage.setItem('partyId', data.partyId);
           console.log('Successfully joined game, partyId:', data.partyId);
-          updateGameState();
+          // Wait 10 seconds before starting the game
+          setTimeout(() => {
+            updateGameState();
+            startPolling();
+          }, 10000); // 10 seconds delay
         } else {
           showNotification(data.message || 'Failed to join game');
           console.error('Failed to join game:', data.message);
@@ -123,22 +119,15 @@
     }
 
     async function updateGameState() {
-      console.log('Updating game state for partyId:', partyId);
       try {
         const image = document.getElementById('game-image');
-        const imageUrl = `/game/state?partyId=${partyId}&t=${Date.now()}`;
-        console.log('Fetching game state from:', imageUrl);
-        image.src = imageUrl;
+        image.src = `/game/state?partyId=${partyId}&t=${Date.now()}`;
 
-        const statsUrl = `/game/stats?partyId=${partyId}`;
-        console.log('Fetching stats from:', statsUrl);
-        const statsResponse = await fetch(statsUrl);
-        console.log('Stats response status:', statsResponse.status);
+        const statsResponse = await fetch(`/game/stats?partyId=${partyId}`);
         if (!statsResponse.ok) {
           throw new Error(`Stats fetch failed: ${statsResponse.statusText}`);
         }
         const stats = await statsResponse.json();
-        console.log('Stats received:', stats);
         document.getElementById('score').textContent = `Score: ${stats.score}`;
         document.getElementById('money').textContent = `Money: $${stats.money}`;
         document.getElementById('health').textContent = `Health: ${stats.health}`;
@@ -342,7 +331,7 @@
     });
 
     function startPolling() {
-      setInterval(updateGameState, 1000);
+      setInterval(updateGameState, 25); // 40 FPS (1000ms / 40 = 25ms)
     }
 
     if (!localStorage.getItem('username')) {
@@ -350,7 +339,6 @@
     } else {
       joinGame();
       initSidebar();
-      startPolling();
     }
   </script>
 </body>
