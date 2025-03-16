@@ -593,13 +593,16 @@ function updateGameState(partyId) {
 }
 
 function generateGameImage(gameState) {
+  console.log(`Generating game image for partyId: ${gameState.partyId}`);
   try {
     const canvas = createCanvas(CANVAS_WIDTH, CANVAS_HEIGHT);
     const ctx = canvas.getContext('2d');
 
+    console.log('Filling background...');
     ctx.fillStyle = themeBackgrounds[gameState.selectedMap] || '#90ee90';
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
+    console.log('Drawing paths...');
     Object.values(gameState.paths).forEach(path => {
       ctx.beginPath();
       ctx.moveTo(path[0].x, path[0].y);
@@ -609,6 +612,7 @@ function generateGameImage(gameState) {
       ctx.stroke();
     });
 
+    console.log('Drawing towers...');
     gameState.towers.forEach(tower => {
       ctx.save();
       ctx.translate(tower.x, tower.y);
@@ -624,6 +628,7 @@ function generateGameImage(gameState) {
       ctx.fillText(`${tower.type.charAt(0).toUpperCase() + tower.type.slice(1)} (${tower.placedBy})`, tower.x, tower.y + 25);
     });
 
+    console.log('Drawing enemies...');
     gameState.enemies.forEach(enemy => {
       ctx.beginPath();
       ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2);
@@ -635,6 +640,7 @@ function generateGameImage(gameState) {
       ctx.fillText(`${Math.floor(enemy.health)}`, enemy.x, enemy.y - enemy.radius - 5);
     });
 
+    console.log('Drawing projectiles...');
     gameState.projectiles.forEach(projectile => {
       ctx.beginPath();
       ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2);
@@ -642,9 +648,11 @@ function generateGameImage(gameState) {
       ctx.fill();
     });
 
-    return canvas.toBuffer('image/png');
+    const imageBuffer = canvas.toBuffer('image/png');
+    console.log('Image generation completed successfully');
+    return imageBuffer;
   } catch (err) {
-    console.error('Error generating game image:', err.message);
+    console.error('Error generating game image:', err.message, err.stack);
     return createCanvas(CANVAS_WIDTH, CANVAS_HEIGHT).toBuffer('image/png'); // Fallback blank image
   }
 }
@@ -830,7 +838,7 @@ app.get('/game/state', async (req, res) => {
     return res.status(400).json({ message: 'partyId required' });
   }
 
-  const gameState = await loadGameState(partyId);
+  let gameState = await loadGameState(partyId);
   if (!gameState) {
     console.log('Game instance not found, attempting to reinitialize for partyId:', partyId);
     const username = partyId.split('-')[0];
@@ -838,18 +846,19 @@ app.get('/game/state', async (req, res) => {
       return res.status(400).json({ message: 'Invalid partyId format' });
     }
     initializeGame(partyId, "easy", "map1", false);
-    const reinitializedState = await loadGameState(partyId);
-    if (reinitializedState) {
-      reinitializedState.players.add(username);
-      reinitializedState.partyLeader = username;
-      spawnWave(reinitializedState);
-      console.log(`Reinitialized game for partyId ${partyId} with username ${username}`);
-    } else {
-      return res.status(500).json({ message: 'Failed to reinitialize game' });
+    gameState = await loadGameState(partyId); // Ensure gameState is updated
+    if (!gameState) {
+      console.error('Reinitialization failed for partyId:', partyId);
+      return res.status(500).json({ message: 'Failed to reinitialize game state' });
     }
+    gameState.players.add(username);
+    gameState.partyLeader = username;
+    spawnWave(gameState);
+    console.log(`Reinitialized game for partyId ${partyId} with username ${username}`);
   }
 
   const imageBuffer = generateGameImage(gameState);
+  console.log('Sending image response for partyId:', partyId);
   res.set('Content-Type', 'image/png');
   res.send(imageBuffer);
 });
