@@ -393,12 +393,7 @@ function initializeGame(partyId, difficulty = "easy", map = "map1", isPartyMode 
 }
 
 async function loadGameState(partyId) {
-  // Simplified: Load from in-memory storage; extend with database if needed
-  const gameState = gameInstances.get(partyId);
-  if (!gameState) {
-    console.warn(`No game state found for partyId: ${partyId}`);
-  }
-  return gameState;
+  return gameInstances.get(partyId); // Simplified in-memory load
 }
 
 // Game Classes
@@ -867,7 +862,7 @@ app.get('/game/stats', async (req, res) => {
     return res.status(400).json({ message: 'partyId required' });
   }
 
-  const gameState = await loadGameState(partyId);
+  let gameState = await loadGameState(partyId);
   if (!gameState) {
     console.log('Game instance not found, attempting to reinitialize for partyId:', partyId);
     const username = partyId.split('-')[0];
@@ -875,29 +870,35 @@ app.get('/game/stats', async (req, res) => {
       return res.status(400).json({ message: 'Invalid partyId format' });
     }
     initializeGame(partyId, "easy", "map1", false);
-    const reinitializedState = await loadGameState(partyId);
-    if (reinitializedState) {
-      reinitializedState.players.add(username);
-      reinitializedState.partyLeader = username;
-      spawnWave(reinitializedState);
-      console.log(`Reinitialized game for partyId ${partyId} with username ${username}`);
-    } else {
-      return res.status(500).json({ message: 'Failed to reinitialize game' });
+    gameState = await loadGameState(partyId); // Ensure gameState is updated
+    if (!gameState) {
+      console.error('Reinitialization failed for partyId:', partyId);
+      return res.status(500).json({ message: 'Failed to reinitialize game state' });
     }
+    gameState.players.add(username);
+    gameState.partyLeader = username;
+    spawnWave(gameState);
+    console.log(`Reinitialized game for partyId ${partyId} with username ${username}`);
+  }
+
+  // Fallback to default values if gameState is still undefined (should not happen)
+  if (!gameState) {
+    console.error('Critical error: gameState is undefined after reinitialization for partyId:', partyId);
+    return res.status(500).json({ message: 'Internal server error' });
   }
 
   res.json({
-    money: gameState.gameMoney,
-    health: gameState.playerHealth,
-    wave: gameState.wave,
-    score: gameState.score,
-    gameSpeed: gameState.gameSpeed,
-    isPaused: gameState.isPaused,
-    gameOver: gameState.gameOver,
-    gameWon: gameState.gameWon,
-    players: Array.from(gameState.players),
-    partyLeader: gameState.partyLeader,
-    towers: gameState.towers.map(t => ({
+    money: gameState.gameMoney || 0,
+    health: gameState.playerHealth || 0,
+    wave: gameState.wave || 1,
+    score: gameState.score || 0,
+    gameSpeed: gameState.gameSpeed || 1,
+    isPaused: gameState.isPaused || false,
+    gameOver: gameState.gameOver || false,
+    gameWon: gameState.gameWon || false,
+    players: Array.from(gameState.players || []),
+    partyLeader: gameState.partyLeader || null,
+    towers: (gameState.towers || []).map(t => ({
       x: t.x,
       y: t.y,
       type: t.type,
