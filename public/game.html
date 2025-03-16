@@ -4,20 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tower Defense Game</title>
-  <style>
-    canvas {
-      border: 1px solid black;
-    }
-    #game-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    #stats {
-      margin: 10px;
-      font-family: Arial, sans-serif;
-    }
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div id="game-container">
@@ -28,200 +15,137 @@
       Wave: <span id="wave">0</span> |
       Score: <span id="score">0</span>
     </div>
-    <button onclick="togglePause()">Toggle Pause</button>
-    <button onclick="setSpeed(1)">1x Speed</button>
-    <button onclick="setSpeed(2)">2x Speed</button>
-    <button onclick="placeTower('basic')">Place Basic Tower</button>
+    <div id="controls">
+      <button onclick="togglePause()">Toggle Pause</button>
+      <button onclick="setSpeed(1)">1x Speed</button>
+      <button onclick="setSpeed(2)">2x Speed</button>
+      <label>
+        Party Mode: <input type="checkbox" id="partyMode" onchange="togglePartyMode()">
+      </label>
+      <button onclick="placeTower('basic')">Place Basic Tower</button>
+      <button onclick="upgradeTower(0, 'power')">Upgrade Tower 0 (Power)</button>
+      <button onclick="upgradeTower(0, 'utility')">Upgrade Tower 0 (Utility)</button>
+    </div>
   </div>
 
+  <script src="game.js"></script>
   <script>
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    const statsDiv = document.getElementById('stats');
-    const moneySpan = document.getElementById('money');
-    const healthSpan = document.getElementById('health');
-    const waveSpan = document.getElementById('wave');
-    const scoreSpan = document.getElementById('score');
+    const username = localStorage.getItem('username');
+    let partyId = new URLSearchParams(window.location.search).get('partyId');
+    let ws = null;
+    let gameState = null;
 
-    let partyId = null;
-    let username = 'starynightssss';
-    let gameState = {
-      enemies: [],
-      towers: [],
-      projectiles: [],
-      paths: {},
-      map: 'map1',
-      mapTheme: 'grassland',
-    };
-    let stats = {
-      money: 0,
-      health: 0,
-      wave: 0,
-      score: 0,
-      gameSpeed: 1,
-      isPaused: false,
-      gameOver: false,
-      gameWon: false,
-    };
-    let themeBackgrounds = {
-      map1: "#90ee90",
-      map2: "#f4a460",
-      map3: "#a9a9a9",
-      map4: "#6b8e23",
-      map5: "#cd853f",
-      map6: "#f4a460",
-      map7: "#87ceeb",
-      map8: "#cd5c5c",
-      map9: "#e0ffff",
-    };
-    const PATH_WIDTH = 40;
-
-    // Join game on page load
+    // Initialize game on page load
     (async () => {
+      if (!username || !partyId) {
+        alert("Please select a map and log in first!");
+        window.location.href = '/map.html';
+        return;
+      }
+
+      const isPartyMode = localStorage.getItem('isPartyMode') === 'true';
+      document.getElementById('partyMode').checked = isPartyMode;
+
       const response = await fetch('/game/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, partyId: `${username}-${Date.now()}`, difficulty: 'easy', map: 'map1' }),
+        body: JSON.stringify({
+          username,
+          partyId,
+          difficulty: localStorage.getItem("selectedDifficulty") || "easy",
+          map: localStorage.getItem("selectedMap") || "map1",
+          isPartyMode,
+        }),
       });
       const data = await response.json();
       partyId = data.partyId;
-      gameState.paths = data.paths;
-      gameState.map = data.map;
-      gameState.mapTheme = data.mapTheme;
-      startPolling();
-      startRendering();
+      gameState = {
+        ...data.gameState,
+        enemies: [],
+        projectiles: [],
+        isSpawning: false,
+        spawnTimer: 0,
+        enemiesToSpawn: 0,
+        waveDelay: 0,
+        isBossWave: false,
+        bossSpawned: false,
+      };
+      spawnWave();
+      connectWebSocket();
+      startGameLoop();
     })();
 
-    // Polling with exponential backoff
-    let pollingInterval = 500;
-    let retryCount = 0;
-    const maxRetries = 5;
-
-    function startPolling() {
-      setTimeout(async () => {
-        try {
-          await updateGameState();
-          await updateStats();
-          retryCount = 0;
-          pollingInterval = 500; // Reset interval
-        } catch (error) {
-          console.error('Error updating game state:', error);
-          retryCount++;
-          if (retryCount < maxRetries) {
-            pollingInterval *= 2; // Exponential backoff
-            console.log(`Retrying in ${pollingInterval}ms...`);
-          } else {
-            console.error('Max retries reached. Stopping polling.');
-            return;
-          }
-        }
-        startPolling();
-      }, pollingInterval);
+    function connectWebSocket() {
+      ws = new WebSocket(`ws://${window.location.host}/?partyId=${partyId}&username=${username}`);
+      ws.onopen = () => console.log('WebSocket connected');
+      ws.onmessage = (event) => {
+        const update = JSON.parse(event.data);
+        handleServerUpdate(update);
+      };
+      ws.onclose = () => {
+        console.log('WebSocket disconnected. Reconnecting...');
+        setTimeout(connectWebSocket, 1000);
+      };
+      ws.onerror = (error) => console.error('WebSocket error:', error);
     }
 
-    async function updateGameState() {
-      const response = await fetch(`/game/state?partyId=${partyId}`);
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      gameState = await response.json();
-    }
-
-    async function updateStats() {
-      const response = await fetch(`/game/stats?partyId=${partyId}`);
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      stats = await response.json();
-      moneySpan.textContent = stats.money;
-      healthSpan.textContent = stats.health;
-      waveSpan.textContent = stats.wave;
-      scoreSpan.textContent = stats.score;
-    }
-
-    function startRendering() {
-      function render() {
-        // Clear canvas
-        ctx.fillStyle = themeBackgrounds[gameState.map] || '#90ee90';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // Draw paths
-        Object.values(gameState.paths).forEach(path => {
-          ctx.beginPath();
-          ctx.moveTo(path[0].x, path[0].y);
-          path.slice(1).forEach(point => ctx.lineTo(point.x, point.y));
-          ctx.strokeStyle = "brown";
-          ctx.lineWidth = PATH_WIDTH;
-          ctx.stroke();
-        });
-
-        // Draw towers
-        gameState.towers.forEach(tower => {
-          ctx.save();
-          ctx.translate(tower.x, tower.y);
-          ctx.rotate(tower.angle);
-          ctx.beginPath();
-          ctx.arc(0, 0, tower.radius, 0, Math.PI * 2);
-          ctx.fillStyle = tower.color;
-          ctx.fill();
-          ctx.restore();
-          ctx.fillStyle = "white";
-          ctx.font = "12px Arial";
-          ctx.textAlign = "center";
-          ctx.fillText(`${tower.type.charAt(0).toUpperCase() + tower.type.slice(1)} (${tower.placedBy})`, tower.x, tower.y + 25);
-        });
-
-        // Draw enemies
-        gameState.enemies.forEach(enemy => {
-          ctx.beginPath();
-          ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2);
-          ctx.fillStyle = enemy.isBoss ? "darkred" : enemy.color;
-          ctx.fill();
-          ctx.fillStyle = "white";
-          ctx.font = "12px Arial";
-          ctx.textAlign = "center";
-          ctx.fillText(`${Math.floor(enemy.health)}`, enemy.x, enemy.y - enemy.radius - 5);
-        });
-
-        // Draw projectiles
-        gameState.projectiles.forEach(projectile => {
-          ctx.beginPath();
-          ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2);
-          ctx.fillStyle = projectile.color;
-          ctx.fill();
-        });
-
-        requestAnimationFrame(render);
+    function handleServerUpdate(update) {
+      switch (update.type) {
+        case 'INITIAL_STATE':
+          gameState = { ...gameState, ...update.gameState };
+          break;
+        case 'UPDATE_STATE':
+          if ('isPaused' in update) gameState.isPaused = update.isPaused;
+          if ('gameSpeed' in update) gameState.gameSpeed = update.gameSpeed;
+          if ('gameMoney' in update) gameState.gameMoney = update.gameMoney;
+          if ('playerHealth' in update) gameState.playerHealth = update.playerHealth;
+          if ('score' in update) gameState.score = update.score;
+          if ('wave' in update) gameState.wave = update.wave;
+          if ('gameOver' in update) gameState.gameOver = update.gameOver;
+          if ('gameWon' in update) gameState.gameWon = update.gameWon;
+          if ('enemies' in update) gameState.enemies = update.enemies;
+          if ('towers' in update) gameState.towers = update.towers;
+          if ('projectiles' in update) gameState.projectiles = update.projectiles;
+          break;
+        case 'TOWER_PLACED':
+          gameState.towers[update.index] = update.tower;
+          break;
+        case 'TOWER_UPGRADED':
+          gameState.towers[update.towerIndex] = update.tower;
+          break;
       }
-      render();
+      updateStatsUI();
     }
 
-    async function togglePause() {
-      const response = await fetch('/game/toggle-pause', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, partyId }),
-      });
-      const data = await response.json();
-      console.log(data.message);
+    function sendAction(action) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(action));
+      }
     }
 
-    async function setSpeed(speed) {
-      const response = await fetch('/game/set-speed', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, partyId, speed }),
-      });
-      const data = await response.json();
-      console.log(data.message);
+    function togglePause() {
+      sendAction({ type: 'TOGGLE_PAUSE' });
     }
 
-    async function placeTower(type) {
+    function setSpeed(speed) {
+      sendAction({ type: 'SET_SPEED', speed });
+    }
+
+    function togglePartyMode() {
+      const isPartyMode = document.getElementById('partyMode').checked;
+      localStorage.setItem('isPartyMode', isPartyMode);
+      // Rejoin game with updated mode if needed
+      window.location.reload();
+    }
+
+    function placeTower(type) {
       const x = Math.random() * canvas.width;
       const y = Math.random() * canvas.height;
-      const response = await fetch('/game/place-tower', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, partyId, type, x, y }),
-      });
-      const data = await response.json();
-      console.log(data.message);
+      sendAction({ type: 'PLACE_TOWER', towerType: type, x, y });
+    }
+
+    function upgradeTower(towerIndex, path) {
+      sendAction({ type: 'UPGRADE_TOWER', towerIndex, path });
     }
   </script>
 </body>
