@@ -14,12 +14,16 @@ app.use(express.static('public'));
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  max: 10, // Limit concurrent connections
+  idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
 });
 
 // Game constants
 const CANVAS_WIDTH = 1920;
 const CANVAS_HEIGHT = 1080;
 const PATH_WIDTH = 40;
+const MAX_ENEMIES = 100; // Cap to prevent memory overload
+const MAX_PROJECTILES = 200; // Cap to prevent memory overload
 
 // Map and Theme Definitions
 const mapThemes = {
@@ -539,12 +543,12 @@ function spawnWave(gameState) {
   }
   gameState.isSpawning = true;
   const enemiesPerWave = Math.min(5 + gameState.wave * 2, 50);
-  gameState.enemiesToSpawn = enemiesPerWave;
+  gameState.enemiesToSpawn = Math.min(enemiesPerWave, MAX_ENEMIES - gameState.enemies.length); // Cap enemies
   gameState.spawnTimer = 0;
   gameState.waveDelay = 0;
   gameState.isBossWave = gameState.wave % 5 === 0 && gameState.wave > 0;
   gameState.bossSpawned = false;
-  console.log(`Starting wave ${gameState.wave} for party ${gameState.partyId}`);
+  console.log(`Starting wave ${gameState.wave} for party ${gameState.partyId}, enemies to spawn: ${gameState.enemiesToSpawn}`);
 }
 
 function updateSpawning(dt, gameState) {
@@ -553,7 +557,7 @@ function updateSpawning(dt, gameState) {
     if (gameState.waveDelay <= 0) spawnWave(gameState);
     return;
   }
-  if (gameState.isSpawning && gameState.enemiesToSpawn > 0) {
+  if (gameState.isSpawning && gameState.enemiesToSpawn > 0 && gameState.enemies.length < MAX_ENEMIES) {
     gameState.spawnTimer += dt * gameState.gameSpeed;
     const spawnInterval = 1;
     if (gameState.spawnTimer >= spawnInterval) {
@@ -577,18 +581,32 @@ function endGame(gameState, won) {
 }
 
 function updateGameState(partyId) {
+  console.log(`Updating game state for partyId: ${partyId}`);
   const gameState = gameInstances.get(partyId);
-  if (!gameState) return;
+  if (!gameState) {
+    console.warn(`No game state found for partyId: ${partyId}`);
+    return;
+  }
 
   const now = Date.now();
   const dt = (now - gameState.lastUpdate) / 1000;
   gameState.lastUpdate = now;
 
   if (!gameState.isPaused && !gameState.gameOver && !gameState.gameWon) {
+    console.log(`Processing spawning for ${partyId}, enemies: ${gameState.enemies.length}`);
     updateSpawning(dt, gameState);
+    console.log(`Moving ${gameState.enemies.length} enemies for ${partyId}`);
     gameState.enemies.forEach(enemy => enemy.move(dt, gameState));
+    console.log(`Shooting with ${gameState.towers.length} towers for ${partyId}`);
     gameState.towers.forEach(tower => tower.shoot(gameState));
+    console.log(`Moving ${gameState.projectiles.length} projectiles for ${partyId}`);
     gameState.projectiles.forEach(projectile => projectile.move(dt, gameState));
+    // Cap collections to prevent memory issues
+    gameState.enemies = gameState.enemies.slice(0, MAX_ENEMIES);
+    gameState.projectiles = gameState.projectiles.slice(0, MAX_PROJECTILES);
+    console.log(`Game state update completed for ${partyId}, enemies: ${gameState.enemies.length}, projectiles: ${gameState.projectiles.length}`);
+  } else {
+    console.log(`Game ${partyId} is paused, over, or won, skipping update`);
   }
 }
 
@@ -658,19 +676,21 @@ function generateGameImage(gameState) {
 }
 
 // Periodic update loop
-setInterval(() => {
+let updateInterval = setInterval(() => {
   gameInstances.forEach(async (gameState, partyId) => {
-    updateGameState(partyId);
     try {
+      updateGameState(partyId);
       await pool.query(
         'INSERT INTO game_instances (party_id, state) VALUES ($1, $2) ON CONFLICT (party_id) DO UPDATE SET state = $2, created_at = CURRENT_TIMESTAMP',
         [partyId, gameState]
       );
+      console.log(`Successfully updated and saved state for party ${partyId}`);
     } catch (err) {
-      console.error(`Error updating game state for party ${partyId}:`, err.message);
+      console.error(`Error updating or saving game state for party ${partyId}:`, err.message);
+      // Skip this iteration if it fails, preventing crash
     }
   });
-}, 1000 / 60);
+}, 1000 / 30); // Reduced to 30 FPS to ease load
 
 // Database Initialization
 async function initializeDatabase() {
@@ -890,35 +910,36 @@ app.get('/game/stats', async (req, res) => {
     console.log(`Reinitialized game for partyId ${partyId} with username ${username}`);
   }
 
-  // Fallback to default values if gameState is still undefined (should not happen)
-  if (!gameState) {
-    console.error('Critical error: gameState is undefined after reinitialization for partyId:', partyId);
-    return res.status(500).json({ message: 'Internal server error' });
+  try {
+    updateGameState(partyId);
+    console.log(`Successfully updated game state for ${partyId}`);
+    res.json({
+      money: gameState.gameMoney || 0,
+      health: gameState.playerHealth || 0,
+      wave: gameState.wave || 1,
+      score: gameState.score || 0,
+      gameSpeed: gameState.gameSpeed || 1,
+      isPaused: gameState.isPaused || false,
+      gameOver: gameState.gameOver || false,
+      gameWon: gameState.gameWon || false,
+      players: Array.from(gameState.players || []),
+      partyLeader: gameState.partyLeader || null,
+      towers: (gameState.towers || []).map(t => ({
+        x: t.x,
+        y: t.y,
+        type: t.type,
+        damage: t.damage,
+        range: t.range,
+        radius: t.radius,
+        powerLevel: t.powerLevel,
+        utilityLevel: t.utilityLevel,
+        placedBy: t.placedBy,
+      })),
+    });
+  } catch (err) {
+    console.error(`Error in /game/stats for partyId ${partyId}:`, err.message, err.stack);
+    res.status(500).json({ message: 'Failed to fetch stats', error: err.message });
   }
-
-  res.json({
-    money: gameState.gameMoney || 0,
-    health: gameState.playerHealth || 0,
-    wave: gameState.wave || 1,
-    score: gameState.score || 0,
-    gameSpeed: gameState.gameSpeed || 1,
-    isPaused: gameState.isPaused || false,
-    gameOver: gameState.gameOver || false,
-    gameWon: gameState.gameWon || false,
-    players: Array.from(gameState.players || []),
-    partyLeader: gameState.partyLeader || null,
-    towers: (gameState.towers || []).map(t => ({
-      x: t.x,
-      y: t.y,
-      type: t.type,
-      damage: t.damage,
-      range: t.range,
-      radius: t.radius,
-      powerLevel: t.powerLevel,
-      utilityLevel: t.utilityLevel,
-      placedBy: t.placedBy,
-    })),
-  });
 });
 
 app.post('/game/place-tower', async (req, res) => {
@@ -1001,20 +1022,6 @@ app.post('/game/upgrade-tower', async (req, res) => {
 
   res.json({ message: `Tower upgraded on ${path} path to level ${currentLevel + 1}` });
 });
-
-setInterval(() => {
-  gameInstances.forEach(async (gameState, partyId) => {
-    updateGameState(partyId);
-    try {
-      await pool.query(
-        'INSERT INTO game_instances (party_id, state) VALUES ($1, $2) ON CONFLICT (party_id) DO UPDATE SET state = $2, created_at = CURRENT_TIMESTAMP',
-        [partyId, gameState]
-      );
-    } catch (err) {
-      console.error(`Error updating game state for party ${partyId}:`, err.message);
-    }
-  });
-}, 1000 / 60);
 
 app.listen(port, async () => {
   console.log(`Server running on port ${port}`);
