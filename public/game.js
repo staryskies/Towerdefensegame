@@ -10,7 +10,11 @@ window.gameState = null;
 window.initializeGameState = function(initialState) {
   window.gameState = {
     ...initialState,
-    enemies: initialState.enemies || [],
+    enemies: initialState.enemies ? initialState.enemies.map(e => new Enemy(
+      { health: e.health, speed: e.speed, radius: e.radius, color: e.color, image: e.image },
+      initialState.wave,
+      e.pathKey
+    )) : [],
     projectiles: initialState.projectiles || [],
     isSpawning: initialState.isSpawning || false,
     spawnTimer: initialState.spawnTimer || 0,
@@ -24,7 +28,19 @@ window.initializeGameState = function(initialState) {
 
 window.updateGameState = function(key, value) {
   if (window.gameState) {
-    window.gameState[key] = value;
+    if (key === 'enemies' && Array.isArray(value)) {
+      window.gameState.enemies = value.map(e => new Enemy(
+        { health: e.health, speed: e.speed, radius: e.radius, color: e.color, image: e.image },
+        window.gameState.wave,
+        e.pathKey
+      ));
+    } else if (key === 'towers' && Array.isArray(value)) {
+      window.gameState.towers = value.map(t => new Tower(t.x, t.y, t.type, t.placedBy));
+    } else if (key === 'projectiles' && Array.isArray(value)) {
+      window.gameState.projectiles = value.map(p => new Projectile(p.x, p.y, p.target, p.damage, p.speed, p.type));
+    } else {
+      window.gameState[key] = value;
+    }
   }
 };
 
@@ -48,60 +64,60 @@ const themeBackgrounds = {
 
 const enemyThemes = {
   grassland: {
-    easy: [{ health: 50, speed: 1, radius: 10, color: "red", image: "enemy_red.png" }],
-    medium: [{ health: 75, speed: 1.2, radius: 12, color: "darkred", image: "enemy_darkred.png" }],
-    hard: [{ health: 100, speed: 1.5, radius: 15, color: "crimson", image: "enemy_crimson.png" }],
+    easy: [{ health: 50, speed: 1, radius: 10, color: "red", image: "images/enemy_red.png" }],
+    medium: [{ health: 75, speed: 1.2, radius: 12, color: "darkred", image: "images/enemy_darkred.png" }],
+    hard: [{ health: 100, speed: 1.5, radius: 15, color: "crimson", image: "images/enemy_crimson.png" }],
   },
   desert: {
-    easy: [{ health: 60, speed: 1.1, radius: 10, color: "sandybrown", image: "enemy_sandy.png" }],
-    medium: [{ health: 85, speed: 1.3, radius: 12, color: "peru", image: "enemy_peru.png" }],
-    hard: [{ health: 120, speed: 1.6, radius: 15, color: "sienna", image: "enemy_sienna.png" }],
+    easy: [{ health: 60, speed: 1.1, radius: 10, color: "sandybrown", image: "images/enemy_sandy.png" }],
+    medium: [{ health: 85, speed: 1.3, radius: 12, color: "peru", image: "images/enemy_peru.png" }],
+    hard: [{ health: 120, speed: 1.6, radius: 15, color: "sienna", image: "images/enemy_sienna.png" }],
   },
   stone: {
-    easy: [{ health: 70, speed: 0.9, radius: 10, color: "gray", image: "enemy_gray.png" }],
-    medium: [{ health: 95, speed: 1.1, radius: 12, color: "darkgray", image: "enemy_darkgray.png" }],
-    hard: [{ health: 130, speed: 1.4, radius: 15, color: "slategray", image: "enemy_slate.png" }],
+    easy: [{ health: 70, speed: 0.9, radius: 10, color: "gray", image: "images/enemy_gray.png" }],
+    medium: [{ health: 95, speed: 1.1, radius: 12, color: "darkgray", image: "images/enemy_darkgray.png" }],
+    hard: [{ health: 130, speed: 1.4, radius: 15, color: "slategray", image: "images/enemy_slate.png" }],
   },
   forest: {
-    easy: [{ health: 55, speed: 1, radius: 10, color: "green", image: "enemy_green.png" }],
-    medium: [{ health: 80, speed: 1.2, radius: 12, color: "darkgreen", image: "enemy_darkgreen.png" }],
-    hard: [{ health: 110, speed: 1.5, radius: 15, color: "forestgreen", image: "enemy_forest.png" }],
+    easy: [{ health: 55, speed: 1, radius: 10, color: "green", image: "images/enemy_green.png" }],
+    medium: [{ health: 80, speed: 1.2, radius: 12, color: "darkgreen", image: "images/enemy_darkgreen.png" }],
+    hard: [{ health: 110, speed: 1.5, radius: 15, color: "forestgreen", image: "images/enemy_forest.png" }],
   },
   mountain: {
-    easy: [{ health: 65, speed: 0.8, radius: 10, color: "brown", image: "enemy_brown.png" }],
-    medium: [{ health: 90, speed: 1, radius: 12, color: "saddlebrown", image: "enemy_saddle.png" }],
-    hard: [{ health: 125, speed: 1.3, radius: 15, color: "chocolate", image: "enemy_choco.png" }],
+    easy: [{ health: 65, speed: 0.8, radius: 10, color: "brown", image: "images/enemy_brown.png" }],
+    medium: [{ health: 90, speed: 1, radius: 12, color: "saddlebrown", image: "images/enemy_saddle.png" }],
+    hard: [{ health: 125, speed: 1.3, radius: 15, color: "chocolate", image: "images/enemy_choco.png" }],
   },
   river: {
-    easy: [{ health: 50, speed: 1.2, radius: 10, color: "blue", image: "enemy_blue.png" }],
-    medium: [{ health: 75, speed: 1.4, radius: 12, color: "darkblue", image: "enemy_darkblue.png" }],
-    hard: [{ health: 100, speed: 1.7, radius: 15, color: "navy", image: "enemy_navy.png" }],
+    easy: [{ health: 50, speed: 1.2, radius: 10, color: "blue", image: "images/enemy_blue.png" }],
+    medium: [{ health: 75, speed: 1.4, radius: 12, color: "darkblue", image: "images/enemy_darkblue.png" }],
+    hard: [{ health: 100, speed: 1.7, radius: 15, color: "navy", image: "images/enemy_navy.png" }],
   },
   canyon: {
-    easy: [{ health: 60, speed: 1, radius: 10, color: "orange", image: "enemy_orange.png" }],
-    medium: [{ health: 85, speed: 1.2, radius: 12, color: "darkorange", image: "enemy_darkorange.png" }],
-    hard: [{ health: 115, speed: 1.5, radius: 15, color: "orangered", image: "enemy_orange.png" }],
+    easy: [{ health: 60, speed: 1, radius: 10, color: "orange", image: "images/enemy_orange.png" }],
+    medium: [{ health: 85, speed: 1.2, radius: 12, color: "darkorange", image: "images/enemy_darkorange.png" }],
+    hard: [{ health: 115, speed: 1.5, radius: 15, color: "orangered", image: "images/enemy_orange.png" }],
   },
   arctic: {
-    easy: [{ health: 70, speed: 0.9, radius: 10, color: "lightblue", image: "enemy_lightblue.png" }],
-    medium: [{ health: 95, speed: 1.1, radius: 12, color: "cyan", image: "enemy_cyan.png" }],
-    hard: [{ health: 130, speed: 1.4, radius: 15, color: "deepskyblue", image: "enemy_deepblue.png" }],
+    easy: [{ health: 70, speed: 0.9, radius: 10, color: "lightblue", image: "images/enemy_lightblue.png" }],
+    medium: [{ health: 95, speed: 1.1, radius: 12, color: "cyan", image: "images/enemy_cyan.png" }],
+    hard: [{ health: 130, speed: 1.4, radius: 15, color: "deepskyblue", image: "images/enemy_deepblue.png" }],
   },
 };
 
 const towerStats = {
-  basic: { damage: 10, range: 100, fireRate: 1000, cost: 50, persistentCost: 0, color: "gray", ability: "Basic shot", image: "tower_basic.png" },
-  archer: { damage: 15, range: 120, fireRate: 2000, cost: 75, persistentCost: 225, color: "brown", ability: "Double shot", image: "tower_archer.png" },
-  cannon: { damage: 30, range: 80, fireRate: 3000, cost: 100, persistentCost: 300, color: "black", ability: "Splash damage", image: "tower_cannon.png" },
-  sniper: { damage: 50, range: 150, fireRate: 4000, cost: 150, persistentCost: 350, color: "green", ability: "Critical hit", image: "tower_sniper.png" },
-  freeze: { damage: 5, range: 100, fireRate: 2000, cost: 120, persistentCost: 400, color: "lightblue", ability: "Slows enemies", image: "tower_freeze.png" },
-  mortar: { damage: 40, range: 120, fireRate: 5000, cost: 200, persistentCost: 450, color: "darkgray", ability: "Large splash", image: "tower_mortar.png" },
-  laser: { damage: 100, range: 150, fireRate: 10000, cost: 350, persistentCost: 500, color: "red", ability: "Continuous beam", image: "tower_laser.png" },
-  tesla: { damage: 25, range: 120, fireRate: 3000, cost: 250, persistentCost: 550, color: "yellow", ability: "Chain lightning", image: "tower_tesla.png" },
-  flamethrower: { damage: 20, range: 80, fireRate: 2000, cost: 180, persistentCost: 600, color: "orange", ability: "Burning damage", image: "tower_flame.png" },
-  missile: { damage: 60, range: 130, fireRate: 4000, cost: 200, persistentCost: 650, color: "silver", ability: "High damage", image: "tower_missile.png" },
-  poison: { damage: 15, range: 110, fireRate: 3000, cost: 250, persistentCost: 700, color: "limegreen", ability: "Poison splash", image: "tower_poison.png" },
-  vortex: { damage: 0, range: 150, fireRate: 5000, cost: 300, persistentCost: 750, color: "purple", ability: "Pulls enemies", image: "tower_vortex.png" },
+  basic: { damage: 10, range: 100, fireRate: 1000, cost: 50, persistentCost: 0, color: "gray", ability: "Basic shot", image: "images/tower_basic.png" },
+  archer: { damage: 15, range: 120, fireRate: 2000, cost: 75, persistentCost: 225, color: "brown", ability: "Double shot", image: "images/tower_archer.png" },
+  cannon: { damage: 30, range: 80, fireRate: 3000, cost: 100, persistentCost: 300, color: "black", ability: "Splash damage", image: "images/tower_cannon.png" },
+  sniper: { damage: 50, range: 150, fireRate: 4000, cost: 150, persistentCost: 350, color: "green", ability: "Critical hit", image: "images/tower_sniper.png" },
+  freeze: { damage: 5, range: 100, fireRate: 2000, cost: 120, persistentCost: 400, color: "lightblue", ability: "Slows enemies", image: "images/tower_freeze.png" },
+  mortar: { damage: 40, range: 120, fireRate: 5000, cost: 200, persistentCost: 450, color: "darkgray", ability: "Large splash", image: "images/tower_mortar.png" },
+  laser: { damage: 100, range: 150, fireRate: 10000, cost: 350, persistentCost: 500, color: "red", ability: "Continuous beam", image: "images/tower_laser.png" },
+  tesla: { damage: 25, range: 120, fireRate: 3000, cost: 250, persistentCost: 550, color: "yellow", ability: "Chain lightning", image: "images/tower_tesla.png" },
+  flamethrower: { damage: 20, range: 80, fireRate: 2000, cost: 180, persistentCost: 600, color: "orange", ability: "Burning damage", image: "images/tower_flame.png" },
+  missile: { damage: 60, range: 130, fireRate: 4000, cost: 200, persistentCost: 650, color: "silver", ability: "High damage", image: "images/tower_missile.png" },
+  poison: { damage: 15, range: 110, fireRate: 3000, cost: 250, persistentCost: 700, color: "limegreen", ability: "Poison splash", image: "images/tower_poison.png" },
+  vortex: { damage: 0, range: 150, fireRate: 5000, cost: 300, persistentCost: 750, color: "purple", ability: "Pulls enemies", image: "images/tower_vortex.png" },
 };
 
 // Game Classes
@@ -117,7 +133,7 @@ class Enemy {
     this.radius = type.radius;
     this.color = type.color;
     this.image = new Image();
-    this.image.src = type.image || `images/${type.color}_enemy.png`; // Fallback to color-based images
+    this.image.src = type.image;
     this.pathIndex = 1;
     this.isBoss = window.gameState.isBossWave && !window.gameState.bossSpawned;
     if (this.isBoss) {
@@ -165,7 +181,7 @@ class Tower {
     this.radius = 20;
     this.color = towerStats[type].color;
     this.image = new Image();
-    this.image.src = towerStats[type].image || `images/${type}_tower.png`; // Fallback to type-based images
+    this.image.src = towerStats[type].image;
     this.angle = 0;
     this.powerLevel = 0;
     this.utilityLevel = 0;
@@ -270,7 +286,13 @@ function updateEnemies(dt) {
     if (window.gameState.enemiesToSpawn === 0) window.gameState.isSpawning = false;
   }
 
-  window.gameState.enemies.forEach(enemy => enemy.move(dt));
+  window.gameState.enemies.forEach(enemy => {
+    if (typeof enemy.move === 'function') {
+      enemy.move(dt);
+    } else {
+      console.error('Enemy lacks move function:', enemy);
+    }
+  });
 }
 
 function updateTowers() {
@@ -296,7 +318,7 @@ function endGame(won) {
     wave: window.gameState.wave,
     gameOver: window.gameState.gameOver,
     gameWon: window.gameState.gameWon,
-    enemies: window.gameState.enemies,
+    enemies: window.gameState.enemies.map(e => ({ x: e.x, y: e.y, health: e.health, speed: e.speed, radius: e.radius, color: e.color, image: e.image, pathKey: e.pathKey, pathIndex: e.pathIndex, isBoss: e.isBoss })),
     towers: window.gameState.towers,
     projectiles: window.gameState.projectiles,
   });
@@ -317,10 +339,17 @@ function drawPath(path) {
 }
 
 function drawEnemy(enemy) {
-  ctx.fillStyle = enemy.color;
+  ctx.save();
   ctx.beginPath();
   ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2);
-  ctx.fill();
+  if (enemy.image && enemy.image.complete && enemy.image.naturalHeight !== 0) {
+    ctx.clip();
+    ctx.drawImage(enemy.image, enemy.x - enemy.radius, enemy.y - enemy.radius, enemy.radius * 2, enemy.radius * 2);
+    ctx.restore();
+  } else {
+    ctx.fillStyle = enemy.color || 'red';
+    ctx.fill();
+  }
   // Draw health bar
   const barWidth = enemy.radius * 2;
   const barHeight = 5;
@@ -329,13 +358,21 @@ function drawEnemy(enemy) {
   ctx.fillRect(enemy.x - barWidth / 2, enemy.y - enemy.radius - 10, barWidth, barHeight);
   ctx.fillStyle = 'green';
   ctx.fillRect(enemy.x - barWidth / 2, enemy.y - enemy.radius - 10, barWidth * healthRatio, barHeight);
+  ctx.restore();
 }
 
 function drawTower(tower) {
-  ctx.fillStyle = tower.color;
+  ctx.save();
   ctx.beginPath();
   ctx.arc(tower.x, tower.y, tower.radius, 0, Math.PI * 2);
-  ctx.fill();
+  if (tower.image && tower.image.complete && tower.image.naturalHeight !== 0) {
+    ctx.clip();
+    ctx.drawImage(tower.image, tower.x - tower.radius, tower.y - tower.radius, tower.radius * 2, tower.radius * 2);
+    ctx.restore();
+  } else {
+    ctx.fillStyle = tower.color || 'gray';
+    ctx.fill();
+  }
   // Draw range circle
   ctx.beginPath();
   ctx.arc(tower.x, tower.y, tower.range, 0, Math.PI * 2);
@@ -347,6 +384,7 @@ function drawTower(tower) {
   ctx.rotate(tower.angle);
   ctx.fillStyle = 'black';
   ctx.fillRect(0, -5, 20, 10);
+  ctx.restore();
   ctx.restore();
 }
 
@@ -360,7 +398,7 @@ function drawProjectile(projectile) {
 function render() {
   if (!window.gameState) return;
   ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-  ctx.fillStyle = themeBackgrounds[window.gameState.map];
+  ctx.fillStyle = themeBackgrounds[window.gameState.map] || '#90ee90';
   ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
   // Draw paths
@@ -392,7 +430,7 @@ function gameLoop(timestamp) {
       wave: window.gameState.wave,
       gameOver: window.gameState.gameOver,
       gameWon: window.gameState.gameWon,
-      enemies: window.gameState.enemies,
+      enemies: window.gameState.enemies.map(e => ({ x: e.x, y: e.y, health: e.health, speed: e.speed, radius: e.radius, color: e.color, image: e.image, pathKey: e.pathKey, pathIndex: e.pathIndex, isBoss: e.isBoss })),
       towers: window.gameState.towers,
       projectiles: window.gameState.projectiles,
     });
