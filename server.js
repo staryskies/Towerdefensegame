@@ -1,7 +1,6 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const { Pool } = require('pg');
-const { createCanvas } = require('canvas');
 require('dotenv').config();
 
 const app = express();
@@ -10,20 +9,28 @@ const port = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static('public'));
 
+// Add timeout middleware
+app.use((req, res, next) => {
+  res.setTimeout(10000, () => {
+    res.status(503).json({ message: 'Request timed out' });
+  });
+  next();
+});
+
 // Database setup
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  max: 10, // Limit concurrent connections
-  idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
+  max: 10,
+  idleTimeoutMillis: 30000,
 });
 
 // Game constants
 const CANVAS_WIDTH = 1920;
 const CANVAS_HEIGHT = 1080;
 const PATH_WIDTH = 40;
-const MAX_ENEMIES = 100; // Cap to prevent memory overload
-const MAX_PROJECTILES = 200; // Cap to prevent memory overload
+const MAX_ENEMIES = 100;
+const MAX_PROJECTILES = 200;
 
 // Map and Theme Definitions
 const mapThemes = {
@@ -391,13 +398,14 @@ function initializeGame(partyId, difficulty = "easy", map = "map1", isPartyMode 
       mapTheme: mapThemes[map],
       paths: paths[map],
       isPartyMode,
+      lastSaved: 0, // Track last database save
     });
     console.log(`Game instance created for party ${partyId}, map: ${map}, difficulty: ${difficulty}, mode: ${isPartyMode ? "party" : "solo"}`);
   }
 }
 
 async function loadGameState(partyId) {
-  return gameInstances.get(partyId); // Simplified in-memory load
+  return gameInstances.get(partyId);
 }
 
 // Game Classes
@@ -543,7 +551,7 @@ function spawnWave(gameState) {
   }
   gameState.isSpawning = true;
   const enemiesPerWave = Math.min(5 + gameState.wave * 2, 50);
-  gameState.enemiesToSpawn = Math.min(enemiesPerWave, MAX_ENEMIES - gameState.enemies.length); // Cap enemies
+  gameState.enemiesToSpawn = Math.min(enemiesPerWave, MAX_ENEMIES - gameState.enemies.length);
   gameState.spawnTimer = 0;
   gameState.waveDelay = 0;
   gameState.isBossWave = gameState.wave % 5 === 0 && gameState.wave > 0;
@@ -578,6 +586,21 @@ function endGame(gameState, won) {
   gameState.gameOver = !won;
   gameState.gameWon = won;
   console.log(`Game ${gameState.partyId} ended: ${won ? "Won" : "Lost"}`);
+  // Save on game end
+  saveGameState(gameState);
+}
+
+async function saveGameState(gameState) {
+  try {
+    await pool.query(
+      'INSERT INTO game_instances (party_id, state) VALUES ($1, $2) ON CONFLICT (party_id) DO UPDATE SET state = $2, created_at = CURRENT_TIMESTAMP',
+      [gameState.partyId, gameState]
+    );
+    gameState.lastSaved = Date.now();
+    console.log(`Successfully saved state for party ${gameState.partyId}`);
+  } catch (err) {
+    console.error(`Error saving game state for party ${gameState.partyId}:`, err.message);
+  }
 }
 
 function updateGameState(partyId) {
@@ -601,96 +624,29 @@ function updateGameState(partyId) {
     gameState.towers.forEach(tower => tower.shoot(gameState));
     console.log(`Moving ${gameState.projectiles.length} projectiles for ${partyId}`);
     gameState.projectiles.forEach(projectile => projectile.move(dt, gameState));
-    // Cap collections to prevent memory issues
     gameState.enemies = gameState.enemies.slice(0, MAX_ENEMIES);
     gameState.projectiles = gameState.projectiles.slice(0, MAX_PROJECTILES);
     console.log(`Game state update completed for ${partyId}, enemies: ${gameState.enemies.length}, projectiles: ${gameState.projectiles.length}`);
+
+    // Save every 5 seconds
+    if (now - gameState.lastSaved > 5000) {
+      saveGameState(gameState);
+    }
   } else {
     console.log(`Game ${partyId} is paused, over, or won, skipping update`);
   }
 }
 
-function generateGameImage(gameState) {
-  console.log(`Generating game image for partyId: ${gameState.partyId}`);
-  try {
-    const canvas = createCanvas(CANVAS_WIDTH, CANVAS_HEIGHT);
-    const ctx = canvas.getContext('2d');
-
-    console.log('Filling background...');
-    ctx.fillStyle = themeBackgrounds[gameState.selectedMap] || '#90ee90';
-    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-
-    console.log('Drawing paths...');
-    Object.values(gameState.paths).forEach(path => {
-      ctx.beginPath();
-      ctx.moveTo(path[0].x, path[0].y);
-      path.slice(1).forEach(point => ctx.lineTo(point.x, point.y));
-      ctx.strokeStyle = "brown";
-      ctx.lineWidth = PATH_WIDTH;
-      ctx.stroke();
-    });
-
-    console.log('Drawing towers...');
-    gameState.towers.forEach(tower => {
-      ctx.save();
-      ctx.translate(tower.x, tower.y);
-      ctx.rotate(tower.angle);
-      ctx.beginPath();
-      ctx.arc(0, 0, tower.radius, 0, Math.PI * 2);
-      ctx.fillStyle = tower.color;
-      ctx.fill();
-      ctx.restore();
-      ctx.fillStyle = "white";
-      ctx.font = "12px Arial";
-      ctx.textAlign = "center";
-      ctx.fillText(`${tower.type.charAt(0).toUpperCase() + tower.type.slice(1)} (${tower.placedBy})`, tower.x, tower.y + 25);
-    });
-
-    console.log('Drawing enemies...');
-    gameState.enemies.forEach(enemy => {
-      ctx.beginPath();
-      ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2);
-      ctx.fillStyle = enemy.isBoss ? "darkred" : enemy.color;
-      ctx.fill();
-      ctx.fillStyle = "white";
-      ctx.font = "12px Arial";
-      ctx.textAlign = "center";
-      ctx.fillText(`${Math.floor(enemy.health)}`, enemy.x, enemy.y - enemy.radius - 5);
-    });
-
-    console.log('Drawing projectiles...');
-    gameState.projectiles.forEach(projectile => {
-      ctx.beginPath();
-      ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2);
-      ctx.fillStyle = projectile.color;
-      ctx.fill();
-    });
-
-    const imageBuffer = canvas.toBuffer('image/png');
-    console.log('Image generation completed successfully');
-    return imageBuffer;
-  } catch (err) {
-    console.error('Error generating game image:', err.message, err.stack);
-    return createCanvas(CANVAS_WIDTH, CANVAS_HEIGHT).toBuffer('image/png'); // Fallback blank image
-  }
-}
-
 // Periodic update loop
-let updateInterval = setInterval(() => {
-  gameInstances.forEach(async (gameState, partyId) => {
+setInterval(() => {
+  gameInstances.forEach((gameState, partyId) => {
     try {
       updateGameState(partyId);
-      await pool.query(
-        'INSERT INTO game_instances (party_id, state) VALUES ($1, $2) ON CONFLICT (party_id) DO UPDATE SET state = $2, created_at = CURRENT_TIMESTAMP',
-        [partyId, gameState]
-      );
-      console.log(`Successfully updated and saved state for party ${partyId}`);
     } catch (err) {
-      console.error(`Error updating or saving game state for party ${partyId}:`, err.message);
-      // Skip this iteration if it fails, preventing crash
+      console.error(`Error updating game state for party ${partyId}:`, err.message);
     }
   });
-}, 1000 / 30); // Reduced to 30 FPS to ease load
+}, 1000 / 30);
 
 // Database Initialization
 async function initializeDatabase() {
@@ -825,11 +781,11 @@ app.post('/game/join', async (req, res) => {
     console.log('Missing username or partyId');
     return res.status(400).json({ message: 'Username and partyId required' });
   }
-  
+
   const effectivePartyId = isPartyMode ? partyId : `${username}-${Date.now()}`;
   console.log('Effective partyId:', effectivePartyId);
   initializeGame(effectivePartyId, difficulty, map, isPartyMode);
-  
+
   const gameState = await loadGameState(effectivePartyId);
   if (!gameState) {
     console.error('Failed to initialize game state for partyId:', effectivePartyId);
@@ -841,12 +797,15 @@ app.post('/game/join', async (req, res) => {
   spawnWave(gameState);
 
   console.log(`Player ${username} joined party ${effectivePartyId}. Current players:`, Array.from(gameState.players));
-  res.json({ 
-    message: `Joined game ${effectivePartyId} in ${isPartyMode ? "party" : "solo"} mode`, 
+  res.json({
+    message: `Joined game ${effectivePartyId} in ${isPartyMode ? "party" : "solo"} mode`,
     partyId: effectivePartyId,
-    money: gameState.gameMoney, 
-    health: gameState.playerHealth, 
-    wave: gameState.wave 
+    money: gameState.gameMoney,
+    health: gameState.playerHealth,
+    wave: gameState.wave,
+    map: gameState.selectedMap,
+    paths: gameState.paths,
+    mapTheme: gameState.mapTheme,
   });
 });
 
@@ -866,7 +825,7 @@ app.get('/game/state', async (req, res) => {
       return res.status(400).json({ message: 'Invalid partyId format' });
     }
     initializeGame(partyId, "easy", "map1", false);
-    gameState = await loadGameState(partyId); // Ensure gameState is updated
+    gameState = await loadGameState(partyId);
     if (!gameState) {
       console.error('Reinitialization failed for partyId:', partyId);
       return res.status(500).json({ message: 'Failed to reinitialize game state' });
@@ -877,10 +836,51 @@ app.get('/game/state', async (req, res) => {
     console.log(`Reinitialized game for partyId ${partyId} with username ${username}`);
   }
 
-  const imageBuffer = generateGameImage(gameState);
-  console.log('Sending image response for partyId:', partyId);
-  res.set('Content-Type', 'image/png');
-  res.send(imageBuffer);
+  try {
+    updateGameState(partyId);
+    res.json({
+      enemies: gameState.enemies.map(e => ({
+        x: e.x,
+        y: e.y,
+        health: e.health,
+        maxHealth: e.maxHealth,
+        speed: e.speed,
+        radius: e.radius,
+        color: e.color,
+        pathIndex: e.pathIndex,
+        isBoss: e.isBoss,
+        pathKey: e.pathKey,
+      })),
+      towers: gameState.towers.map(t => ({
+        x: t.x,
+        y: t.y,
+        type: t.type,
+        damage: t.damage,
+        range: t.range,
+        fireRate: t.fireRate,
+        lastShot: t.lastShot,
+        radius: t.radius,
+        color: t.color,
+        angle: t.angle,
+        powerLevel: t.powerLevel,
+        utilityLevel: t.utilityLevel,
+        placedBy: t.placedBy,
+      })),
+      projectiles: gameState.projectiles.map(p => ({
+        x: p.x,
+        y: p.y,
+        target: gameState.enemies.indexOf(p.target),
+        damage: p.damage,
+        speed: p.speed,
+        type: p.type,
+        radius: p.radius,
+        color: p.color,
+      })),
+    });
+  } catch (err) {
+    console.error(`Error in /game/state for partyId ${partyId}:`, err.message, err.stack);
+    res.status(500).json({ message: 'Failed to fetch game state', error: err.message });
+  }
 });
 
 app.get('/game/stats', async (req, res) => {
@@ -899,7 +899,7 @@ app.get('/game/stats', async (req, res) => {
       return res.status(400).json({ message: 'Invalid partyId format' });
     }
     initializeGame(partyId, "easy", "map1", false);
-    gameState = await loadGameState(partyId); // Ensure gameState is updated
+    gameState = await loadGameState(partyId);
     if (!gameState) {
       console.error('Reinitialization failed for partyId:', partyId);
       return res.status(500).json({ message: 'Failed to reinitialize game state' });
@@ -912,7 +912,6 @@ app.get('/game/stats', async (req, res) => {
 
   try {
     updateGameState(partyId);
-    console.log(`Successfully updated game state for ${partyId}`);
     res.json({
       money: gameState.gameMoney || 0,
       health: gameState.playerHealth || 0,
@@ -924,17 +923,6 @@ app.get('/game/stats', async (req, res) => {
       gameWon: gameState.gameWon || false,
       players: Array.from(gameState.players || []),
       partyLeader: gameState.partyLeader || null,
-      towers: (gameState.towers || []).map(t => ({
-        x: t.x,
-        y: t.y,
-        type: t.type,
-        damage: t.damage,
-        range: t.range,
-        radius: t.radius,
-        powerLevel: t.powerLevel,
-        utilityLevel: t.utilityLevel,
-        placedBy: t.placedBy,
-      })),
     });
   } catch (err) {
     console.error(`Error in /game/stats for partyId ${partyId}:`, err.message, err.stack);
@@ -944,6 +932,7 @@ app.get('/game/stats', async (req, res) => {
 
 app.post('/game/place-tower', async (req, res) => {
   const { username, partyId, type, x, y } = req.body;
+  console.log(`Received /game/place-tower request for partyId: ${partyId}, username: ${username}`);
   const gameState = await loadGameState(partyId);
   if (!gameState) return res.status(404).json({ message: 'Game not found' });
 
@@ -963,6 +952,8 @@ app.post('/game/place-tower', async (req, res) => {
     await pool.query('UPDATE users SET money = money - $1 WHERE username = $2', [towerCost, username]);
   }
 
+  // Save state after placing a tower
+  await saveGameState(gameState);
   res.json({ message: 'Tower placed' });
 });
 
@@ -974,6 +965,7 @@ app.post('/game/toggle-pause', async (req, res) => {
   if (gameState.partyLeader !== username) return res.status(403).json({ message: 'Only the party leader can toggle pause' });
 
   gameState.isPaused = !gameState.isPaused;
+  await saveGameState(gameState);
   res.json({ message: gameState.isPaused ? 'Game paused' : 'Game resumed' });
 });
 
@@ -985,6 +977,7 @@ app.post('/game/set-speed', async (req, res) => {
   if (gameState.partyLeader !== username) return res.status(403).json({ message: 'Only the party leader can set speed' });
 
   gameState.gameSpeed = speed;
+  await saveGameState(gameState);
   res.json({ message: `Game speed set to ${speed}x` });
 });
 
@@ -1020,6 +1013,7 @@ app.post('/game/upgrade-tower', async (req, res) => {
     await pool.query('UPDATE users SET money = money - $1 WHERE username = $2', [upgrade.cost, username]);
   }
 
+  await saveGameState(gameState);
   res.json({ message: `Tower upgraded on ${path} path to level ${currentLevel + 1}` });
 });
 
