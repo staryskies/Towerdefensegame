@@ -71,9 +71,9 @@
       poison: { cost: 250 },
       vortex: { cost: 300 },
     };
-    const partyId = localStorage.getItem('partyId') || `${localStorage.getItem('username')}-${Date.now()}`;
     const username = localStorage.getItem('username') || 'Guest';
     const isPartyMode = localStorage.getItem('isPartyMode') === 'true';
+    const partyId = isPartyMode ? localStorage.getItem('partyId') : `${username}-${Date.now()}`;
     let selectedTower = null;
     let selectedTowerIndex = null;
 
@@ -83,8 +83,15 @@
       notification.classList.add('show');
       setTimeout(() => notification.classList.remove('show'), 3000);
     }
+
     async function joinGame() {
-      console.log('Attempting to join game with:', { username, partyId, difficulty: localStorage.getItem('selectedDifficulty'), map: localStorage.getItem('selectedMap'), isPartyMode });
+      console.log('Joining game with:', { 
+        username, 
+        partyId, 
+        difficulty: localStorage.getItem('selectedDifficulty'), 
+        map: localStorage.getItem('selectedMap'), 
+        isPartyMode 
+      });
       try {
         const response = await fetch('/game/join', {
           method: 'POST',
@@ -102,24 +109,36 @@
         console.log('Join response data:', data);
         if (response.ok) {
           showNotification(data.message);
-          localStorage.setItem('partyId', data.partyId); // Update partyId for solo mode
+          localStorage.setItem('partyId', data.partyId);
+          console.log('Successfully joined game, partyId:', data.partyId);
           updateGameState();
         } else {
           showNotification(data.message || 'Failed to join game');
+          console.error('Failed to join game:', data.message);
         }
       } catch (err) {
-        console.error('Join error:', err);
+        console.error('Error joining game:', err);
         showNotification('Error joining game: ' + err.message);
       }
-}
+    }
 
     async function updateGameState() {
+      console.log('Updating game state for partyId:', partyId);
       try {
         const image = document.getElementById('game-image');
-        image.src = `/game/state?partyId=${partyId}&t=${Date.now()}`;
+        const imageUrl = `/game/state?partyId=${partyId}&t=${Date.now()}`;
+        console.log('Fetching game state from:', imageUrl);
+        image.src = imageUrl;
 
-        const statsResponse = await fetch(`/game/stats?partyId=${partyId}`);
+        const statsUrl = `/game/stats?partyId=${partyId}`;
+        console.log('Fetching stats from:', statsUrl);
+        const statsResponse = await fetch(statsUrl);
+        console.log('Stats response status:', statsResponse.status);
+        if (!statsResponse.ok) {
+          throw new Error(`Stats fetch failed: ${statsResponse.statusText}`);
+        }
         const stats = await statsResponse.json();
+        console.log('Stats received:', stats);
         document.getElementById('score').textContent = `Score: ${stats.score}`;
         document.getElementById('money').textContent = `Money: $${stats.money}`;
         document.getElementById('health').textContent = `Health: ${stats.health}`;
@@ -138,7 +157,8 @@
 
         updateTowerInfo(stats);
       } catch (err) {
-        showNotification('Error updating game state');
+        console.error('Error updating game state:', err);
+        showNotification('Error updating game state: ' + err.message);
       }
     }
 
@@ -198,8 +218,8 @@
 
     document.getElementById('game-image').addEventListener('click', async (e) => {
       const rect = e.target.getBoundingClientRect();
-      const scaleX = CANVAS_WIDTH / rect.width;
-      const scaleY = CANVAS_HEIGHT / rect.height;
+      const scaleX = 1920 / rect.width;
+      const scaleY = 1080 / rect.height;
       const x = (e.clientX - rect.left) * scaleX;
       const y = (e.clientY - rect.top) * scaleY;
 
@@ -322,12 +342,16 @@
     });
 
     function startPolling() {
-      setInterval(updateGameState, 1000); // Update every 1 second
+      setInterval(updateGameState, 1000);
     }
 
-    joinGame();
-    initSidebar();
-    startPolling();
+    if (!localStorage.getItem('username')) {
+      window.location.href = '/';
+    } else {
+      joinGame();
+      initSidebar();
+      startPolling();
+    }
   </script>
 </body>
 </html>
