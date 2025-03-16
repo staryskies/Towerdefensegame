@@ -186,23 +186,176 @@ const towerStats = {
 const towerUpgradePaths = {
   basic: {
     power: [
-      { cost: 50, damage: 1.2, desc: "Damage +20%" },
-      { cost: 100, damage: 1.3, desc: "Damage +30%" },
-      { cost: 150, range: 1.2, desc: "Range +20%" },
-      { cost: 200, fireRate: 0.9, desc: "Fire Rate +10%" },
+      { cost: 50, damageIncrease: 2, desc: "Damage +20%" },
+      { cost: 100, damageIncrease: 3, desc: "Damage +30%" },
+      { cost: 150, rangeIncrease: 20, desc: "Range +20%" },
+      { cost: 200, fireRateDecrease: 100, desc: "Fire Rate +10%" },
     ],
     utility: [
-      { cost: 50, range: 1.1, desc: "Range +10%" },
-      { cost: 100, fireRate: 0.9, desc: "Fire Rate +10%" },
-      { cost: 150, damage: 1.2, desc: "Damage +20%" },
-      { cost: 200, range: 1.15, desc: "Range +15%" },
+      { cost: 50, rangeIncrease: 10, desc: "Range +10%" },
+      { cost: 100, fireRateDecrease: 100, desc: "Fire Rate +10%" },
+      { cost: 150, damageIncrease: 2, desc: "Damage +20%" },
+      { cost: 200, rangeIncrease: 15, desc: "Range +15%" },
     ],
   },
-  // Add other tower upgrade paths similarly
+  archer: {
+    power: [
+      { cost: 75, damageIncrease: 3, desc: "Damage +20%" },
+      { cost: 150, damageIncrease: 4, desc: "Damage +27%" },
+      { cost: 225, rangeIncrease: 24, desc: "Range +20%" },
+      { cost: 300, fireRateDecrease: 200, desc: "Fire Rate +10%" },
+    ],
+    utility: [
+      { cost: 75, rangeIncrease: 12, desc: "Range +10%" },
+      { cost: 150, fireRateDecrease: 200, desc: "Fire Rate +10%" },
+      { cost: 225, damageIncrease: 3, desc: "Damage +20%" },
+      { cost: 300, rangeIncrease: 18, desc: "Range +15%" },
+    ],
+  },
+  cannon: {
+    power: [
+      { cost: 100, damageIncrease: 6, desc: "Damage +20%" },
+      { cost: 200, damageIncrease: 9, desc: "Damage +30%" },
+      { cost: 300, rangeIncrease: 16, desc: "Range +20%" },
+      { cost: 400, fireRateDecrease: 300, desc: "Fire Rate +10%" },
+    ],
+    utility: [
+      { cost: 100, rangeIncrease: 8, desc: "Range +10%" },
+      { cost: 200, fireRateDecrease: 300, desc: "Fire Rate +10%" },
+      { cost: 300, damageIncrease: 6, desc: "Damage +20%" },
+      { cost: 400, rangeIncrease: 12, desc: "Range +15%" },
+    ],
+  },
+  sniper: {
+    power: [
+      { cost: 150, damageIncrease: 10, desc: "Damage +20%" },
+      { cost: 300, damageIncrease: 15, desc: "Damage +30%" },
+      { cost: 450, rangeIncrease: 30, desc: "Range +20%" },
+      { cost: 600, fireRateDecrease: 400, desc: "Fire Rate +10%" },
+    ],
+    utility: [
+      { cost: 150, rangeIncrease: 15, desc: "Range +10%" },
+      { cost: 300, fireRateDecrease: 400, desc: "Fire Rate +10%" },
+      { cost: 450, damageIncrease: 10, desc: "Damage +20%" },
+      { cost: 600, rangeIncrease: 22.5, desc: "Range +15%" },
+    ],
+  },
+  freeze: {
+    power: [
+      { cost: 120, damageIncrease: 1, desc: "Damage +20%" },
+      { cost: 240, damageIncrease: 1.5, desc: "Damage +30%" },
+      { cost: 360, rangeIncrease: 20, desc: "Range +20%" },
+      { cost: 480, fireRateDecrease: 200, desc: "Fire Rate +10%" },
+    ],
+    utility: [
+      { cost: 120, rangeIncrease: 10, desc: "Range +10%" },
+      { cost: 240, fireRateDecrease: 200, desc: "Fire Rate +10%" },
+      { cost: 360, damageIncrease: 1, desc: "Damage +20%" },
+      { cost: 480, rangeIncrease: 15, desc: "Range +15%" },
+    ],
+  },
+  mortar: {
+    power: [
+      { cost: 200, damageIncrease: 8, desc: "Damage +20%" },
+      { cost: 400, damageIncrease: 12, desc: "Damage +30%" },
+      { cost: 600, rangeIncrease: 24, desc: "Range +20%" },
+      { cost: 800, fireRateDecrease: 500, desc: "Fire Rate +10%" },
+    ],
+    utility: [
+      { cost: 200, rangeIncrease: 12, desc: "Range +10%" },
+      { cost: 400, fireRateDecrease: 500, desc: "Fire Rate +10%" },
+      { cost: 600, damageIncrease: 8, desc: "Damage +20%" },
+      { cost: 800, rangeIncrease: 18, desc: "Range +15%" },
+    ],
+  },
+  laser: {
+    power: [
+      { cost: 350, damageIncrease: 20, desc: "Damage +20%" },
+      { cost: 700, damageIncrease: 30, desc: "Damage +30%" },
+      { cost: 1050, rangeIncrease: 30, desc: "Range +20%" },
+      { cost: 1400, fireRateDecrease: 1000, desc: "Fire Rate +10%" },
+    ],
+    utility: [
+      { cost: 350, rangeIncrease: 15, desc: "Range +10%" },
+      { cost: 700, fireRateDecrease: 1000, desc: "Fire Rate +10%" },
+      { cost: 1050, damageIncrease: 20, desc: "Damage +20%" },
+      { cost: 1400, rangeIncrease: 22.5, desc: "Range +15%" },
+    ],
+  },
+  tesla: {
+    power: [
+      { cost: 250, damageIncrease: 5, desc: "Damage +20%" },
+      { cost: 500, damageIncrease: 7.5, desc: "Damage +30%" },
+      { cost: 750, rangeIncrease: 24, desc: "Range +20%" },
+      { cost: 1000, fireRateDecrease: 300, desc: "Fire Rate +10%" },
+    ],
+    utility: [
+      { cost: 250, rangeIncrease: 12, desc: "Range +10%" },
+      { cost: 500, fireRateDecrease: 300, desc: "Fire Rate +10%" },
+      { cost: 750, damageIncrease: 5, desc: "Damage +20%" },
+      { cost: 1000, rangeIncrease: 18, desc: "Range +15%" },
+    ],
+  },
+  flamethrower: {
+    power: [
+      { cost: 180, damageIncrease: 4, desc: "Damage +20%" },
+      { cost: 360, damageIncrease: 6, desc: "Damage +30%" },
+      { cost: 540, rangeIncrease: 16, desc: "Range +20%" },
+      { cost: 720, fireRateDecrease: 200, desc: "Fire Rate +10%" },
+    ],
+    utility: [
+      { cost: 180, rangeIncrease: 8, desc: "Range +10%" },
+      { cost: 360, fireRateDecrease: 200, desc: "Fire Rate +10%" },
+      { cost: 540, damageIncrease: 4, desc: "Damage +20%" },
+      { cost: 720, rangeIncrease: 12, desc: "Range +15%" },
+    ],
+  },
+  missile: {
+    power: [
+      { cost: 200, damageIncrease: 12, desc: "Damage +20%" },
+      { cost: 400, damageIncrease: 18, desc: "Damage +30%" },
+      { cost: 600, rangeIncrease: 26, desc: "Range +20%" },
+      { cost: 800, fireRateDecrease: 400, desc: "Fire Rate +10%" },
+    ],
+    utility: [
+      { cost: 200, rangeIncrease: 13, desc: "Range +10%" },
+      { cost: 400, fireRateDecrease: 400, desc: "Fire Rate +10%" },
+      { cost: 600, damageIncrease: 12, desc: "Damage +20%" },
+      { cost: 800, rangeIncrease: 19.5, desc: "Range +15%" },
+    ],
+  },
+  poison: {
+    power: [
+      { cost: 250, damageIncrease: 3, desc: "Damage +20%" },
+      { cost: 500, damageIncrease: 4.5, desc: "Damage +30%" },
+      { cost: 750, rangeIncrease: 22, desc: "Range +20%" },
+      { cost: 1000, fireRateDecrease: 300, desc: "Fire Rate +10%" },
+    ],
+    utility: [
+      { cost: 250, rangeIncrease: 11, desc: "Range +10%" },
+      { cost: 500, fireRateDecrease: 300, desc: "Fire Rate +10%" },
+      { cost: 750, damageIncrease: 3, desc: "Damage +20%" },
+      { cost: 1000, rangeIncrease: 16.5, desc: "Range +15%" },
+    ],
+  },
+  vortex: {
+    power: [
+      { cost: 300, damageIncrease: 0, desc: "No damage increase" },
+      { cost: 600, rangeIncrease: 30, desc: "Range +20%" },
+      { cost: 900, fireRateDecrease: 500, desc: "Fire Rate +10%" },
+      { cost: 1200, rangeIncrease: 22.5, desc: "Range +15%" },
+    ],
+    utility: [
+      { cost: 300, rangeIncrease: 15, desc: "Range +10%" },
+      { cost: 600, fireRateDecrease: 500, desc: "Fire Rate +10%" },
+      { cost: 900, damageIncrease: 0, desc: "No damage increase" },
+      { cost: 1200, rangeIncrease: 22.5, desc: "Range +15%" },
+    ],
+  },
 };
 
 // Game state management
-const gameInstances = new Map(); // Key: partyId, Value: gameState
+const gameInstances = new Map();
 
 function initializeGame(partyId, difficulty = "easy", map = "map1", isPartyMode = false) {
   if (!gameInstances.has(partyId)) {
@@ -212,7 +365,7 @@ function initializeGame(partyId, difficulty = "easy", map = "map1", isPartyMode 
       towers: [],
       projectiles: [],
       playerHealth: 20,
-      gameMoney: gameMoney,
+      gameMoney,
       score: 0,
       wave: 1,
       isPaused: false,
@@ -239,10 +392,19 @@ function initializeGame(partyId, difficulty = "easy", map = "map1", isPartyMode 
   }
 }
 
+async function loadGameState(partyId) {
+  // Simplified: Load from in-memory storage; extend with database if needed
+  const gameState = gameInstances.get(partyId);
+  if (!gameState) {
+    console.warn(`No game state found for partyId: ${partyId}`);
+  }
+  return gameState;
+}
+
 // Game Classes
 class Enemy {
   constructor(type, wave, gameState, pathKey) {
-    this.pathKey = pathKey; // "path1" or "path2"
+    this.pathKey = pathKey;
     this.x = gameState.paths[pathKey][0].x;
     this.y = gameState.paths[pathKey][0].y;
     const healthMultiplier = gameState.selectedDifficulty === "easy" ? 0.25 : gameState.selectedDifficulty === "medium" ? 0.5 : 1;
@@ -299,8 +461,7 @@ class Tower {
     this.angle = 0;
     this.powerLevel = 0;
     this.utilityLevel = 0;
-    this.specials = { tripleShot: false, crit: 0.2, splash: 1, slow: 0.5, multiBeam: false, chain: 2, burn: 1, pull: 100 };
-    this.placedBy = placedBy; // Track who placed the tower
+    this.placedBy = placedBy;
   }
 
   shoot(gameState) {
@@ -323,9 +484,9 @@ class Tower {
     const upgrade = upgrades[level];
     if (!upgrade || gameState.gameMoney < upgrade.cost) return { success: false, message: "Not enough money!" };
     gameState.gameMoney -= upgrade.cost;
-    if (upgrade.damage) this.damage *= upgrade.damage;
-    if (upgrade.range) this.range *= upgrade.range;
-    if (upgrade.fireRate) this.fireRate *= upgrade.fireRate;
+    if (upgrade.damageIncrease) this.damage += upgrade.damageIncrease;
+    if (upgrade.rangeIncrease) this.range += upgrade.rangeIncrease;
+    if (upgrade.fireRateDecrease) this.fireRate -= upgrade.fireRateDecrease;
     if (path === "power") this.powerLevel++;
     else this.utilityLevel++;
     return { success: true, message: `${this.type} upgraded: ${upgrade.desc}` };
@@ -402,7 +563,7 @@ function updateSpawning(dt, gameState) {
     const spawnInterval = 1;
     if (gameState.spawnTimer >= spawnInterval) {
       const enemyType = enemyThemes[gameState.mapTheme][gameState.selectedDifficulty][0];
-      const pathKey = Math.random() < 0.5 ? "path1" : "path2"; // Randomly choose path
+      const pathKey = Math.random() < 0.5 ? "path1" : "path2";
       gameState.enemies.push(new Enemy(enemyType, gameState.wave, gameState, pathKey));
       gameState.enemiesToSpawn--;
       gameState.spawnTimer -= spawnInterval;
@@ -437,68 +598,76 @@ function updateGameState(partyId) {
 }
 
 function generateGameImage(gameState) {
-  const canvas = createCanvas(CANVAS_WIDTH, CANVAS_HEIGHT);
-  const ctx = canvas.getContext('2d');
+  try {
+    const canvas = createCanvas(CANVAS_WIDTH, CANVAS_HEIGHT);
+    const ctx = canvas.getContext('2d');
 
-  // Background
-  ctx.fillStyle = themeBackgrounds[gameState.selectedMap];
-  ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    ctx.fillStyle = themeBackgrounds[gameState.selectedMap] || '#90ee90';
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-  // Paths
-  Object.values(gameState.paths).forEach(path => {
-    ctx.beginPath();
-    ctx.moveTo(path[0].x, path[0].y);
-    path.slice(1).forEach(point => ctx.lineTo(point.x, point.y));
-    ctx.strokeStyle = "brown";
-    ctx.lineWidth = PATH_WIDTH;
-    ctx.stroke();
-  });
+    Object.values(gameState.paths).forEach(path => {
+      ctx.beginPath();
+      ctx.moveTo(path[0].x, path[0].y);
+      path.slice(1).forEach(point => ctx.lineTo(point.x, point.y));
+      ctx.strokeStyle = "brown";
+      ctx.lineWidth = PATH_WIDTH;
+      ctx.stroke();
+    });
 
-  // Towers
-  gameState.towers.forEach(tower => {
-    ctx.save();
-    ctx.translate(tower.x, tower.y);
-    ctx.rotate(tower.angle);
-    ctx.beginPath();
-    ctx.arc(0, 0, tower.radius, 0, Math.PI * 2);
-    ctx.fillStyle = tower.color;
-    ctx.fill();
-    ctx.restore();
-    ctx.fillStyle = "white";
-    ctx.font = "12px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText(`${tower.type.charAt(0).toUpperCase() + tower.type.slice(1)} (${tower.placedBy})`, tower.x, tower.y + 25);
-  });
+    gameState.towers.forEach(tower => {
+      ctx.save();
+      ctx.translate(tower.x, tower.y);
+      ctx.rotate(tower.angle);
+      ctx.beginPath();
+      ctx.arc(0, 0, tower.radius, 0, Math.PI * 2);
+      ctx.fillStyle = tower.color;
+      ctx.fill();
+      ctx.restore();
+      ctx.fillStyle = "white";
+      ctx.font = "12px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText(`${tower.type.charAt(0).toUpperCase() + tower.type.slice(1)} (${tower.placedBy})`, tower.x, tower.y + 25);
+    });
 
-  // Enemies
-  gameState.enemies.forEach(enemy => {
-    ctx.beginPath();
-    ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2);
-    ctx.fillStyle = enemy.isBoss ? "darkred" : enemy.color;
-    ctx.fill();
-    ctx.fillStyle = "white";
-    ctx.font = "12px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText(`${Math.floor(enemy.health)}`, enemy.x, enemy.y - enemy.radius - 5);
-  });
+    gameState.enemies.forEach(enemy => {
+      ctx.beginPath();
+      ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2);
+      ctx.fillStyle = enemy.isBoss ? "darkred" : enemy.color;
+      ctx.fill();
+      ctx.fillStyle = "white";
+      ctx.font = "12px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText(`${Math.floor(enemy.health)}`, enemy.x, enemy.y - enemy.radius - 5);
+    });
 
-  // Projectiles
-  gameState.projectiles.forEach(projectile => {
-    ctx.beginPath();
-    ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2);
-    ctx.fillStyle = projectile.color;
-    ctx.fill();
-  });
+    gameState.projectiles.forEach(projectile => {
+      ctx.beginPath();
+      ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2);
+      ctx.fillStyle = projectile.color;
+      ctx.fill();
+    });
 
-  return canvas.toBuffer('image/png');
+    return canvas.toBuffer('image/png');
+  } catch (err) {
+    console.error('Error generating game image:', err.message);
+    return createCanvas(CANVAS_WIDTH, CANVAS_HEIGHT).toBuffer('image/png'); // Fallback blank image
+  }
 }
 
 // Periodic update loop
 setInterval(() => {
-  gameInstances.forEach((gameState, partyId) => {
+  gameInstances.forEach(async (gameState, partyId) => {
     updateGameState(partyId);
+    try {
+      await pool.query(
+        'INSERT INTO game_instances (party_id, state) VALUES ($1, $2) ON CONFLICT (party_id) DO UPDATE SET state = $2, created_at = CURRENT_TIMESTAMP',
+        [partyId, gameState]
+      );
+    } catch (err) {
+      console.error(`Error updating game state for party ${partyId}:`, err.message);
+    }
   });
-}, 1000 / 60); // 60 FPS update
+}, 1000 / 60);
 
 // Database Initialization
 async function initializeDatabase() {
@@ -518,11 +687,18 @@ async function initializeDatabase() {
         PRIMARY KEY (user_id, tower)
       );
     `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS game_instances (
+        party_id VARCHAR(255) PRIMARY KEY,
+        state JSONB,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
     console.log('Database schema ensured');
 
     const userCount = (await pool.query('SELECT COUNT(*) FROM users')).rows[0].count;
     if (parseInt(userCount, 10) === 0) {
-      const defaultUsername = 'starynightsss';
+      const defaultUsername = 'starynightssss';
       const defaultPassword = 'password123';
       const hashedPassword = await bcrypt.hash(defaultPassword, 10);
       const userResult = await pool.query(
@@ -596,6 +772,7 @@ app.get('/towers', async (req, res) => {
     const towers = towersResult.rows.map(row => row.tower);
     res.json({ towers });
   } catch (err) {
+    console.error('Error fetching towers:', err.message);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -628,11 +805,11 @@ app.post('/game/join', async (req, res) => {
   
   const effectivePartyId = isPartyMode ? partyId : `${username}-${Date.now()}`;
   console.log('Effective partyId:', effectivePartyId);
-  await initializeGame(effectivePartyId, difficulty, map, isPartyMode);
+  initializeGame(effectivePartyId, difficulty, map, isPartyMode);
   
   const gameState = await loadGameState(effectivePartyId);
   if (!gameState) {
-    console.log('Failed to initialize game state for partyId:', effectivePartyId);
+    console.error('Failed to initialize game state for partyId:', effectivePartyId);
     return res.status(500).json({ message: 'Failed to initialize game' });
   }
 
@@ -658,19 +835,23 @@ app.get('/game/state', async (req, res) => {
     return res.status(400).json({ message: 'partyId required' });
   }
 
-  let gameState = await loadGameState(partyId);
+  const gameState = await loadGameState(partyId);
   if (!gameState) {
     console.log('Game instance not found, attempting to reinitialize for partyId:', partyId);
     const username = partyId.split('-')[0];
     if (!username) {
       return res.status(400).json({ message: 'Invalid partyId format' });
     }
-    await initializeGame(partyId, "easy", "map1", false);
-    gameState = await loadGameState(partyId);
-    gameState.players.add(username);
-    gameState.partyLeader = username;
-    spawnWave(gameState);
-    console.log(`Reinitialized game for partyId ${partyId} with username ${username}`);
+    initializeGame(partyId, "easy", "map1", false);
+    const reinitializedState = await loadGameState(partyId);
+    if (reinitializedState) {
+      reinitializedState.players.add(username);
+      reinitializedState.partyLeader = username;
+      spawnWave(reinitializedState);
+      console.log(`Reinitialized game for partyId ${partyId} with username ${username}`);
+    } else {
+      return res.status(500).json({ message: 'Failed to reinitialize game' });
+    }
   }
 
   const imageBuffer = generateGameImage(gameState);
@@ -686,19 +867,23 @@ app.get('/game/stats', async (req, res) => {
     return res.status(400).json({ message: 'partyId required' });
   }
 
-  let gameState = await loadGameState(partyId);
+  const gameState = await loadGameState(partyId);
   if (!gameState) {
     console.log('Game instance not found, attempting to reinitialize for partyId:', partyId);
     const username = partyId.split('-')[0];
     if (!username) {
       return res.status(400).json({ message: 'Invalid partyId format' });
     }
-    await initializeGame(partyId, "easy", "map1", false);
-    gameState = await loadGameState(partyId);
-    gameState.players.add(username);
-    gameState.partyLeader = username;
-    spawnWave(gameState);
-    console.log(`Reinitialized game for partyId ${partyId} with username ${username}`);
+    initializeGame(partyId, "easy", "map1", false);
+    const reinitializedState = await loadGameState(partyId);
+    if (reinitializedState) {
+      reinitializedState.players.add(username);
+      reinitializedState.partyLeader = username;
+      spawnWave(reinitializedState);
+      console.log(`Reinitialized game for partyId ${partyId} with username ${username}`);
+    } else {
+      return res.status(500).json({ message: 'Failed to reinitialize game' });
+    }
   }
 
   res.json({
@@ -733,24 +918,12 @@ app.post('/game/place-tower', async (req, res) => {
 
   if (!gameState.players.has(username)) return res.status(403).json({ message: 'Not a player in this game' });
 
-  const towerCost = towerTypes[type].cost;
+  const towerCost = towerStats[type].cost;
   const sharedMoney = gameState.isPartyMode ? gameState.gameMoney : (await pool.query('SELECT money FROM users WHERE username = $1', [username])).rows[0].money;
 
   if (sharedMoney < towerCost) return res.status(400).json({ message: 'Not enough money' });
 
-  const tower = {
-    x,
-    y,
-    type,
-    damage: towerTypes[type].damage,
-    range: towerTypes[type].range,
-    speed: towerTypes[type].speed,
-    radius: towerTypes[type].radius,
-    cooldown: 0,
-    powerLevel: 0,
-    utilityLevel: 0,
-    placedBy: username,
-  };
+  const tower = new Tower(x, y, type, username);
   gameState.towers.push(tower);
 
   if (gameState.isPartyMode) {
@@ -802,15 +975,11 @@ app.post('/game/upgrade-tower', async (req, res) => {
   if (sharedMoney < upgrade.cost) return res.status(400).json({ message: 'Not enough money' });
 
   if (path === 'power') {
-    tower.damage += upgrade.damageIncrease;
+    tower.damage += (upgrade.damageIncrease || 0);
     tower.powerLevel++;
   } else if (path === 'utility') {
-    if (upgrade.rangeIncrease) tower.range += upgrade.rangeIncrease;
-    if (upgrade.speedIncrease) tower.speed += upgrade.speedIncrease;
-    if (upgrade.slowIncrease) tower.slow += upgrade.slowIncrease;
-    if (upgrade.chainIncrease) tower.chain += upgrade.chainIncrease;
-    if (upgrade.durationIncrease) tower.duration += upgrade.durationIncrease;
-    if (upgrade.pullStrengthIncrease) tower.pullStrength += upgrade.pullStrengthIncrease;
+    tower.range += (upgrade.rangeIncrease || 0);
+    tower.fireRate -= (upgrade.fireRateDecrease || 0);
     tower.utilityLevel++;
   }
 
@@ -828,8 +997,8 @@ setInterval(() => {
     updateGameState(partyId);
     try {
       await pool.query(
-        'UPDATE game_instances SET state = $1 WHERE party_id = $2',
-        [gameState, partyId]
+        'INSERT INTO game_instances (party_id, state) VALUES ($1, $2) ON CONFLICT (party_id) DO UPDATE SET state = $2, created_at = CURRENT_TIMESTAMP',
+        [partyId, gameState]
       );
     } catch (err) {
       console.error(`Error updating game state for party ${partyId}:`, err.message);
