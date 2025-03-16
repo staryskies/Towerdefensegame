@@ -83,8 +83,8 @@
       notification.classList.add('show');
       setTimeout(() => notification.classList.remove('show'), 3000);
     }
-
     async function joinGame() {
+      console.log('Attempting to join game with:', { username, partyId, difficulty: localStorage.getItem('selectedDifficulty'), map: localStorage.getItem('selectedMap'), isPartyMode });
       try {
         const response = await fetch('/game/join', {
           method: 'POST',
@@ -97,18 +97,21 @@
             isPartyMode 
           }),
         });
+        console.log('Join response status:', response.status);
         const data = await response.json();
+        console.log('Join response data:', data);
         if (response.ok) {
           showNotification(data.message);
           localStorage.setItem('partyId', data.partyId); // Update partyId for solo mode
           updateGameState();
         } else {
-          showNotification(data.message);
+          showNotification(data.message || 'Failed to join game');
         }
       } catch (err) {
-        showNotification('Error joining game');
+        console.error('Join error:', err);
+        showNotification('Error joining game: ' + err.message);
       }
-    }
+}
 
     async function updateGameState() {
       try {
